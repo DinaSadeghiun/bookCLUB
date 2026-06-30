@@ -20,3 +20,11 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+INCLUDEPATH += $$PWD/../Common/Models
+
+SOURCES += \
+    ../Common/Models/person.cpp
+
+HEADERS += \
+    ../Common/Models/person.h
