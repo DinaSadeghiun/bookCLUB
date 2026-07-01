@@ -1,5 +1,7 @@
 TEMPLATE = subdirs
 
-SUBDIRS += \
+SUBDIRS = \
     BookClubClient \
     BookClubServer
+
+include(Common/Common.pri)

@@ -15,3 +15,4 @@ void Person::setUsername(const QString &newUsername) { username = newUsername; }
 void Person::setPassword(const QString &newPassword) { password = newPassword; }
 void Person::setEmail(const QString &newEmail) { email = newEmail; }
 void Person::setIsActive(bool status) { isActive = status; }
+
