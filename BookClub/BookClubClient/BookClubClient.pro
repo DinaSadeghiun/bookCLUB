@@ -8,10 +8,16 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    #../Common/Models/book.cpp \
+    #../Common/Models/discount.cpp \
+    #../Common/Models/shoppingcart.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+   # ../Common/Models/book.h \
+    #../Common/Models/discount.h \
+    #../Common/Models/shoppingcart.h \
     mainwindow.h
 
 FORMS += \
