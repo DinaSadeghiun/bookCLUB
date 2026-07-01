@@ -1,11 +1,20 @@
-#include "mainwindow.h"
-
-#include <QApplication>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
-    return QApplication::exec();
+
+    QGuiApplication app(argc, argv);
+
+
+    QQmlApplicationEngine engine;
+
+    const QUrl url(QStringLiteral("qrc:/Login.qml"));
+
+    engine.load(url);
+
+    if (engine.rootObjects().isEmpty())
+        return -1;
+
+    return app.exec();
 }
