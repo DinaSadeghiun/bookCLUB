@@ -1,5 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>Login.qml</file>
+        <file>SignUp.qml</file>
+        <file>main.qml</file>
+        <file>images/giraffe.png</file>
     </qresource>
 </RCC>

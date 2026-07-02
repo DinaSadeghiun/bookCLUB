@@ -1,51 +1,70 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
-Window {
-    width: 400
-    height: 500
-    visible: true
-    title: "Book Club 📚"
+Item {
+    id: loginPage
+    anchors.fill: parent
 
     Rectangle {
         anchors.fill: parent
-        color: "#4B0082" // بنفش تیره حرفه‌ای
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#4B0082" }
+            GradientStop { position: 1.0; color: "#2C003E" }
+        }
     }
 
-    Column {
+    ColumnLayout {
         anchors.centerIn: parent
-        spacing: 25
-               Text {
-                  text:  "Welcome"
-            font.pixelSize:28
-            color:"#FFD700"
-        }
-        Text {
-                           text:  "to"
-                    font.pixelSize: 28
-                    color:   "#FFD700"
-                }
-        Text {
+        spacing: 20
+        width: parent.width * 0.8
 
-
-            text: " BOOK CLUB "
-            font.family: "Segoe UI"
-            font.pixelSize: 37
-            font.bold: true
-            color: "#FFD700" // طلایی
-            anchors.horizontalCenter: parent.horizontalCenter
+        Image {
+            id: mascotIcon
+            source: "qrc:/images/giraffe.png"
+            Layout.preferredWidth: 100
+            Layout.preferredHeight: 100
+            Layout.alignment: Qt.AlignHCenter
+            fillMode: Image.PreserveAspectFit
         }
 
-        // استایل‌دهی حرفه‌ای به فیلدها
+        ColumnLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 5
+
+            Text {
+                text: "Welcome to"
+                font.pixelSize: 22
+                color: "#B0A4E3"
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "BOOK CLUB"
+                font.pixelSize: 38
+                font.bold: true
+                font.letterSpacing: 2
+                color: "#FFD700"
+                Layout.alignment: Qt.AlignHCenter
+            }
+        }
+
+        Item { Layout.preferredHeight: 10 }
+
         TextField {
             id: usernameInput
             placeholderText: "Username"
-            width: 280
-            height: 45
+            Layout.fillWidth: true
+            Layout.preferredHeight: 50
+            color: "#2C003E"
+            leftPadding: 15
+
             background: Rectangle {
-                radius: 10
-                color: "#FFFFFF"
-                border.color: "#FFD700"
+                radius: 12
+                color: "#F5F5F5"
+                border.color: usernameInput.activeFocus ? "#FFD700" : "transparent"
+                border.width: 2
+                Behavior on border.color { ColorAnimation { duration: 200 } }
             }
         }
 
@@ -53,31 +72,90 @@ Window {
             id: passwordInput
             placeholderText: "Password"
             echoMode: TextInput.Password
-            width: 280
-            height: 45
+            Layout.fillWidth: true
+            Layout.preferredHeight: 50
+            color: "#2C003E"
+            leftPadding: 15
+
             background: Rectangle {
-                radius: 10
-                color: "#FFFFFF"
-                border.color: "#FFD700"
+                radius: 12
+                color: "#F5F5F5"
+                border.color: passwordInput.activeFocus ? "#FFD700" : "transparent"
+                border.width: 2
+                Behavior on border.color { ColorAnimation { duration: 200 } }
             }
         }
 
-        // طراحی دکمه حرفه‌ای
         Button {
-            text: "Login"
-            width: 280
-            height: 45
+            id: loginButton
+            text: "LOGIN"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 55
+            Layout.topMargin: 10
+
             contentItem: Text {
-                text: parent.text
-                color: "#4B0082"
+                text: loginButton.text
+                font.pixelSize: 16
+                font.bold: true
+                color: "#2C003E"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                font.bold: true
             }
+
             background: Rectangle {
-                radius: 10
-                color: parent.hovered ? "#FFC107" : "#FFD700" // تغییر رنگ هنگام بردن موس
+                radius: 12
+                color: loginButton.pressed ? "#E6C200" : (loginButton.hovered ? "#FFEA00" : "#FFD700")
+                Behavior on color { ColorAnimation { duration: 150 } }
+            }
+
+            onClicked: {
+                console.log("Login clicked. Username:", usernameInput.text)
+            }
+        }
+
+        Text {
+            text: "Forgot Password?"
+            font.pixelSize: 13
+            color: "#B0A4E3"
+            Layout.alignment: Qt.AlignHCenter
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    console.log("Navigate to Forgot Password Page")
+                }
+            }
+        }
+
+        Item { Layout.preferredHeight: 10 }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 5
+
+            Text {
+                text: "Don't have an account?"
+                font.pixelSize: 14
+                color: "#FFFFFF"
+            }
+
+            Text {
+                text: "Sign Up"
+                font.pixelSize: 14
+                font.bold: true
+                color: "#FFD700"
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        console.log("Navigating to Sign Up Page...")
+                        stackView.push("SignUp.qml")
+                    }
+                }
             }
         }
     }
 }
+

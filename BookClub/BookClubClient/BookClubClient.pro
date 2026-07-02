@@ -19,7 +19,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 DISTFILES += \
-    Login.qml
+    Login.qml \
+    SignUp.qml \
+    main.qml
 
 RESOURCES += \
     resources.qrc
