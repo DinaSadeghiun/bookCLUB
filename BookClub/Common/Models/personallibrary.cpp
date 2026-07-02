@@ -1,19 +1,14 @@
-#include "PersonalLibrary.h"
+#include "personallibrary.h"
 
-// Shelf implementation
-PersonalLibrary::Shelf::Shelf(const QString &name) : shelfName(name) {}
+//shelf
+PersonalLibrary::Shelf::Shelf(const QString &name)
+    : shelfName(name) {}
 
-QString PersonalLibrary::Shelf::getShelfName() const {
-    return shelfName;
-}
+QString PersonalLibrary::Shelf::getShelfName() const { return shelfName; }
 
-void PersonalLibrary::Shelf::setShelfName(const QString &name) {
-    shelfName = name;
-}
+void PersonalLibrary::Shelf::setShelfName(const QString &name) { shelfName = name; }
 
-QList<int> PersonalLibrary::Shelf::getBookIds() const {
-    return bookIds;
-}
+const QList<int>& PersonalLibrary::Shelf::getBookIds() const { return bookIds; }
 
 void PersonalLibrary::Shelf::addBook(int bookId) {
     if (!bookIds.contains(bookId)) {
@@ -21,20 +16,21 @@ void PersonalLibrary::Shelf::addBook(int bookId) {
     }
 }
 
-void PersonalLibrary::Shelf::removeBook(int bookId) {
-    bookIds.removeAll(bookId);
+bool PersonalLibrary::Shelf::removeBook(int bookId) {
+    return bookIds.removeOne(bookId);
 }
 
-// PersonalLibrary implementation
-PersonalLibrary::PersonalLibrary() {}
+//personal library
+PersonalLibrary::PersonalLibrary(int userId)
+    : userId(userId) {}
 
 PersonalLibrary::~PersonalLibrary() {
     qDeleteAll(customShelves);
     customShelves.clear();
 }
 
-// Purchased books
-QList<int> PersonalLibrary::getPurchasedBooks() const {
+
+const QList<int>& PersonalLibrary::getPurchasedBooks() const {
     return purchasedBooks;
 }
 
@@ -48,8 +44,8 @@ bool PersonalLibrary::hasPurchased(int bookId) const {
     return purchasedBooks.contains(bookId);
 }
 
-// Wishlist
-QList<int> PersonalLibrary::getWishlist() const {
+//wish list
+const QList<int>& PersonalLibrary::getWishlist() const {
     return wishlist;
 }
 
@@ -59,24 +55,22 @@ void PersonalLibrary::addToWishlist(int bookId) {
     }
 }
 
-void PersonalLibrary::removeFromWishlist(int bookId) {
-    wishlist.removeAll(bookId);
+bool PersonalLibrary::removeFromWishlist(int bookId) {
+    return wishlist.removeOne(bookId);
 }
 
 bool PersonalLibrary::isInWishlist(int bookId) const {
     return wishlist.contains(bookId);
 }
 
-// Custom shelves
-QList<PersonalLibrary::Shelf*> PersonalLibrary::getCustomShelves() const {
+
+//costum shelves
+const QList<PersonalLibrary::Shelf*>& PersonalLibrary::getCustomShelves() const
+{
     return customShelves;
 }
 
 PersonalLibrary::Shelf* PersonalLibrary::createShelf(const QString &name) {
-    if (name.trimmed().isEmpty()) {
-        return nullptr;
-    }
-
     if (findShelf(name) != nullptr) {
         return nullptr;
     }
@@ -86,15 +80,15 @@ PersonalLibrary::Shelf* PersonalLibrary::createShelf(const QString &name) {
     return newShelf;
 }
 
-
-void PersonalLibrary::deleteShelf(const QString &name) {
+bool PersonalLibrary::deleteShelf(const QString &name) {
     for (int i = 0; i < customShelves.size(); ++i) {
         if (customShelves[i]->getShelfName() == name) {
             delete customShelves[i];
             customShelves.removeAt(i);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 PersonalLibrary::Shelf* PersonalLibrary::findShelf(const QString &name) const {
