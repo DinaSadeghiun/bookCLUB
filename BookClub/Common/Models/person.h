@@ -3,12 +3,14 @@
 
 #include <QString>
 #include <QDateTime>
+#include <QCryptographicHash>
+#include <QByteArray>
 
 class Person {
 protected:
     int id;
     QString username;
-    QString password;
+    QString passwordHash;
     QString email;
     QDateTime createdAt;
     bool isActive;
@@ -18,24 +20,37 @@ public:
            const QString& email = "", const QDateTime& createdAt = QDateTime::currentDateTime(),
            bool isActive = true);
 
-    virtual ~Person() {}
+    virtual ~Person();
 
-    //getters
+    // Getters
     int getId() const;
     QString getUsername() const;
-    QString getPassword() const;
     QString getEmail() const;
     QDateTime getCreatedAt() const;
     bool getIsActive() const;
 
-    // Setters
-    void setId(int newId);
-    void setUsername(const QString &newUsername);
-    void setPassword(const QString &newPassword);
-    void setEmail(const QString &newEmail);
-    void setIsActive(bool status);
+    // Password verification
+    bool verifyPassword(const QString& password) const;
 
+    // Setters
+    void setId(int id);
+    void setUsername(const QString& username);
+    void setPassword(const QString& password);
+    void setEmail(const QString& email);
+    void setIsActive(bool isActive);
+
+    // Methods
+    void blockAccount();
+    void unblockAccount();
+    bool isBlocked() const;
+
+    // Pure virtual
     virtual QString getRole() const = 0;
+
+protected:
+    static QString hashPassword(const QString& password);
+    static QString encryptData(const QString& data);
+    static QString decryptData(const QString& encrypted);
 };
 
 #endif
