@@ -2,9 +2,7 @@
 
 User::User(int id, const QString& username, const QString& password,
            const QString& email, double balance, const QDateTime& createdAt, bool isActive)
-    : Person(id, username, password, email, createdAt, isActive)
-{
-    // اصلاح ۱: جلوگیری از بالانس منفی در زمان ساخت
+    : Person(id, username, password, email, createdAt, isActive) {
     this->walletBalance = (balance >= 0) ? balance : 0.0;
 
     this->cart = new ShoppingCart(id);
