@@ -2,65 +2,62 @@
 #define BOOK_H
 
 #include <QString>
-#include "discount.h"
 
 class Book {
 private:
     int id;
+    int publisherId;
+    int discountId; // ID-based link
     QString title;
     QString author;
     QString genre;
     QString description;
-    double price;
-    Discount discount;
-    bool isAvailable;
-    int publisherId;
-    double averageRating;
     QString coverImagePath;
     QString pdfFilePath;
+    double price;
+    double totalRating;
+    double averageRating;
+    int ratingCount;
+    int salesCount;
+    bool isAvailable;
+
+    void updateAverageRating();
 
 public:
-    Book(int id = 0,
-         const QString& title = "",
-         const QString& author = "",
-         const QString& genre = "",
-         const QString& description = "",
-         double price = 0.0,
-         const Discount& discount = Discount(),
-         bool isAvailable = true,
-         int publisherId = 0,
-         double averageRating = 0.0,
-         const QString& coverImagePath = "",
-         const QString& pdfFilePath = "");
+    Book(int id = 0, int pubId = 0, const QString& title = "", double price = 0.0);
+    ~Book() = default;
 
     // Getters
     int getId() const;
+    int getPublisherId() const;
+    int getDiscountId() const;
     QString getTitle() const;
     QString getAuthor() const;
     QString getGenre() const;
     QString getDescription() const;
-    double getPrice() const;
-    Discount getDiscount() const;
-    bool getIsAvailable() const;
-    int getPublisherId() const;
-    double getAverageRating() const;
     QString getCoverImagePath() const;
     QString getPdfFilePath() const;
+    double getPrice() const;
+    int getSalesCount() const;
+    int getRatingCount() const;
+    bool getIsAvailable() const;
+    double getAverageRating() const;
 
     // Setters
-    void setTitle(const QString& title);
-    void setAuthor(const QString& author);
-    void setGenre(const QString& genre);
-    void setDescription(const QString& description);
-    void setPrice(double price);
-    void setDiscount(const Discount& d);
-    void setIsAvailable(bool available);
-    void setAverageRating(double rating);
+    void setTitle(const QString& t);
+    void setAuthor(const QString& a);
+    void setGenre(const QString& g);
+    void setDescription(const QString& d);
+    void setPrice(double p);
     void setCoverImagePath(const QString& path);
     void setPdfFilePath(const QString& path);
+    void setDiscountId(int dId);
+    void setAvailable(bool status);
 
-    double getFinalPrice() const;
-    bool hasDiscount() const;
-    bool isFree() const;
+    // Methods
+    void removeDiscount();
+    void incrementSalesCount();
+    void addRating(double rating);
 };
+
 #endif
