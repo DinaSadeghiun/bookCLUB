@@ -1,4 +1,4 @@
-QT += widgets
+QT += widgets quick qml
 
 CONFIG += c++17
 
@@ -15,6 +15,15 @@ HEADERS += \
 
 FORMS += \
     mainwindow.ui
+
+    DISTFILES += \
+        Login.qml \
+        SignUp.qml \
+        main.qml
+
+    RESOURCES += \
+        resources.qrc
+
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
