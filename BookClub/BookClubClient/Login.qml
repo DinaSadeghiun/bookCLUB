@@ -134,17 +134,32 @@ Item {
             Layout.alignment: Qt.AlignHCenter
             spacing: 5
 
-            Text {
-                text: "Don't have an account?"
-                font.pixelSize: 14
-                color: "#FFFFFF"
-            }
+            Row {
+                     spacing: 5
+                     anchors.horizontalCenter: parent.horizontalCenter
 
-            Text {
-                text: "Sign Up"
-                font.pixelSize: 14
-                font.bold: true
-                color: "#FFD700"
+                     Text {
+                         text: "Don't have an account?"
+                         font.pixelSize: 14
+                         color: "#FFFFFF"
+                     }
+
+                     Text {
+                         text: "Sign Up"
+                         font.pixelSize: 14
+                         font.bold: true
+                         color: "#4CAF50"
+
+                         MouseArea {
+                             anchors.fill: parent
+                             cursorShape: Qt.PointingHandCursor
+                             onClicked: {
+                                 console.log("Navigating to Sign Up...")
+                                 stackView.push("qrc:/SignUp.qml")
+                             }
+                         }
+                     }
+                 }
 
                 MouseArea {
                     anchors.fill: parent
@@ -157,5 +172,5 @@ Item {
             }
         }
     }
-}
+
 

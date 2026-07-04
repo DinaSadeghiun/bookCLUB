@@ -42,14 +42,6 @@ Rectangle {
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
 
-        TextField {
-            id: emailField
-            placeholderText: "Email Address"
-            Layout.fillWidth: true
-            Layout.preferredHeight: 45
-            color: "#2C003E"
-            background: Rectangle { radius: 10; color: "#F5F5F5" }
-        }
 
         TextField {
             id: passwordField
@@ -141,7 +133,7 @@ Rectangle {
             }
 
             onClicked: {
-                if (usernameField.text === "" || passwordField.text === "" || emailField.text === "") {
+                if (usernameField.text === "" || passwordField.text === "" ) {
                     console.log("Error: Fields cannot be empty!")
                 } else if (passwordField.text !== confirmPasswordField.text) {
                     console.log("Error: Passwords do not match!")
@@ -153,17 +145,15 @@ Rectangle {
                         selectedRole = "Admin"
                     }
                     console.log("Success! Registering as:", selectedRole)
-                    stackView.pop()
+
+                    stackView.push("qrc:/Dashboard.qml", {
+                        "userRole": selectedRole,
+                        "username": usernameField.text
+                    })
                 }
             }
-        }
 
-        Text {
-            text: "Already have an account? <b>Login</b>"
-            font.pixelSize: 14
-            color: "#FFFFFF"
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
+
 
             MouseArea {
                 anchors.fill: parent

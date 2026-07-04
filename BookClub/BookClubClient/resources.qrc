@@ -4,5 +4,6 @@
         <file>SignUp.qml</file>
         <file>main.qml</file>
         <file>images/giraffe.png</file>
+        <file>Dashboard.qml</file>
     </qresource>
 </RCC>

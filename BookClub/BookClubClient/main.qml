@@ -2,15 +2,15 @@ import QtQuick
 import QtQuick.Controls
 
 Window {
-    id: window
-    width: 400
-    height: 600
+    width: 1000
+    height: 700
     visible: true
-    title: "Book Club"
+    title: "BookClub Project"
 
     StackView {
         id: stackView
         anchors.fill: parent
-        initialItem: "Login.qml"
+        initialItem: "qrc:/Login.qml"
     }
 }
+
