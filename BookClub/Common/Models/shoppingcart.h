@@ -2,26 +2,41 @@
 #define SHOPPINGCART_H
 
 #include <QList>
+#include <QDateTime>
 
-class Book;
+class Order;
 
 class ShoppingCart {
-public:
-    explicit ShoppingCart(int userId = 0);
+private:
+    int id;
+    int userId;
+    QList<int> itemIds;
+    QDateTime createdAt;
 
-    void addBook(int bookId);
+public:
+    explicit ShoppingCart(int userId);
+
+    bool addBook(int bookId);
     bool removeBook(int bookId);
     void clearCart();
 
-    double getTotalFinalPrice() const;
+    // TODO (DB phase): inject BookRepository to calculate prices
+    // double getTotalRawPrice(BookRepository* repo) const;
+    // double getTotalDiscountAmount(BookRepository* repo) const;
+    // double getFinalPayableAmount(BookRepository* repo) const;
 
-    int getUserId() const { return userId; }
-    const QList<int>& getItemIds() const { return itemIds; }
-    bool isEmpty() const { return itemIds.isEmpty(); }
+    // TODO (DB phase): Order* checkout(BookRepository* repo);
 
-private:
-    int userId;
-    QList<int> itemIds;
+    //getters
+    int getId() const;
+    int getUserId() const;
+    const QList<int>& getItemIds() const;
+
+    //setters
+    void setUserId(int newId);
+
+    bool isEmpty() const;
+    QDateTime getCreatedAt() const;
 };
 
 #endif

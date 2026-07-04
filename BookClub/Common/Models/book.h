@@ -24,7 +24,11 @@ private:
     void updateAverageRating();
 
 public:
-    Book(int id = 0, int pubId = 0, const QString& title = "", double price = 0.0);
+    //creating new book
+    Book(int publisherId, const QString& title, const QString& author, double price);
+    //LOADING from DB
+    Book(int id, int publisherId, const QString& title, const QString& author, double price);
+
     ~Book() = default;
 
     // Getters
@@ -43,7 +47,11 @@ public:
     bool getIsAvailable() const;
     double getAverageRating() const;
 
+    double getDiscountAmount() const; //***
+    double getFinalPrice() const;
+
     // Setters
+    void setId(int id);
     void setTitle(const QString& t);
     void setAuthor(const QString& a);
     void setGenre(const QString& g);
@@ -53,6 +61,7 @@ public:
     void setPdfFilePath(const QString& path);
     void setDiscountId(int dId);
     void setAvailable(bool status);
+    void setPublisherId(int newId);
 
     // Methods
     void removeDiscount();

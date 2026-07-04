@@ -1,12 +1,23 @@
 #include "user.h"
 
-User::User(int id, const QString& username, const QString& password,
-           const QString& email, double balance, const QDateTime& createdAt, bool isActive)
-    : Person(id, username, password, email, createdAt, isActive) {
-    this->walletBalance = (balance >= 0) ? balance : 0.0;
+//creat new
+User::User(const QString& username, const QString& password, const QString& email, double balance)
+    : Person(username, password, email),
+    walletBalance(balance)
+{
+    cart = new ShoppingCart();
+    library = new PersonalLibrary();
+}
 
-    this->cart = new ShoppingCart(id);
-    this->library = new PersonalLibrary(id);
+//LOAD from DB
+User::User(int id, const QString& username, const QString& passwordHash,
+           const QString& email, double balance,
+           const QDateTime& createdAt, bool isActive)
+    : Person(id, username, passwordHash, email, createdAt, isActive),
+    walletBalance(balance)
+{
+    cart = new ShoppingCart(this->id);
+    library = new PersonalLibrary(this->id);
 }
 
 User::~User() {
@@ -14,6 +25,7 @@ User::~User() {
     delete this->library;
 }
 
+//getters
 QString User::getRole() const {
     return "User";
 }
@@ -29,6 +41,16 @@ ShoppingCart* User::getCart() const {
 PersonalLibrary* User::getLibrary() const {
     return this->library;
 }
+
+//setter
+void User::setId(int newId) {
+    if (newId == -1) {
+        Person::setId(newId);
+        this->cart->setUserId(newId);
+        this->library->setUserId(newId);
+    }
+}
+
 
 bool User::deposit(double amount) {
     if (amount > 0) {
@@ -46,6 +68,4 @@ bool User::withdraw(double amount) {
     return false;
 }
 
-bool User::canLogin() const {
-    return this->isActive && !this->isBlocked();
-}
+

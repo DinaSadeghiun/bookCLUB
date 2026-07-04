@@ -1,16 +1,30 @@
 #include "publisher.h"
 
-Publisher::Publisher()
-    : Person(), companyName("") {}
+//creat new
+Publisher::Publisher(QString name, QString email, QString password, QString companyName)
+    : Person(name, email, password), companyName(companyName)
+{}
 
-Publisher::Publisher(int id, const QString& username, const QString& password,
-                     const QString& email, const QString& companyName)
-    : Person(id, username, password, email), companyName(companyName) {}
+//LOAD from DB
+Publisher::Publisher(int id, QString name, QString email, QString password, QString companyName)
+    : Person(id, name, email, password), companyName(companyName)
+{}
+
 
 QString Publisher::getRole() const {
     return "Publisher";
 }
 
+// Getters
+QString Publisher::getCompanyName() const { return companyName; }
+QList<int> Publisher::getBookIds() const { return bookIds; }
+QList<int> publisher::getDiscountIds() const { return discountIds; }
+
+// Setters
+void Publisher::setCompanyName(const QString& name) { this->companyName = name; }
+void Publisher::setId(int newId) {
+    Person::setId(newId);
+}
 
 void Publisher::addBook(int bookId) {
     if (!bookIds.contains(bookId)) {
@@ -39,3 +53,8 @@ void Publisher::removeDiscount(int discountId) {
 bool Publisher::hasDiscount(int discountId) const {
     return discountIds.contains(discountId);
 }
+
+
+// Statistics (computed externally, injected here)
+SalesStats Publisher::getSalesStats() const { return salesStats; }
+void Publisher::setSalesStats(const SalesStats& stats) { this->salesStats = stats; }

@@ -24,21 +24,24 @@ private:
     SalesStats salesStats;
 
 public:
-    Publisher();
-    Publisher(int id, const QString& username, const QString& password,
-              const QString& email, const QString& companyName);
+    //creat new
+    Publisher::Publisher(QString name, QString email, QString password, QString companyName);
+
+    //LOAD from DB
+    Publisher::Publisher(int id, QString name, QString email, QString password, QString companyName);
 
     ~Publisher() override = default;
 
     QString getRole() const override;
 
     // Getters
-    QString getCompanyName() const { return companyName; }
-    QList<int> getBookIds() const { return bookIds; }
-    QList<int> getDiscountIds() const { return discountIds; }
+    QString getCompanyName();
+    QList<int> getBookIds();
+    QList<int> getDiscountIds();
 
     // Setters
-    void setCompanyName(const QString& name) { this->companyName = name; }
+    void setCompanyName(const QString& name);
+    void setId(int newId) override;
 
     // Book management
     void addBook(int bookId);
@@ -51,9 +54,8 @@ public:
     bool hasDiscount(int discountId) const;
 
     // Statistics (computed externally, injected here)
-    SalesStats getSalesStats() const { return salesStats; }
-    void setSalesStats(const SalesStats& stats) { this->salesStats = stats; }
-
+    SalesStats getSalesStats() const;
+    void setSalesStats(const SalesStats& stats);
 
 };
 

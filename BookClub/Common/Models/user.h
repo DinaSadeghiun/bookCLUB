@@ -12,9 +12,14 @@ private:
     PersonalLibrary* library;
 
 public:
-    User(int id = 0, const QString& username = "", const QString& password = "",
-         const QString& email = "", double balance = 0.0,
-         const QDateTime& createdAt = QDateTime::currentDateTime(), bool isActive = true);
+    //creat new
+    User(const QString& username, const QString& password, const QString& email, double balance);
+
+    //LOAD from DB
+    User(int id, const QString& username, const QString& passwordHash,
+               const QString& email, double balance,
+               const QDateTime& createdAt, bool isActive);
+
 
     ~User() override;
 
@@ -25,10 +30,12 @@ public:
     ShoppingCart* getCart() const;
     PersonalLibrary* getLibrary() const;
 
+    //setter
+    void setId(int newId) override;
+
     // Methods
     bool deposit(double amount);
     bool withdraw(double amount);
-    bool canLogin() const;
 };
 
 #endif

@@ -1,13 +1,12 @@
 #include "shoppingcart.h"
-//#include "databasemanager.h"
 
 ShoppingCart::ShoppingCart(int userId)
-    : userId(userId) {}
+    : id(-1), userId(userId), createdAt(QDateTime::currentDateTime()) {}
 
-void ShoppingCart::addBook(int bookId) {
-    if (!itemIds.contains(bookId)) {
-        itemIds.append(bookId);
-    }
+bool ShoppingCart::addBook(int bookId) {
+    if (itemIds.contains(bookId)) return false;
+    itemIds.append(bookId);
+    return true;
 }
 
 bool ShoppingCart::removeBook(int bookId) {
@@ -18,14 +17,16 @@ void ShoppingCart::clearCart() {
     itemIds.clear();
 }
 
-double ShoppingCart::getTotalFinalPrice() const {
-    double total = 0.0;
+//getters
+int ShoppingCart::getId() const { return id; }
+int ShoppingCart::getUserId() const { return userId; }
+const QList<int>& ShoppingCart::getItemIds() const { return itemIds; }
 
- //not connected to databace yet, so price of all books is 50 for now
-    for (int id : itemIds) {
-        Q_UNUSED(id);
-        total += 50.0;
-    }
-
-    return total;
+//setters
+void ShoppingCart::setUserId(int newId) {
+    userId = newId;
 }
+
+
+bool ShoppingCart::isEmpty() const { return itemIds.isEmpty(); }
+QDateTime ShoppingCart::getCreatedAt() const { return createdAt; }

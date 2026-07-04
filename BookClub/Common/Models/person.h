@@ -34,7 +34,7 @@ public:
     bool verifyPassword(const QString& password) const;
 
     // Setters
-    void setId(int newId);
+    virtual void setId(int newId);
     void setUsername(const QString& username);
     void setPassword(const QString& password);
     void setEmail(const QString& email);

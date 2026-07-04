@@ -99,3 +99,31 @@ PersonalLibrary::Shelf* PersonalLibrary::findShelf(const QString &name) const {
     }
     return nullptr;
 }
+
+bool PersonalLibrary::addBookToShelf(const QString &shelfName, int bookId) {   ///new added for easier use in ui
+    if (!hasPurchased(bookId)) {
+        return false;
+    }
+
+    Shelf* shelf = findShelf(shelfName);
+    if (shelf != nullptr) {
+        shelf->addBook(bookId);
+        return true;
+    }
+    return false;
+}
+
+bool PersonalLibrary::removeBookFromShelf(const QString &shelfName, int bookId) {
+    Shelf* shelf = findShelf(shelfName);
+    if (shelf != nullptr) {
+        return shelf->removeBook(bookId);
+    }
+    return false;
+}
+
+
+int PersonalLibrary::getUserId() const { return userId;}
+void PersonalLibrary::setUserId(int newId) {
+    userId = newId;
+}
+
