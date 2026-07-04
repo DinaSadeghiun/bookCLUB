@@ -1,16 +1,18 @@
 #include "person.h"
 
-Person::Person(int id, const QString& username, const QString& password,
-               const QString& email, const QDateTime& createdAt, bool isActive) {
-    this->id = id;
-    this->username = encryptData(username);
+Person::Person(const QString& username, const QString& password, const QString& email)
+    : id(-1), username(username), email(email),
+    createdAt(QDateTime::currentDateTime()), isActive(true)
+{
     this->passwordHash = hashPassword(password);
-    this->email = encryptData(email);
-    this->createdAt = createdAt;
-    this->isActive = isActive;
 }
 
-Person::~Person() {}
+Person::Person(int id, const QString& username, const QString& passwordHash,
+               const QString& email, const QDateTime& createdAt, bool isActive)
+    : id(id), username(username), passwordHash(passwordHash),
+    email(email), createdAt(createdAt), isActive(isActive
+{}
+
 
 // Getters
 int Person::getId() const {
@@ -39,8 +41,10 @@ bool Person::verifyPassword(const QString& password) const {
 }
 
 // Setters
-void Person::setId(int id) {
-    this->id = id;
+void Person::setId(int newId) {
+    if (id == -1) {
+        newId= id;
+    }
 }
 
 void Person::setUsername(const QString& username) {
@@ -60,16 +64,58 @@ void Person::setIsActive(bool isActive) {
 }
 
 // Status Methods
-void Person::blockAccount() {
-    this->isActive = false;
-}
-
-void Person::unblockAccount() {
+void Person::active() {
     this->isActive = true;
 }
 
-bool Person::isBlocked() const {
-    return !this->isActive;
+void Person::deactive() {
+    this->isActive = false;
+}
+
+bool Person::canLogin() const {
+    return isActive;
+}
+
+
+//Account Managemenet
+bool Person::changePassword(const QString& oldPassword, const QString& newPassword) {
+    if (!verifyPassword(oldPassword)) {
+        return false;
+    }
+
+    if (newPassword.trimmed().isEmpty()) {
+        return false;
+    }
+
+    setPassword(newPassword);
+    return true;
+}
+
+bool Person::changeUsername(const QString& newUsername, const QString& password) {
+    if (!verifyPassword(password)) {
+        return false;
+    }
+
+    if (newUsername.trimmed().isEmpty()) {
+        return false;
+    }
+
+    this->username = encryptData(newUsername);
+    return true;
+}
+
+bool Person::changeEmail(const QString& newEmail, const QString& password) {
+    if (!verifyPassword(password)) {
+        return false;
+    }
+
+    QString trimmedEmail = newEmail.trimmed();
+    if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
+        return false;
+    }
+
+    this->email = encryptData(trimmedEmail);
+    return true;
 }
 
 
