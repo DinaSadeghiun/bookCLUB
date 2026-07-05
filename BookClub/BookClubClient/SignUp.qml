@@ -133,25 +133,26 @@ Rectangle {
             }
 
             onClicked: {
-                if (usernameField.text === "" || passwordField.text === "" ) {
-                    console.log("Error: Fields cannot be empty!")
-                } else if (passwordField.text !== confirmPasswordField.text) {
-                    console.log("Error: Passwords do not match!")
-                } else {
-                    var selectedRole = "User"
-                    if (radioPublisher.checked) {
-                        selectedRole = "Publisher"
-                    } else if (radioAdmin.checked) {
-                        selectedRole = "Admin"
-                    }
-                    console.log("Success! Registering as:", selectedRole)
+                if (usernameField.text !== "" && passwordField.text !== "") {
+                    let selectedRole = roleGroup.current.text;
 
-                    stackView.push("qrc:/Dashboard.qml", {
-                        "userRole": selectedRole,
-                        "username": usernameField.text
-                    })
+                    if (selectedRole === "User") {
+                        stackView.push("qrc:/GenreSelection.qml", {
+                            "username": usernameField.text,
+                            "userRole": selectedRole
+                        });
+                    } else {
+                        stackView.push("qrc:/Dashboard.qml", {
+                            "username": usernameField.text,
+                            "userRole": selectedRole
+                        });
+                    }
+                } else {
+                    console.log("Validation failed: Empty fields");
                 }
             }
+
+
 
 
 
