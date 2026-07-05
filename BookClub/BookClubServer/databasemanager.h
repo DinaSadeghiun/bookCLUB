@@ -5,16 +5,20 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QString>
+#include <QDebug>
 
 class DatabaseManager {
-private:
     QSqlDatabase db;
     DatabaseManager();
 
 public:
     static DatabaseManager& instance();
     bool initDatabase(const QString& dbName = "bookclub.db");
-    bool registerUser(const QString& username, const QString& password, const QString& email, const QString& role);
+    void closeDatabase();
+
+private:
+    bool createTables();
+    void enableForeignKeys();
 };
 
 #endif
