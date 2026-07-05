@@ -1,13 +1,13 @@
 #include "publisher.h"
 
 //creat new
-Publisher::Publisher(QString name, QString email, QString password, QString companyName)
-    : Person(name, email, password), companyName(companyName)
+Publisher::Publisher(QString name, QString password, QString companyName)
+    : Person(name, password), companyName(companyName)
 {}
 
 //LOAD from DB
-Publisher::Publisher(int id, QString name, QString email, QString password, QString companyName)
-    : Person(id, name, email, password), companyName(companyName)
+Publisher::Publisher(int id, QString name, QString password, QString companyName)
+    : Person(id, name, password), companyName(companyName)
 {}
 
 
@@ -18,7 +18,7 @@ QString Publisher::getRole() const {
 // Getters
 QString Publisher::getCompanyName() const { return companyName; }
 QList<int> Publisher::getBookIds() const { return bookIds; }
-QList<int> publisher::getDiscountIds() const { return discountIds; }
+QList<int> Publisher::getDiscountIds() const { return discountIds; }
 
 // Setters
 void Publisher::setCompanyName(const QString& name) { this->companyName = name; }

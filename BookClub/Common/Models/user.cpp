@@ -1,19 +1,19 @@
 #include "user.h"
 
 //creat new
-User::User(const QString& username, const QString& password, const QString& email, double balance)
-    : Person(username, password, email),
+User::User(const QString& username, const QString& password,  double balance)
+    : Person(username, password),
     walletBalance(balance)
 {
-    cart = new ShoppingCart();
-    library = new PersonalLibrary();
+    cart = new ShoppingCart(this->id);
+    library = new PersonalLibrary(this->id);
 }
 
 //LOAD from DB
 User::User(int id, const QString& username, const QString& passwordHash,
-           const QString& email, double balance,
+            double balance,
            const QDateTime& createdAt, bool isActive)
-    : Person(id, username, passwordHash, email, createdAt, isActive),
+    : Person(id, username, passwordHash, createdAt, isActive),
     walletBalance(balance)
 {
     cart = new ShoppingCart(this->id);

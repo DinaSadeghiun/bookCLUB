@@ -16,7 +16,7 @@ Discount::Discount(double value, DiscountType type, QDateTime start, QDateTime e
     value(value),
     type(type),
     startDate(start),
-    endDate(end
+    endDate(end),
     active(true)
  {}
 
@@ -29,9 +29,9 @@ QDateTime Discount::getEndDate() const { return endDate; }
 bool Discount::isActive() const { return active; }
 
 // Setters
-void setId(int newId) {
+void Discount::setId(int newId) {
     if (id == -1) {
-        newId = id;
+        id = newId;
     }
 }
 void Discount::setValue(double v) { if (v >= 0) value = v; }

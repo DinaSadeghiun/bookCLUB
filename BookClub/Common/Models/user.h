@@ -13,11 +13,11 @@ private:
 
 public:
     //creat new
-    User(const QString& username, const QString& password, const QString& email, double balance);
+    User(const QString& username, const QString& password,  double balance);
 
     //LOAD from DB
     User(int id, const QString& username, const QString& passwordHash,
-               const QString& email, double balance,
+                double balance,
                const QDateTime& createdAt, bool isActive);
 
 

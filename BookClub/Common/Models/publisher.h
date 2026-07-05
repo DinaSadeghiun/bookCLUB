@@ -25,19 +25,19 @@ private:
 
 public:
     //creat new
-    Publisher::Publisher(QString name, QString email, QString password, QString companyName);
+    Publisher(QString name, QString password, QString companyName);
 
     //LOAD from DB
-    Publisher::Publisher(int id, QString name, QString email, QString password, QString companyName);
+    Publisher(int id, QString name, QString password, QString companyName);
 
     ~Publisher() override = default;
 
     QString getRole() const override;
 
     // Getters
-    QString getCompanyName();
-    QList<int> getBookIds();
-    QList<int> getDiscountIds();
+    QString getCompanyName() const;
+    QList<int> getBookIds() const;
+    QList<int> getDiscountIds() const;
 
     // Setters
     void setCompanyName(const QString& name);

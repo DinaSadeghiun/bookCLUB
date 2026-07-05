@@ -9,7 +9,10 @@ public:
     Admin(const QString& username, const QString& password);
     //constructor for LOADING from DB
     Admin(int id, const QString& username, const QString& password);
-    ~Admin() override;
+
+    ~Admin() override = default;
+
+    QString getRole() const override;
 };
 
 #endif

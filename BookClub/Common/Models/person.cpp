@@ -1,16 +1,15 @@
 #include "person.h"
 
-Person::Person(const QString& username, const QString& password, const QString& email)
-    : id(-1), username(username), email(email),
-    createdAt(QDateTime::currentDateTime()), isActive(true)
+Person::Person(const QString& username, const QString& password)
+    : id(-1), username(username)
 {
     this->passwordHash = hashPassword(password);
 }
 
 Person::Person(int id, const QString& username, const QString& passwordHash,
-               const QString& email, const QDateTime& createdAt, bool isActive)
+                const QDateTime& createdAt, bool isActive)
     : id(id), username(username), passwordHash(passwordHash),
-    email(email), createdAt(createdAt), isActive(isActive
+    createdAt(createdAt), isActive(isActive)
 {}
 
 
@@ -23,9 +22,6 @@ QString Person::getUsername() const {
     return decryptData(this->username);
 }
 
-QString Person::getEmail() const {
-    return decryptData(this->email);
-}
 
 QDateTime Person::getCreatedAt() const {
     return this->createdAt;
@@ -43,7 +39,7 @@ bool Person::verifyPassword(const QString& password) const {
 // Setters
 void Person::setId(int newId) {
     if (id == -1) {
-        newId= id;
+        id= newId;
     }
 }
 
@@ -53,10 +49,6 @@ void Person::setUsername(const QString& username) {
 
 void Person::setPassword(const QString& password) {
     this->passwordHash = hashPassword(password);
-}
-
-void Person::setEmail(const QString& email) {
-    this->email = encryptData(email);
 }
 
 void Person::setIsActive(bool isActive) {
@@ -101,20 +93,6 @@ bool Person::changeUsername(const QString& newUsername, const QString& password)
     }
 
     this->username = encryptData(newUsername);
-    return true;
-}
-
-bool Person::changeEmail(const QString& newEmail, const QString& password) {
-    if (!verifyPassword(password)) {
-        return false;
-    }
-
-    QString trimmedEmail = newEmail.trimmed();
-    if (trimmedEmail.isEmpty() || !trimmedEmail.contains("@")) {
-        return false;
-    }
-
-    this->email = encryptData(trimmedEmail);
     return true;
 }
 

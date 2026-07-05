@@ -11,22 +11,20 @@ protected:
     int id;
     QString username;
     QString passwordHash;
-    QString email;
     QDateTime createdAt;
     bool isActive;
 
 public:
     Person(int id, const QString& username, const QString& passwordHash,
-                   const QString& email, const QDateTime& createdAt, bool isActive);
+                    const QDateTime& createdAt = QDateTime::currentDateTime(), bool isActive = true);
 
-    Person(const QString& username, const QString& password, const QString& email);
+    Person(const QString& username, const QString& password);
 
     virtual ~Person() = default;
 
     // Getters
     int getId() const;
     QString getUsername() const;
-    QString getEmail() const;
     QDateTime getCreatedAt() const;
     bool getIsActive() const;
 
@@ -37,7 +35,6 @@ public:
     virtual void setId(int newId);
     void setUsername(const QString& username);
     void setPassword(const QString& password);
-    void setEmail(const QString& email);
     void setIsActive(bool isActive);
 
     // Methods
@@ -51,7 +48,6 @@ public:
     // Account management
     bool changePassword(const QString& oldPassword, const QString& newPassword);
     bool changeUsername(const QString& newUsername, const QString& password);
-    bool changeEmail(const QString& newEmail, const QString& password);
 
 protected:
     static QString hashPassword(const QString& password);
