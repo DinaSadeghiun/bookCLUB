@@ -14,6 +14,7 @@ RESOURCES += \
 
 DISTFILES += \
     Dashboard.qml \
+    UserPanel.qml \
     main.qml \
     Login.qml \
     SignUp.qml
