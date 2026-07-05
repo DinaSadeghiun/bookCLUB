@@ -112,57 +112,45 @@ Rectangle {
 
         Button {
             id: registerButton
-            text: "REGISTER"
-            Layout.fillWidth: true
-            Layout.preferredHeight: 50
-            Layout.topMargin: 10
-
-            contentItem: Text {
-                text: registerButton.text
-                font.pixelSize: 16
-                font.bold: true
-                color: "#2C003E"
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-            }
-
-            background: Rectangle {
-                radius: 10
-                color: registerButton.pressed ? "#E6C200" : "#FFD700"
-                Behavior on color { ColorAnimation { duration: 100 } }
-            }
+            text: "Register"
+            // ... existing styles ...
 
             onClicked: {
                 if (usernameField.text !== "" && passwordField.text !== "") {
                     let selectedRole = roleGroup.current.text;
 
                     if (selectedRole === "User") {
+                        // Change: Directly push GenreSelection instead of going to Login
                         stackView.push("qrc:/GenreSelection.qml", {
                             "username": usernameField.text,
                             "userRole": selectedRole
                         });
                     } else {
+                        // For Admin or Publisher, go straight to Dashboard
                         stackView.push("qrc:/Dashboard.qml", {
                             "username": usernameField.text,
                             "userRole": selectedRole
                         });
                     }
                 } else {
-                    console.log("Validation failed: Empty fields");
+                    console.log("Error: Fields are empty");
                 }
             }
+        }
 
 
 
 
 
+        Text {
+            text: "Already have an account? Login"
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    stackView.pop()
+                    stackView.pop() // This correctly goes back to Login
                 }
             }
         }
-    }
+}
 }
