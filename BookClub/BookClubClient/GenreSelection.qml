@@ -2,138 +2,114 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-Item {
-    id: genreSelectionPage
+Rectangle {
+    id: genrePage
     anchors.fill: parent
 
-    // Array to store selected genres
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#4B0082" }
+        GradientStop { position: 1.0; color: "#2C003E" }
+    }
+
     property var selectedGenres: []
+    property int maxSelection: 3
+    property string username: ""
 
-    Rectangle {
+    ColumnLayout {
         anchors.fill: parent
-        color: "#F8F9FA" // Light background color
+        anchors.margins: 30
+        spacing: 25
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            width: parent.width * 0.85
-            spacing: 30
+        Text {
+            text: "Please select 1 to 3 genres"
+            font.pixelSize: 24
+            font.bold: true
+            color: "#FFD700"
+            Layout.alignment: Qt.AlignHCenter
+        }
 
-            // Header Section
-            ColumnLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 10
+        GridView {
+            id: genreGrid
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            cellWidth: genreGrid.width / 2
+            cellHeight: 70
+            clip: true
+            model: ["Fiction", "Non-Fiction", "Science", "History", "Fantasy", "Mystery", "Biography", "Poetry"]
 
-                Text {
-                    text: "Welcome to BookClub!"
-                    font.pixelSize: 28
-                    font.bold: true
-                    color: "#2C3E50"
-                    Layout.alignment: Qt.AlignHCenter
-                }
+            delegate: Item {
+                width: genreGrid.cellWidth
+                height: genreGrid.cellHeight
 
-                Text {
-                    text: "Select 1 to 3 genres that you love"
-                    font.pixelSize: 16
-                    color: "#7F8C8D"
-                    Layout.alignment: Qt.AlignHCenter
-                }
-            }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    radius: 12
+                    color: selectedGenres.indexOf(modelData) !== -1 ? "#FFD700" : "transparent"
+                    border.color: "#FFD700"
+                    border.width: 2
 
-            // Genre Grid
-            GridLayout {
-                id: genreGrid
-                columns: 3
-                columnSpacing: 15
-                rowSpacing: 15
-                Layout.alignment: Qt.AlignHCenter
-
-                Repeater {
-                    model: ["Fiction", "Science", "History", "Biography", "Fantasy",
-                            "Mystery", "Horror", "Art", "Self-Help"]
-
-                    Button {
-                        id: genreButton
+                    Text {
+                        anchors.centerIn: parent
                         text: modelData
-                        checkable: true
+                        color: selectedGenres.indexOf(modelData) !== -1 ? "#2C003E" : "white"
+                        font.bold: true
+                        font.pixelSize: 16
+                    }
 
-                        // Custom style for selection
-                        contentItem: Text {
-                            text: genreButton.text
-                            color: genreButton.checked ? "white" : "#2C3E50"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            font.bold: genreButton.checked
-                        }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            let genres = [...selectedGenres];
+                            let index = genres.indexOf(modelData);
 
-                        background: Rectangle {
-                            implicitWidth: 100
-                            implicitHeight: 45
-                            color: genreButton.checked ? "#3498DB" : "white"
-                            border.color: genreButton.checked ? "#2980B9" : "#BDC3C7"
-                            radius: 8
-                        }
-
-                        onCheckedChanged: {
-                            if (checked) {
-                                if (selectedGenres.length < 3) {
-                                    selectedGenres.push(modelData);
-                                } else {
-                                    // Prevent selecting more than 3
-                                    checked = false;
-                                }
-                            } else {
-                                // Remove genre if unchecked
-                                var index = selectedGenres.indexOf(modelData);
-                                if (index !== -1) {
-                                    selectedGenres.splice(index, 1);
-                                }
+                            if (index !== -1) {
+                                genres.splice(index, 1);
+                            } else if (genres.length < maxSelection) {
+                                genres.push(modelData);
                             }
+                            selectedGenres = genres;
                         }
                     }
                 }
             }
+        }
 
-            // Navigation Button
-            Button {
-                id: finishButton
-                text: "Continue to Library"
-                Layout.preferredWidth: 250
-                Layout.preferredHeight: 50
-                Layout.alignment: Qt.AlignHCenter
+        Text {
+            id: counterText
+            text: "Selected: " + selectedGenres.length + " / " + maxSelection
+            color: "white"
+            font.pixelSize: 18
+            Layout.alignment: Qt.AlignHCenter
+        }
 
-                // Enabled only if 1, 2, or 3 genres are selected
-                enabled: selectedGenres.length >= 1 && selectedGenres.length <= 3
+        Button {
+            id: finishButton
+            text: "Finish"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 50
+            enabled: selectedGenres.length >= 1 && selectedGenres.length <= 3
 
-                background: Rectangle {
-                    color: finishButton.enabled ? "#2ECC71" : "#BDC3C7"
-                    radius: 25
-                }
-
-                contentItem: Text {
-                    text: finishButton.text
-                    color: "white"
-                    font.bold: true
-                    font.pixelSize: 16
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    console.log("Selected Genres:", selectedGenres)
-                    // Moving to Dashboard and passing selected genres
-                    stackView.push("qrc:/Dashboard.qml", {
-                        "userRole": "User",
-                        "preferredGenres": selectedGenres
-                    })
-                }
+            background: Rectangle {
+                color: finishButton.enabled ? "#FFD700" : "#555555"
+                radius: 10
             }
 
-            // Display current count for the user
-            Text {
-                text: "Selected: " + selectedGenres.length + " / 3"
-                font.pixelSize: 12
-                color: selectedGenres.length === 3 ? "#E74C3C" : "#7F8C8D"
-                Layout.alignment: Qt.AlignHCenter
+            contentItem: Text {
+                text: finishButton.text
+                color: "#2C003E"
+                font.bold: true
+                font.pixelSize: 20
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                stackView.push("qrc:/Dashboard.qml", {
+                    "username": username,
+                    "userRole": "User",
+                    "preferredGenres": selectedGenres
+                });
             }
         }
     }
