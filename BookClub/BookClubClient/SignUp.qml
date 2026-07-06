@@ -42,7 +42,6 @@ Rectangle {
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
 
-
         TextField {
             id: passwordField
             placeholderText: "Password"
@@ -110,47 +109,69 @@ Rectangle {
             }
         }
 
+        Text {
+            id: errorText
+            text: "Please fill all fields!"
+            color: "#FF6B6B"
+            font.pixelSize: 14
+            visible: false
+            Layout.alignment: Qt.AlignHCenter
+        }
+
         Button {
             id: registerButton
             text: "Register"
-            // ... existing styles ...
+            Layout.fillWidth: true
+            Layout.preferredHeight: 45
+            Layout.alignment: Qt.AlignHCenter
+
+            background: Rectangle {
+                color: "#FFD700"
+                radius: 10
+            }
+
+            contentItem: Text {
+                text: registerButton.text
+                color: "#2C003E"
+                font.bold: true
+                font.pixelSize: 16
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
 
             onClicked: {
                 if (usernameField.text !== "" && passwordField.text !== "") {
+                    errorText.visible = false
                     let selectedRole = roleGroup.current.text;
 
                     if (selectedRole === "User") {
-                        // Change: Directly push GenreSelection instead of going to Login
                         stackView.push("qrc:/GenreSelection.qml", {
                             "username": usernameField.text,
                             "userRole": selectedRole
                         });
                     } else {
-                        // For Admin or Publisher, go straight to Dashboard
                         stackView.push("qrc:/Dashboard.qml", {
                             "username": usernameField.text,
                             "userRole": selectedRole
                         });
                     }
                 } else {
-                    console.log("Error: Fields are empty");
+                    errorText.visible = true
                 }
             }
         }
 
-
-
-
-
         Text {
             text: "Already have an account? Login"
+            color: "white"
+            Layout.alignment: Qt.AlignHCenter
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    stackView.pop() // This correctly goes back to Login
+                    stackView.pop()
                 }
             }
         }
-}
+    }
 }
