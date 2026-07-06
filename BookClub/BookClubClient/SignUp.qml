@@ -142,7 +142,14 @@ Rectangle {
             onClicked: {
                 if (usernameField.text !== "" && passwordField.text !== "") {
                     errorText.visible = false
-                    let selectedRole = roleGroup.current.text;
+
+                    // Safe role detection based on checked state
+                    let selectedRole = "User";
+                    if (radioPublisher.checked) {
+                        selectedRole = "Publisher";
+                    } else if (radioAdmin.checked) {
+                        selectedRole = "Admin";
+                    }
 
                     if (selectedRole === "User") {
                         stackView.push("qrc:/GenreSelection.qml", {
@@ -159,7 +166,7 @@ Rectangle {
                     errorText.visible = true
                 }
             }
-        }
+
 
         Text {
             text: "Already have an account? Login"
