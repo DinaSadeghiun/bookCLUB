@@ -771,7 +771,36 @@ release/mainwindow.o: ../../../BookClubServer/mainwindow.cpp ../../../BookClubSe
 		D:/QT/6.5.3/mingw_64/include/QtGui/QTransform \
 		D:/QT/6.5.3/mingw_64/include/QtCore/qnativeinterface.h \
 		D:/QT/6.5.3/mingw_64/include/QtWidgets/qtabwidget.h \
-		ui_mainwindow.h
+		ui_mainwindow.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/QVariant \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/QApplication \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/qapplication.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qcoreapplication.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qeventloop.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qcoreapplication_platform.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qfuture.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qfutureinterface.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qmutex.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qtsan_impl.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qresultstore.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qfuture_impl.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qthreadpool.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qthread.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qdeadlinetimer.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qelapsedtimer.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qrunnable.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qexception.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qpromise.h \
+		D:/QT/6.5.3/mingw_64/include/QtGui/qguiapplication.h \
+		D:/QT/6.5.3/mingw_64/include/QtGui/qinputmethod.h \
+		D:/QT/6.5.3/mingw_64/include/QtCore/qlocale.h \
+		D:/QT/6.5.3/mingw_64/include/QtGui/qguiapplication_platform.h \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/QMenuBar \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/qmenubar.h \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/qmenu.h \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/QStatusBar \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/qstatusbar.h \
+		D:/QT/6.5.3/mingw_64/include/QtWidgets/QWidget
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\mainwindow.o ..\..\..\BookClubServer\mainwindow.cpp
 
 release/moc_mainwindow.o: release/moc_mainwindow.cpp 

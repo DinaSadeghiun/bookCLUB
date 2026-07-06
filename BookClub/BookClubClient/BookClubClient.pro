@@ -14,6 +14,7 @@ RESOURCES += \
 
 DISTFILES += \
     Dashboard.qml \
+    GenreSelection.qml \
     UserPanel.qml \
     main.qml \
     Login.qml \

@@ -55,6 +55,8 @@ OBJECTS       = release/main.o \
 		release/qrc_resources.o
 
 DIST          = Dashboard.qml \
+		GenreSelection.qml \
+		UserPanel.qml \
 		main.qml \
 		Login.qml \
 		SignUp.qml  ..\..\..\BookClubClient\main.cpp
