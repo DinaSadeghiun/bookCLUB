@@ -1,0 +1,28 @@
+# Qt Creator generated files
+*.user
+*.user.*
+
+# Build directories (Standard Qt build folders)
+build-*/
+debug/
+release/
+
+# Compiled Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.dll
+*.so
+*.app
+
+# Version control (if you have sub-modules)
+.DS_Store
+Thumbs.db
+
+# Qt generated source files
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+Makefile*
