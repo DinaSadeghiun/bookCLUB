@@ -3,139 +3,145 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Rectangle {
-    id: genrePage
-    anchors.fill: parent
-
-    gradient: Gradient {
-        GradientStop { position: 0.0; color: "#4B0082" }
-        GradientStop { position: 1.0; color: "#2C003E" }
-    }
+    id: genreSelectionPage
+    anchors.fill: parent // Crucial to prevent the white gap on the right
+    color: "#1A0F1F"
 
     property var selectedGenres: []
-    property int maxSelection: 3
-    property string username: ""
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 15
 
+        // Header
         Text {
-            text: "Choose Your Genres"
-            font.pixelSize: 26
+            text: "Choose Your Favorites"
+            color: "#D4AF37"
+            font.pixelSize: 24
             font.bold: true
-            color: "#FFD700"
             Layout.alignment: Qt.AlignHCenter
         }
 
+        Text {
+            text: "Select 1 to 3 genres to personalize your feed"
+            color: "#D4AF37"
+            font.pixelSize: 14
+            opacity: 0.8
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        // Genre Grid
         GridView {
             id: genreGrid
             Layout.fillWidth: true
             Layout.fillHeight: true
-            cellWidth: genreGrid.width / 3
-            cellHeight: cellWidth + 40
+            cellWidth: width / 2
+            cellHeight: 220
             clip: true
 
             model: ListModel {
-                ListElement { name: "Fiction"; img: "qrc:/assets/genres/fiction.jpg" }
-                ListElement { name: "NonFiction"; img: "qrc:/assets/genres/nonfiction.jpg" }
-                ListElement { name: "Mystery"; img: "qrc:/assets/genres/mystery.jpg" }
-                ListElement { name: "Romance"; img: "qrc:/assets/genres/romance.jpg" }
-                ListElement { name: "SciFi"; img: "qrc:/assets/genres/scifi.jpg" }
-                ListElement { name: "Fantasy"; img: "qrc:/assets/genres/fantasy.jpg" }
-                ListElement { name: "Biography"; img: "qrc:/assets/genres/biography.jpg" }
-                ListElement { name: "History"; img: "qrc:/assets/genres/history.jpg" }
-                ListElement { name: "SelfHelp"; img: "qrc:/assets/genres/selfhelp.jpg" }
-                ListElement { name: "Poetry"; img: "qrc:/assets/genres/poetry.jpg" }
-                ListElement { name: "Children"; img: "qrc:/assets/genres/children.jpg" }
-                ListElement { name: "Other"; img: "qrc:/assets/genres/other.jpg" }
+                ListElement { name: "Fiction"; prompt: "Imaginary stories and adventures"; img: "qrc:/assets/genres/fiction.png" }
+                ListElement { name: "NonFiction"; prompt: "Real-world facts and knowledge"; img: "qrc:/assets/genres/nonFiction.png" }
+                ListElement { name: "Mystery"; prompt: "Solving puzzles and crimes"; img: "qrc:/assets/genres/mystery.png" }
+                ListElement { name: "Romance"; prompt: "Love stories and relationships"; img: "qrc:/assets/genres/romance.png" }
+                ListElement { name: "SciFi"; prompt: "Future tech and space exploration"; img: "qrc:/assets/genres/sciFI.png" }
+                ListElement { name: "Fantasy"; prompt: "Magic and mythical creatures"; img: "qrc:/assets/genres/fantasy.png" }
+                ListElement { name: "Biography"; prompt: "Life stories of real people"; img: "qrc:/assets/genres/biography.jpg" }
+                ListElement { name: "History"; prompt: "Exploring the events of the past"; img: "qrc:/assets/genres/history.png" }
+                ListElement { name: "SelfHelp"; prompt: "Personal growth and motivation"; img: "qrc:/assets/genres/selfHelp.png" }
+                ListElement { name: "Poetry"; prompt: "Rhythmic and emotional verses"; img: "qrc:/assets/genres/poetry.png" }
+                ListElement { name: "Children"; prompt: "Fun stories for young minds"; img: "qrc:/assets/genres/children.png" }
+                ListElement { name: "Other"; prompt: "Explore diverse categories"; img: "qrc:/assets/genres/other.png" }
             }
 
             delegate: Item {
                 width: genreGrid.cellWidth
                 height: genreGrid.cellHeight
 
-                ColumnLayout {
+                Rectangle {
                     anchors.fill: parent
-                    anchors.margins: 5
-                    spacing: 8
+                    anchors.margins: 8
+                    radius: 15
+                    color: selectedGenres.indexOf(model.name) !== -1 ? "#D4AF37" : "#2D1B33"
+                    border.color: "#D4AF37"
+                    border.width: 2
 
-                    Rectangle {
-                        Layout.preferredWidth: parent.width - 10
-                        Layout.preferredHeight: Layout.preferredWidth
-                        Layout.alignment: Qt.AlignHCenter
-                        radius: 12
-                        clip: true
-                        border.color: selectedGenres.indexOf(name) !== -1 ? "#FFD700" : "transparent"
-                        border.width: 3
-                        color: "#3B0062"
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 10
+                        width: parent.width - 20
 
                         Image {
-                            anchors.fill: parent
-                            source: img
-                            fillMode: Image.PreserveAspectCrop
-                            smooth: true
+                            source: model.img
+                            width: 85
+                            height: 85
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            fillMode: Image.PreserveAspectFit
                         }
 
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "#4B0082"
-                            opacity: selectedGenres.indexOf(name) !== -1 ? 0.0 : 0.3
+                        Text {
+                            text: model.name
+                            color: selectedGenres.indexOf(model.name) !== -1 ? "#2D1B33" : "#D4AF37"
+                            font.bold: true
+                            font.pixelSize: 16
+                            anchors.horizontalCenter: parent.horizontalCenter
                         }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                let genres = [...selectedGenres];
-                                let index = genres.indexOf(name);
-                                if (index !== -1) {
-                                    genres.splice(index, 1);
-                                } else if (genres.length < maxSelection) {
-                                    genres.push(name);
-                                }
-                                selectedGenres = genres;
-                            }
+                        Text {
+                            text: model.prompt
+                            color: selectedGenres.indexOf(model.name) !== -1 ? "#2D1B33" : "#D4AF37"
+                            font.pixelSize: 11
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                            opacity: 0.9
                         }
                     }
 
-                    Text {
-                        text: name
-                        color: selectedGenres.indexOf(name) !== -1 ? "#FFD700" : "white"
-                        font.bold: true
-                        font.pixelSize: 14
-                        Layout.alignment: Qt.AlignHCenter
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            var index = selectedGenres.indexOf(model.name);
+                            if (index !== -1) {
+                                selectedGenres.splice(index, 1);
+                            } else if (selectedGenres.length < 3) {
+                                selectedGenres.push(model.name);
+                            }
+                            var temp = selectedGenres;
+                            selectedGenres = [];
+                            selectedGenres = temp;
+                        }
                     }
                 }
             }
         }
 
+        // Continue Button
         Button {
-            id: finishButton
-            text: "Continue (" + selectedGenres.length + "/" + maxSelection + ")"
+            id: continueButton
+            text: "Continue (" + selectedGenres.length + "/3)"
+            enabled: selectedGenres.length > 0
             Layout.fillWidth: true
             Layout.preferredHeight: 50
-            enabled: selectedGenres.length >= 1
+            Layout.bottomMargin: 10
 
             background: Rectangle {
-                color: finishButton.enabled ? "#FFD700" : "#555555"
+                color: continueButton.enabled ? "#D4AF37" : "#444444"
                 radius: 10
             }
 
             contentItem: Text {
-                text: finishButton.text
-                color: "#2C003E"
-                font.bold: true
+                text: continueButton.text
+                color: "#1A0F1F"
                 font.pixelSize: 18
+                font.bold: true
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
 
             onClicked: {
-                stackView.push("qrc:/Dashboard.qml", {
-                    "username": username,
-                    "userRole": "User",
-                    "preferredGenres": selectedGenres
-                });
+                stackView.push("Dashboard.qml", { "userGenres": selectedGenres })
             }
         }
     }

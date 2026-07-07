@@ -104,10 +104,23 @@ compiler_rcc_clean:
 debug/qrc_resources.cpp: ../../../BookClubClient/resources.qrc \
 		D:/QT/6.5.3/mingw_64/bin/rcc.exe \
 		../../../BookClubClient/SignUp.qml \
+		../../../BookClubClient/GenreSelection.qml \
 		../../../BookClubClient/Dashboard.qml \
 		../../../BookClubClient/Login.qml \
 		../../../BookClubClient/main.qml \
-		../../../BookClubClient/images/giraffe.png
+		../../../BookClubClient/images/giraffe.png \
+		../../../BookClubClient/assets/genres/history.png \
+		../../../BookClubClient/assets/genres/biography.jpg \
+		../../../BookClubClient/assets/genres/fantasy.png \
+		../../../BookClubClient/assets/genres/other.png \
+		../../../BookClubClient/assets/genres/poetry.png \
+		../../../BookClubClient/assets/genres/romance.png \
+		../../../BookClubClient/assets/genres/fiction.png \
+		../../../BookClubClient/assets/genres/nonFiction.png \
+		../../../BookClubClient/assets/genres/mystery.png \
+		../../../BookClubClient/assets/genres/children.png \
+		../../../BookClubClient/assets/genres/sciFI.png \
+		../../../BookClubClient/assets/genres/selfHelp.png
 	D:\QT\6.5.3\mingw_64\bin\rcc.exe -name resources --no-zstd ..\..\..\BookClubClient\resources.qrc -o debug\qrc_resources.cpp
 
 compiler_moc_predefs_make_all: debug/moc_predefs.h
