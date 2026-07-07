@@ -3,11 +3,13 @@
 
 #include <QMainWindow>
 
+/* موقتاً کامنت شده تا ارور vtable رفع شود
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
 QT_END_NAMESPACE
+*/
 
 class MainWindow : public QMainWindow
 {
@@ -18,6 +20,6 @@ public:
     ~MainWindow() override;
 
 private:
-    Ui::MainWindow *ui;
+    // Ui::MainWindow *ui; // موقتاً غیرفعال
 };
 #endif // MAINWINDOW_H
