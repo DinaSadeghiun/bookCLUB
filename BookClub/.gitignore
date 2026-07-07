@@ -1,0 +1,15 @@
+# Qt Creator & Build output
+build-*/
+*.user
+*.user.*
+*.autosave
+
+# Compiled Object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.dll
+*.so
+*.dylib
