@@ -7,7 +7,6 @@
 
 // Sales statistics container
 struct SalesStats {
-    double totalRevenue = 0.0;
     int totalBooksSold = 0;
     double averageRating = 0.0;
     QList<int> topSellingBookIds;
@@ -19,16 +18,19 @@ class Publisher : public Person {
 
 private:
     QString companyName;
-    QList<int> bookIds;
-    QList<int> discountIds;
+   // QList<int> bookIds;
+    //QList<int> discountIds;
     SalesStats salesStats;
+    double revenue = 0.0;
+
 
 public:
     //creat new
-    Publisher(QString name, QString password, QString companyName);
+    Publisher(const QString& name, const QString& password, const QString& sa, const QString& companyName);
 
     //LOAD from DB
-    Publisher(int id, QString name, QString password, QString companyName);
+    Publisher(int id, const QString& name, const QString& passwordHash,
+              const QDateTime& createdAt, bool isActive, const QString& sa, const QString& companyName);
 
     ~Publisher() override = default;
 
@@ -36,11 +38,13 @@ public:
 
     // Getters
     QString getCompanyName() const;
-    QList<int> getBookIds() const;
-    QList<int> getDiscountIds() const;
+    double getRevenue() const;
+    //QList<int> getBookIds() const;
+    //QList<int> getDiscountIds() const;
 
     // Setters
     void setCompanyName(const QString& name);
+    void setRevenue(double amount);
     void setId(int newId) override;
 
     // Book management
@@ -49,13 +53,15 @@ public:
     bool hasBook(int bookId) const;
 
     // Discount management
-    void addDiscount(int discountId);
+   /* void addDiscount(int discountId);
     void removeDiscount(int discountId);
-    bool hasDiscount(int discountId) const;
+    bool hasDiscount(int discountId) const;*/
 
     // Statistics (computed externally, injected here)
     SalesStats getSalesStats() const;
     void setSalesStats(const SalesStats& stats);
+
+    void addRevenue(double amount);
 
 };
 

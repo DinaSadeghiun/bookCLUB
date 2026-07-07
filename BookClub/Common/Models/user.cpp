@@ -1,20 +1,21 @@
 #include "user.h"
 
 //creat new
-User::User(const QString& username, const QString& password,  double balance)
-    : Person(username, password),
-    walletBalance(balance)
+User::User(const QString& username, const QString& password, const QString& sa, double balance, QList<Genre> favs)
+    : Person(username, password, sa),
+    walletBalance(balance),
+    favoriteGenres(favs)
 {
     cart = new ShoppingCart(this->id);
     library = new PersonalLibrary(this->id);
 }
 
 //LOAD from DB
-User::User(int id, const QString& username, const QString& passwordHash,
-            double balance,
-           const QDateTime& createdAt, bool isActive)
-    : Person(id, username, passwordHash, createdAt, isActive),
-    walletBalance(balance)
+User::User(int id, const QString& username, const QString& passwordHash, const QDateTime& createdAt,
+           bool isActive, const QString& sa, double balance, QList<Genre> favs)
+    : Person(id, username, passwordHash, createdAt, isActive, sa),
+    walletBalance(balance),
+    favoriteGenres(favs)
 {
     cart = new ShoppingCart(this->id);
     library = new PersonalLibrary(this->id);
@@ -28,6 +29,10 @@ User::~User() {
 //getters
 QString User::getRole() const {
     return "User";
+}
+
+QList<Genre> User::getFavoriteGenres() const {
+    return favoriteGenres;
 }
 
 double User::getWalletBalance() const {
@@ -44,14 +49,23 @@ PersonalLibrary* User::getLibrary() const {
 
 //setter
 void User::setId(int newId) {
-    if (newId == -1) {
-        Person::setId(newId);
+    if (id == -1) {
+        id = newId;
         this->cart->setUserId(newId);
         this->library->setUserId(newId);
     }
 }
 
+bool User::setFavoriteGenres(const QList<Genre>& genres) {
+    if (genres.isEmpty() || genres.size() > 3) return false;
+    favoriteGenres = genres;
+    return true;
+}
 
+void User::setWalletBalance(double amount) {
+    walletBalance = amount;
+}
+//methods
 bool User::deposit(double amount) {
     if (amount > 0) {
         this->walletBalance += amount;
@@ -68,4 +82,12 @@ bool User::withdraw(double amount) {
     return false;
 }
 
+void User::addFavoriteGenre(Genre g) {
+    if (!favoriteGenres.contains(g)) favoriteGenres.append(g);
+}
 
+bool User::updateFavoriteGenres(const QList<Genre>& newGenres) {
+    if (newGenres.isEmpty() || newGenres.size() > 3) return false;
+    favoriteGenres = newGenres;
+    return true;
+}

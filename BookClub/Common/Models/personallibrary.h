@@ -22,7 +22,6 @@ public:
         void addBook(int bookId);
         bool removeBook(int bookId);
 
-
     };
 
     explicit PersonalLibrary(int userId);

@@ -1,35 +1,36 @@
 #include "person.h"
 
-Person::Person(const QString& username, const QString& password)
-    : id(-1), username(username)
+//creat new
+Person::Person(const QString& username, const QString& password, const QString& sa)
+    : id(-1),
+    username(encryptData(username)),
+    createdAt(QDateTime::currentDateTime()),
+    isActive(true),
+    securityAnswer(sa)
 {
     this->passwordHash = hashPassword(password);
 }
 
+//LOAD from DB
 Person::Person(int id, const QString& username, const QString& passwordHash,
-                const QDateTime& createdAt, bool isActive)
-    : id(id), username(username), passwordHash(passwordHash),
-    createdAt(createdAt), isActive(isActive)
+               const QDateTime& createdAt, bool isActive, const QString& sa)
+    : id(id),
+    username(username),
+    passwordHash(passwordHash),
+    createdAt(createdAt),
+    isActive(isActive),
+    securityAnswer(sa)
 {}
 
 
 // Getters
-int Person::getId() const {
-    return this->id;
-}
+int Person::getId() const { return id; }
+QString Person::getUsername() const { return decryptData(username); }
+QDateTime Person::getCreatedAt() const { return createdAt; }
+bool Person::getIsActive() const { return isActive; }
+QString Person::getPasswordHash() const { return passwordHash; }
+QString Person::getSecurityAnswer() const { return securityAnswer; }
 
-QString Person::getUsername() const {
-    return decryptData(this->username);
-}
-
-
-QDateTime Person::getCreatedAt() const {
-    return this->createdAt;
-}
-
-bool Person::getIsActive() const {
-    return this->isActive;
-}
 
 // Security Methods
 bool Person::verifyPassword(const QString& password) const {
@@ -55,6 +56,11 @@ void Person::setIsActive(bool isActive) {
     this->isActive = isActive;
 }
 
+void Person::setSecurityAnswer(const QString& sa) {
+    securityAnswer = sa;
+}
+
+
 // Status Methods
 void Person::active() {
     this->isActive = true;
@@ -67,6 +73,7 @@ void Person::deactive() {
 bool Person::canLogin() const {
     return isActive;
 }
+
 
 
 //Account Managemenet

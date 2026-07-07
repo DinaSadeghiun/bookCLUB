@@ -13,20 +13,27 @@ protected:
     QString passwordHash;
     QDateTime createdAt;
     bool isActive;
+    QString securityAnswer;
 
 public:
-    Person(int id, const QString& username, const QString& passwordHash,
-                    const QDateTime& createdAt = QDateTime::currentDateTime(), bool isActive = true);
+    //creat new
+    Person(const QString& username, const QString& password, const QString& sa);
 
-    Person(const QString& username, const QString& password);
+    //LOAD from DB
+    Person(int id, const QString& username, const QString& passwordHash,
+           const QDateTime& createdAt, bool isActive, const QString& sa);
+
 
     virtual ~Person() = default;
 
     // Getters
     int getId() const;
     QString getUsername() const;
+    QString getPasswordHash() const;
     QDateTime getCreatedAt() const;
     bool getIsActive() const;
+    QString getSecurityAnswer() const;
+
 
     // Password verification
     bool verifyPassword(const QString& password) const;
@@ -36,6 +43,8 @@ public:
     void setUsername(const QString& username);
     void setPassword(const QString& password);
     void setIsActive(bool isActive);
+    void setSecurityAnswer(const QString& sa);
+
 
     // Methods
     void active();

@@ -1,13 +1,16 @@
 #include "publisher.h"
 
 //creat new
-Publisher::Publisher(QString name, QString password, QString companyName)
-    : Person(name, password), companyName(companyName)
+Publisher::Publisher(const QString& name, const QString& password, const QString& sa, const QString& companyName)
+    : Person(name, password, sa),
+    companyName(companyName)
 {}
 
 //LOAD from DB
-Publisher::Publisher(int id, QString name, QString password, QString companyName)
-    : Person(id, name, password), companyName(companyName)
+Publisher::Publisher(int id, const QString& name, const QString& passwordHash,
+                     const QDateTime& createdAt, bool isActive, const QString& sa, const QString& companyName)
+    : Person(id, name, passwordHash, createdAt, isActive, sa),
+    companyName(companyName)
 {}
 
 
@@ -17,16 +20,21 @@ QString Publisher::getRole() const {
 
 // Getters
 QString Publisher::getCompanyName() const { return companyName; }
-QList<int> Publisher::getBookIds() const { return bookIds; }
-QList<int> Publisher::getDiscountIds() const { return discountIds; }
+double Publisher::getRevenue() const { return revenue; }
+//QList<int> Publisher::getBookIds() const { return bookIds; }
+//QList<int> Publisher::getDiscountIds() const { return discountIds; }
 
 // Setters
 void Publisher::setCompanyName(const QString& name) { this->companyName = name; }
 void Publisher::setId(int newId) {
-    Person::setId(newId);
+    if (id == -1){
+    id = newId;
+    }
 }
+void Publisher::setRevenue(double amount) { revenue = amount; }
 
-void Publisher::addBook(int bookId) {
+
+/*void Publisher::addBook(int bookId) {
     if (!bookIds.contains(bookId)) {
         bookIds.append(bookId);
     }
@@ -53,8 +61,10 @@ void Publisher::removeDiscount(int discountId) {
 bool Publisher::hasDiscount(int discountId) const {
     return discountIds.contains(discountId);
 }
-
+*/
 
 // Statistics (computed externally, injected here)
 SalesStats Publisher::getSalesStats() const { return salesStats; }
 void Publisher::setSalesStats(const SalesStats& stats) { this->salesStats = stats; }
+
+void Publisher::addRevenue(double amount) { revenue += amount; }

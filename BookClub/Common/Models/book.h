@@ -2,7 +2,7 @@
 #define BOOK_H
 
 #include <QString>
-
+#include "genre.h"
 class Book {
 private:
     int id;
@@ -10,13 +10,13 @@ private:
     int discountId; // ID-based link
     QString title;
     QString author;
-    QString genre;
+    Genre genre;
     QString description;
     QString coverImagePath;
     QString pdfFilePath;
     double price;
     double totalRating;
-    double averageRating;
+    //double averageRating;
     int ratingCount;
     int salesCount;
     bool isAvailable;
@@ -27,7 +27,11 @@ public:
     //creating new book
     Book(int publisherId, const QString& title, const QString& author, double price);
     //LOADING from DB
-    Book(int id, int publisherId, const QString& title, const QString& author, double price);
+    Book(int id, int publisherId, int discountId,
+         const QString& title, const QString& author, Genre genre,
+         const QString& description, const QString& coverImagePath,
+         const QString& pdfFilePath, double price,
+         int totalRating, int ratingCount, int salesCount, bool isAvailable);
 
     ~Book() = default;
 
@@ -37,7 +41,7 @@ public:
     int getDiscountId() const;
     QString getTitle() const;
     QString getAuthor() const;
-    QString getGenre() const;
+    Genre getGenre() const;
     QString getDescription() const;
     QString getCoverImagePath() const;
     QString getPdfFilePath() const;
@@ -54,7 +58,7 @@ public:
     void setId(int id);
     void setTitle(const QString& t);
     void setAuthor(const QString& a);
-    void setGenre(const QString& g);
+    void setGenre(Genre g);
     void setDescription(const QString& d);
     void setPrice(double p);
     void setCoverImagePath(const QString& path);

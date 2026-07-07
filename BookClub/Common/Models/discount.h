@@ -16,7 +16,7 @@ private:
     DiscountType type;
     QDateTime startDate;
     QDateTime endDate;
-    bool active;
+    bool isActive;
 
 public:
     //creating new discount
@@ -25,7 +25,7 @@ public:
 
     //LOADING from DB
     Discount(int id, double value, DiscountType type,
-             QDateTime start, QDateTime end, bool active);
+             QDateTime start, QDateTime end, bool isActive);
 
     // Getters
     int getId() const;
@@ -33,7 +33,7 @@ public:
     DiscountType getType() const;
     QDateTime getStartDate() const;
     QDateTime getEndDate() const;
-    bool isActive() const;
+    bool getIsActive() const;
 
     // Setters
     void setId(int newId);
@@ -41,7 +41,7 @@ public:
     void setType(DiscountType t);
     void setStartDate(const QDateTime& start);
     void setEndDate(const QDateTime& end);
-    void setActive(bool status);
+    void setIsActive(bool status);
 
     bool isValid() const;
 };

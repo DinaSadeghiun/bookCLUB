@@ -1,13 +1,13 @@
 #include "discount.h"
 
 //LOADING from DB
-Discount::Discount(int id, double value, DiscountType type, QDateTime start, QDateTime end, bool active)
+Discount::Discount(int id, double value, DiscountType type, QDateTime start, QDateTime end, bool isActive)
     : id(id),
     value(value),
     type(type),
     startDate(start),
     endDate(end),
-    active(active)
+    isActive(isActive)
 {}
 
 //creating new
@@ -17,7 +17,7 @@ Discount::Discount(double value, DiscountType type, QDateTime start, QDateTime e
     type(type),
     startDate(start),
     endDate(end),
-    active(true)
+    isActive(true)
  {}
 
 // Getters
@@ -26,7 +26,7 @@ double Discount::getValue() const { return value; }
 Discount::DiscountType Discount::getType() const { return type; }
 QDateTime Discount::getStartDate() const { return startDate; }
 QDateTime Discount::getEndDate() const { return endDate; }
-bool Discount::isActive() const { return active; }
+bool Discount::getIsActive() const { return isActive; }
 
 // Setters
 void Discount::setId(int newId) {
@@ -38,10 +38,10 @@ void Discount::setValue(double v) { if (v >= 0) value = v; }
 void Discount::setType(DiscountType t) { type = t; }
 void Discount::setStartDate(const QDateTime& start) { startDate = start; }
 void Discount::setEndDate(const QDateTime& end) { endDate = end; }
-void Discount::setActive(bool status) { active = status; }
+void Discount::setIsActive(bool status) { isActive = status; }
 
 bool Discount::isValid() const {
-    if (!active) {
+    if (!isActive) {
         return false;
     }
     QDateTime now = QDateTime::currentDateTime();
