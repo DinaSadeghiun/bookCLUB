@@ -58,7 +58,7 @@ public:
     bool changePassword(const QString& oldPassword, const QString& newPassword);
     bool changeUsername(const QString& newUsername, const QString& password);
 
-protected:
+public:
     static QString hashPassword(const QString& password);
     static QString encryptData(const QString& data);
     static QString decryptData(const QString& encrypted);

@@ -3,7 +3,7 @@
 //creat new
 Person::Person(const QString& username, const QString& password, const QString& sa)
     : id(-1),
-    username(encryptData(username)),
+    username(username),
     createdAt(QDateTime::currentDateTime()),
     isActive(true),
     securityAnswer(sa)
@@ -25,7 +25,7 @@ Person::Person(int id, const QString& username, const QString& passwordHash,
 
 // Getters
 int Person::getId() const { return id; }
-QString Person::getUsername() const { return decryptData(username); }
+QString Person::getUsername() const { return username; }
 QDateTime Person::getCreatedAt() const { return createdAt; }
 bool Person::getIsActive() const { return isActive; }
 QString Person::getPasswordHash() const { return passwordHash; }
@@ -45,7 +45,7 @@ void Person::setId(int newId) {
 }
 
 void Person::setUsername(const QString& username) {
-    this->username = encryptData(username);
+    this->username = username;
 }
 
 void Person::setPassword(const QString& password) {
@@ -99,11 +99,12 @@ bool Person::changeUsername(const QString& newUsername, const QString& password)
         return false;
     }
 
-    this->username = encryptData(newUsername);
+    this->username = newUsername;
     return true;
 }
 
 
+//hash , encrypt , decrypt
 QString Person::hashPassword(const QString& password) {
     return QString(QCryptographicHash::hash(
                        password.toUtf8(),

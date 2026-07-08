@@ -28,10 +28,6 @@ Book::Book(int id, int publisherId, int discountId,
     salesCount(salesCount), isAvailable(isAvailable)
 {}
 
-//helper
-/*void Book::updateAverageRating() {
-    averageRating = (ratingCount > 0) ? (totalRating / ratingCount) : 0.0;
-}*/
 
 //getter
 int Book::getId() const { return id; }
@@ -46,6 +42,7 @@ QString Book::getPdfFilePath() const { return pdfFilePath; }
 double Book::getPrice() const { return price; }
 int Book::getSalesCount() const { return salesCount; }
 int Book::getRatingCount() const { return ratingCount; }
+double Book::getTotalRating() const { return totalRating; }
 double Book::getAverageRating() const {
     return ratingCount > 0 ? totalRating / ratingCount : 0.0;
 }

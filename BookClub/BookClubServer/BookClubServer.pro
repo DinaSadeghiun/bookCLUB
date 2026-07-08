@@ -5,6 +5,8 @@ CONFIG += c++17 console
 CONFIG -= app_bundle
 
 SOURCES += \
+    DB/adminrepository.cpp \
+    DB/bookrepository.cpp \
     DB/databasemanager.cpp \
     DB/publisherrepository.cpp \
     DB/userrepository.cpp \
@@ -13,6 +15,8 @@ SOURCES += \
     main.cpp
 
 HEADERS += \
+    DB/adminrepository.h \
+    DB/bookrepository.h \
     DB/databasemanager.h \
     DB/publisherrepository.h \
     DB/userrepository.h

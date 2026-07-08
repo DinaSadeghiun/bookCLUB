@@ -16,12 +16,9 @@ private:
     QString pdfFilePath;
     double price;
     double totalRating;
-    //double averageRating;
     int ratingCount;
     int salesCount;
     bool isAvailable;
-
-    void updateAverageRating();
 
 public:
     //creating new book
@@ -47,6 +44,7 @@ public:
     QString getPdfFilePath() const;
     double getPrice() const;
     int getSalesCount() const;
+    double getTotalRating() const;
     int getRatingCount() const;
     bool getIsAvailable() const;
     double getAverageRating() const;
