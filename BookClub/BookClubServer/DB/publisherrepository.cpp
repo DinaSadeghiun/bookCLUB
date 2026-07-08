@@ -1,20 +1,19 @@
-#include "PublisherRepository.h"
+#include "DB/publisherrepository.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 
-const QString ROLE_PUBLISHER = "Publisher";
 
 PublisherRepository::PublisherRepository(const QString& connectionName)
     : connName(connectionName) {}
 
 Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
-    QString username = q.value("username").toString();
+    QString username = Person::decryptData(q.value("username").toString());
     QString pwHash = q.value("password_hash").toString();
     QDateTime created = QDateTime::fromSecsSinceEpoch(q.value("created_at").toLongLong());
     bool active = q.value("is_active").toBool();
-    QString secA = q.value("security_answer").toString();
+    QString secA = Person::decryptData(q.value("security_answer").toString());
 
     QString companyName = q.value("company_name").toString();
     double revenue = q.value("revenue").toDouble();
@@ -35,11 +34,11 @@ bool PublisherRepository::save(Publisher& pub) {
         // INSERT logic
         q.prepare("INSERT INTO Persons (username, password_hash, role, created_at, security_answer, is_active)"
                   " VALUES (:uname, :hash, :role, :created, :sec_a, :active)");
-        q.bindValue(":uname", pub.getUsername());
+        q.bindValue(":uname", Person::encryptData(pub.getUsername()));
         q.bindValue(":hash", pub.getPasswordHash());
         q.bindValue(":role", ROLE_PUBLISHER);
         q.bindValue(":created", pub.getCreatedAt().toSecsSinceEpoch());
-        q.bindValue(":sec_a", pub.getSecurityAnswer());
+        q.bindValue(":sec_a", Person::encryptData(pub.getSecurityAnswer()));
         q.bindValue(":active", pub.getIsActive() ? 1 : 0);
 
         if (!q.exec()) {
@@ -62,9 +61,9 @@ bool PublisherRepository::save(Publisher& pub) {
         // UPDATE logic
         q.prepare("UPDATE Persons SET username=:uname, password_hash=:hash, "
                   "security_answer=:sec_a, is_active=:active WHERE id=:id AND role=:role");
-        q.bindValue(":uname", pub.getUsername());
+        q.bindValue(":uname", Person::encryptData(pub.getUsername()));
         q.bindValue(":hash", pub.getPasswordHash());
-        q.bindValue(":sec_a", pub.getSecurityAnswer());
+        q.bindValue(":sec_a", Person::encryptData(pub.getSecurityAnswer()));
         q.bindValue(":active", pub.getIsActive() ? 1 : 0);
         q.bindValue(":id", pub.getId());
         q.bindValue(":role", ROLE_PUBLISHER);
@@ -109,11 +108,35 @@ std::optional<Publisher> PublisherRepository::findByUsername(const QString& user
     q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
               "WHERE p.username = :uname AND p.role = :role");
-    q.bindValue(":uname", username);
+    q.bindValue(":uname", Person::encryptData(username));
     q.bindValue(":role", ROLE_PUBLISHER);
 
     if (q.exec() && q.next()) {
         return fromQuery(q);
+    }
+    return std::nullopt;
+}
+
+//remove
+bool PublisherRepository::remove(int pubId) {
+    if (pubId <= 0) return false;
+
+    QSqlDatabase db = connName.isEmpty()
+                          ? QSqlDatabase::database()
+                          : QSqlDatabase::database(connName);
+
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
+    q.bindValue(":id", pubId);
+    q.bindValue(":role", ROLE_PUBLISHER);
+    return q.exec() && q.numRowsAffected() > 0;
+}
+
+//auth
+std::optional<Publisher> PublisherRepository::authenticate(const QString& username, const QString& password) {
+    auto pubOpt = findByUsername(username);
+    if (pubOpt && pubOpt->verifyPassword(password)) {
+        return pubOpt;
     }
     return std::nullopt;
 }

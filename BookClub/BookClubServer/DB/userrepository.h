@@ -22,6 +22,7 @@ public:
     bool remove(int id);
     std::optional<User> findById(int id);
     std::optional<User> findByUsername(const QString& username);
+    std::optional<User> authenticate(const QString& username, const QString& password);
 };
 
 #endif

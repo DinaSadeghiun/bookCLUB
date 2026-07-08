@@ -1,9 +1,9 @@
 #include "UserRepository.h"
+#include "Person.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 
-const QString ROLE_USER = "User";
 
 UserRepository::UserRepository(const QString& connectionName)
     : connName(connectionName) {}
@@ -12,11 +12,11 @@ User UserRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
     QList<Genre> genres = loadUserGenres(id);
 
-    QString username = q.value("username").toString();
+    QString username = Person::decryptData(q.value("username").toString());
     QString password = q.value("password_hash").toString();
     QDateTime created = QDateTime::fromSecsSinceEpoch(q.value("created_at").toLongLong());
     bool active = q.value("is_active").toBool();
-    QString secA = q.value("security_answer").toString();
+    QString secA = Person::decryptData(q.value("security_answer").toString());
     double balance = q.value("wallet_balance").toDouble();
 
     return User(id, username, password, created, active, secA, balance, genres);
@@ -57,11 +57,11 @@ bool UserRepository::save(User& u) {
     if (u.getId() == -1) {
         q.prepare("INSERT INTO Persons (username, password_hash, role, created_at, security_answer, is_active)"
                   " VALUES (:uname, :hash, :role, :created, :sec_a, :active)");
-        q.bindValue(":uname", u.getUsername());
+        q.bindValue(":uname", Person::encryptData(u.getUsername()));
         q.bindValue(":hash", u.getPasswordHash());
         q.bindValue(":role", ROLE_USER);
         q.bindValue(":created", u.getCreatedAt().toSecsSinceEpoch());
-        q.bindValue(":sec_a", u.getSecurityAnswer());
+        q.bindValue(":sec_a", Person::encryptData(u.getSecurityAnswer()));
         q.bindValue(":active", u.getIsActive() ? 1 : 0);
         //genres??
         if (!q.exec()) {
@@ -81,9 +81,10 @@ bool UserRepository::save(User& u) {
         }
     } else {
         // Update logic
-        q.prepare("UPDATE Persons SET username=:uname, security_answer=:sec_a, is_active=:active WHERE id=:id AND role=:role");
-        q.bindValue(":uname", u.getUsername());
-        q.bindValue(":sec_a", u.getSecurityAnswer());
+        q.prepare("UPDATE Persons SET username=:uname, password_hash=:hash, security_answer=:sec_a, is_active=:active WHERE id=:id AND role=:role");
+        q.bindValue(":uname", Person::encryptData(u.getUsername()));
+        q.bindValue(":hash", u.getPasswordHash());
+        q.bindValue(":sec_a", Person::encryptData(u.getSecurityAnswer()));
         q.bindValue(":active", u.getIsActive() ? 1 : 0);
         q.bindValue(":id", u.getId());
         q.bindValue(":role", "User");
@@ -150,7 +151,7 @@ std::optional<User> UserRepository::findByUsername(const QString& username) {
     q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
               "WHERE p.username = :uname AND p.role = :role");
-    q.bindValue(":uname", username);
+    q.bindValue(":uname", Person::encryptData(username));
     q.bindValue(":role", ROLE_USER);
 
     if (q.exec()) {
@@ -162,3 +163,32 @@ std::optional<User> UserRepository::findByUsername(const QString& username) {
     }
     return std::nullopt;
 }
+
+//remove
+bool UserRepository::remove(int userId) {
+    if (userId <= 0) return false;
+
+    QSqlDatabase db = connName.isEmpty()
+                          ? QSqlDatabase::database()
+                          : QSqlDatabase::database(connName);
+
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM Persons WHERE id = :userId");
+    query.bindValue(":userId", userId);
+    return query.exec() && query.numRowsAffected() > 0;
+}
+
+
+//auth
+std::optional<User> UserRepository::authenticate(const QString& username, const QString& password) {
+    auto userOpt = findByUsername(username);
+
+    if (userOpt) {
+        if (userOpt->verifyPassword(password)) {
+            return userOpt;
+        }
+    }
+
+    return std::nullopt;
+}
+
