@@ -1,0 +1,11 @@
+# Qt Creator & Build outputs
+build/
+build-*/
+*.user
+.qtcreator/
+*.autosave
+
+# Compiled files
+*.o
+*.obj
+*.exe
