@@ -42,6 +42,7 @@ Rectangle {
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
 
+
         TextField {
             id: passwordField
             placeholderText: "Password"
@@ -109,77 +110,65 @@ Rectangle {
             }
         }
 
-        Text {
-            id: errorText
-            text: "Please fill all fields!"
-            color: "#FF6B6B"
-            font.pixelSize: 14
-            visible: false
-            Layout.alignment: Qt.AlignHCenter
-        }
-
         Button {
             id: registerButton
-            text: "Register"
+            text: "REGISTER"
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
-            Layout.alignment: Qt.AlignHCenter
-
-            background: Rectangle {
-                color: "#FFD700"
-                radius: 10
-            }
+            Layout.preferredHeight: 50
+            Layout.topMargin: 10
 
             contentItem: Text {
                 text: registerButton.text
-                color: "#2C003E"
-                font.bold: true
                 font.pixelSize: 16
+                font.bold: true
+                color: "#2C003E"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }
 
-            onClicked: {
-                if (usernameField.text !== "" && passwordField.text !== "") {
-                    errorText.visible = false
-
-                    // Safe role detection based on checked state
-                    let selectedRole = "User";
-                    if (radioPublisher.checked) {
-                        selectedRole = "Publisher";
-                    } else if (radioAdmin.checked) {
-                        selectedRole = "Admin";
-                    }
-
-                    if (selectedRole === "User") {
-                        stackView.push("qrc:/GenreSelection.qml", {
-                            "username": usernameField.text,
-                            "userRole": selectedRole
-                        });
-                    } else {
-                        stackView.push("qrc:/Dashboard.qml", {
-                            "username": usernameField.text,
-                            "userRole": selectedRole
-                        });
-                    }
-                } else {
-                    errorText.visible = true
-                }
+            background: Rectangle {
+                radius: 10
+                color: registerButton.pressed ? "#E6C200" : "#FFD700"
+                Behavior on color { ColorAnimation { duration: 100 } }
             }
 
+            onClicked: {
+                if (usernameField.text === "" || passwordField.text === "" ) {
+                    console.log("Error: Fields cannot be empty!")
+                } else if (passwordField.text !== confirmPasswordField.text) {
+                    console.log("Error: Passwords do not match!")
+                } else {
+                    var selectedRole = "User"
+                    if (radioPublisher.checked) {
+                        selectedRole = "Publisher"
+                    } else if (radioAdmin.checked) {
+                        selectedRole = "Admin"
+                    }
+                    console.log("Success! Registering as:", selectedRole)
+                    signUpPage.StackView.view.push("GenreSelection.qml", {
+                                                       "username": usernameField.text,
+                                                       "userRole": selectedRole
+                                                   })
+
+                }
+            }
+        }
 
         Text {
-            text: "Already have an account? Login"
-            color: "white"
+            text: "Already have an account? <b>Login</b>"
+            font.pixelSize: 14
+            color: "#FFFFFF"
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 10
+
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    stackView.pop()
+                    signUpPage.StackView.view.pop()
+
                 }
             }
         }
     }
-}
 }

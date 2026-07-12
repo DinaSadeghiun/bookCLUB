@@ -14,8 +14,14 @@ RESOURCES += \
 
 
 DISTFILES += \
+    BookCard.qml \
+    CartView.qml \
     Dashboard.qml \
     GenreSelection.qml \
+    HomeView.qml \
+    LibraryView.qml \
+    SearchView.qml \
+    SettingsView.qml \
     UserPanel.qml \
     main.qml \
     Login.qml \

@@ -4,10 +4,23 @@ import QtQuick.Layouts
 
 Rectangle {
     id: genreSelectionPage
-    anchors.fill: parent // Crucial to prevent the white gap on the right
+    anchors.fill: parent
     color: "#1A0F1F"
-
+    required property string username
+    required property string userRole
     property var selectedGenres: []
+    property bool isEditMode: false
+    property var initialGenres: []
+    property var userGenres: []
+    signal genresSaved(var genres)
+    signal navigateToDashboard(string username, string userRole, var userGenres)
+    signal navigateBack()
+
+    Component.onCompleted: {
+        if (isEditMode && initialGenres.length > 0) {
+            selectedGenres = initialGenres.slice()
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -16,7 +29,7 @@ Rectangle {
 
         // Header
         Text {
-            text: "Choose Your Favorites"
+            text: isEditMode ? "Edit Your Interests" : "Choose Your Favorites"
             color: "#D4AF37"
             font.pixelSize: 24
             font.bold: true
@@ -117,14 +130,16 @@ Rectangle {
             }
         }
 
-        // Continue Button
+        // Continue / Save Button
         Button {
             id: continueButton
-            text: "Continue (" + selectedGenres.length + "/3)"
+            text: isEditMode
+                  ? "Save (" + selectedGenres.length + "/3)"
+                  : "Continue (" + selectedGenres.length + "/3)"
             enabled: selectedGenres.length > 0
             Layout.fillWidth: true
             Layout.preferredHeight: 50
-            Layout.bottomMargin: 10
+            Layout.bottomMargin: isEditMode ? 5 : 10
 
             background: Rectangle {
                 color: continueButton.enabled ? "#D4AF37" : "#444444"
@@ -141,8 +156,22 @@ Rectangle {
             }
 
             onClicked: {
-                stackView.push("Dashboard.qml", { "userGenres": selectedGenres })
+                if (isEditMode) {
+                    genresSaved(selectedGenres)
+                    rootStackView.pop()
+                } else {
+                    rootStackView.push("qrc:/Dashboard.qml", {
+                        "username": username,
+                        "userRole": userRole,
+                        "userGenres": selectedGenres
+                    })
+                }
             }
         }
+
+
+
+
+
     }
 }
