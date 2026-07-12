@@ -1,4 +1,4 @@
-#include "publisher.h"
+#include "Publisher.h"
 
 //creat new
 Publisher::Publisher(const QString& name, const QString& password, const QString& sa, const QString& companyName)
@@ -33,35 +33,6 @@ void Publisher::setId(int newId) {
 }
 void Publisher::setRevenue(double amount) { revenue = amount; }
 
-
-/*void Publisher::addBook(int bookId) {
-    if (!bookIds.contains(bookId)) {
-        bookIds.append(bookId);
-    }
-}
-
-void Publisher::removeBook(int bookId) {
-    bookIds.removeAll(bookId);
-}
-
-bool Publisher::hasBook(int bookId) const {
-    return bookIds.contains(bookId);
-}
-
-void Publisher::addDiscount(int discountId) {
-    if (!discountIds.contains(discountId)) {
-        discountIds.append(discountId);
-    }
-}
-
-void Publisher::removeDiscount(int discountId) {
-    discountIds.removeAll(discountId);
-}
-
-bool Publisher::hasDiscount(int discountId) const {
-    return discountIds.contains(discountId);
-}
-*/
 
 // Statistics (computed externally, injected here)
 SalesStats Publisher::getSalesStats() const { return salesStats; }

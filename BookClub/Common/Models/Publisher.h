@@ -18,8 +18,6 @@ class Publisher : public Person {
 
 private:
     QString companyName;
-   // QList<int> bookIds;
-    //QList<int> discountIds;
     SalesStats salesStats;
     double revenue = 0.0;
 
@@ -52,10 +50,6 @@ public:
     void removeBook(int bookId);
     bool hasBook(int bookId) const;
 
-    // Discount management
-   /* void addDiscount(int discountId);
-    void removeDiscount(int discountId);
-    bool hasDiscount(int discountId) const;*/
 
     // Statistics (computed externally, injected here)
     SalesStats getSalesStats() const;

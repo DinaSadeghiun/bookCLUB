@@ -12,7 +12,7 @@ void DatabaseManager::closeDatabase() {
 }
 
 bool DatabaseManager::initDatabase(const QString& dbName) {
-    db = QSqlDatabase::addDatabase("QSQLITE");
+    db = QSqlDatabase::addDatabase("QSQLITE", "bookclub_db");
     db.setDatabaseName(dbName);
     if (!db.open()) {
         qCritical() << "DB open failed:" << db.lastError().text();
@@ -23,12 +23,14 @@ bool DatabaseManager::initDatabase(const QString& dbName) {
 }
 
 void DatabaseManager::enableForeignKeys() {
-    QSqlQuery q;
-    q.exec("PRAGMA foreign_keys = ON;");
+    QSqlQuery q(db);
+    if (!q.exec("PRAGMA foreign_keys = ON;")) {
+        qCritical() << "Foreign Keys Error:" << q.lastError().text();
+    }
 }
 
 bool DatabaseManager::createTables() {
-    QSqlQuery q;
+    QSqlQuery q(db);
 
     // persons (base for User/Publisher/Admin)
     if (!q.exec(R"(
@@ -107,7 +109,7 @@ bool DatabaseManager::createTables() {
             cover_image_path TEXT,
             pdf_file_path    TEXT,
             price            REAL    DEFAULT 0.0,
-            total_rating     INTEGER DEFAULT 0,
+            total_rating     REAL DEFAULT 0,
             rating_count     INTEGER DEFAULT 0,
             sales_count      INTEGER DEFAULT 0,
             is_available     INTEGER DEFAULT 1,

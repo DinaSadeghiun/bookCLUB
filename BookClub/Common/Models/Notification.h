@@ -35,7 +35,7 @@ public:
     int getRelatedBookId() const;
     QString getMessage() const;
     QDateTime getCreatedAt() const;
-    bool readStatus() const;
+    bool getIsRead() const;
 
     // Actions
     void markAsRead();

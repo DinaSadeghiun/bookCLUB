@@ -31,7 +31,7 @@ QString Notification::getMessage() const { return message; }
 QDateTime Notification::getCreatedAt() const { return createdAt; }
 
 //methods
-bool Notification::readStatus() const { return isRead; }
+bool Notification::getIsRead() const { return isRead; }
 void Notification::markAsRead() { isRead = true; }
 
 //setter

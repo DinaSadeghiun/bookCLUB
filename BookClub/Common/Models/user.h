@@ -23,6 +23,8 @@ public:
 
 
     ~User() override;
+    User(const User& other); //copy constructor
+    User& operator=(const User& other); //copt assignment operator
 
     QString getRole() const override;
 

@@ -10,11 +10,12 @@
 
 class BookRepository {
 private:
-    QString connName;
+    QSqlDatabase db;
+
     Book fromQuery(QSqlQuery& q) const;
 
 public:
-    explicit BookRepository(const QString& connectionName = "");
+    explicit BookRepository();
 
     bool save(Book& book);
     std::optional<Book> findById(int id);

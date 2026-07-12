@@ -27,6 +27,13 @@ public:
     explicit PersonalLibrary(int userId);
     ~PersonalLibrary();
 
+    //copy constructor
+    PersonalLibrary(const PersonalLibrary &other);
+    PersonalLibrary& operator=(const PersonalLibrary &other);
+
+    PersonalLibrary(PersonalLibrary &&other) noexcept;
+    PersonalLibrary& operator=(PersonalLibrary &&other) noexcept;
+
     //purchesed
     const QList<int>& getPurchasedBooks() const;
     void addPurchasedBook(int bookId);

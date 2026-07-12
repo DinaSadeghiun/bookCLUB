@@ -42,3 +42,6 @@ void Order::setId(int newId) {
         id = newId;
     }
 }
+void Order::setBookIds(const QList<int>& newBookIds) {
+    bookIds = newBookIds;
+}

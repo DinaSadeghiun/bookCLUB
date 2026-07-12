@@ -1,11 +1,12 @@
-#include "DB/publisherrepository.h"
+#include "publisherrepository.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
+#include <QDateTime>
 
-
-PublisherRepository::PublisherRepository(const QString& connectionName)
-    : connName(connectionName) {}
+PublisherRepository::PublisherRepository() {
+    db = QSqlDatabase::database("bookclub_db");
+}
 
 Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -24,14 +25,12 @@ Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool PublisherRepository::save(Publisher& pub) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
-
-    if (!db.isOpen()) return false;
     if (!db.transaction()) return false;
 
     QSqlQuery q(db);
-    if (pub.getId() == -1) {
-        // INSERT logic
+    bool isInsert = (pub.getId() == -1);
+
+    if (isInsert) {
         q.prepare("INSERT INTO Persons (username, password_hash, role, created_at, security_answer, is_active)"
                   " VALUES (:uname, :hash, :role, :created, :sec_a, :active)");
         q.bindValue(":uname", Person::encryptData(pub.getUsername()));
@@ -42,7 +41,7 @@ bool PublisherRepository::save(Publisher& pub) {
         q.bindValue(":active", pub.getIsActive() ? 1 : 0);
 
         if (!q.exec()) {
-            qDebug() << "Persons Insert Failed:" << q.lastError().text();
+            qDebug() << "Publisher save (Persons) failed:" << q.lastError().text();
             db.rollback();
             return false;
         }
@@ -58,7 +57,6 @@ bool PublisherRepository::save(Publisher& pub) {
             return false;
         }
     } else {
-        // UPDATE logic
         q.prepare("UPDATE Persons SET username=:uname, password_hash=:hash, "
                   "security_answer=:sec_a, is_active=:active WHERE id=:id AND role=:role");
         q.bindValue(":uname", Person::encryptData(pub.getUsername()));
@@ -88,7 +86,6 @@ bool PublisherRepository::save(Publisher& pub) {
 }
 
 std::optional<Publisher> PublisherRepository::findById(int id) const {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
@@ -103,7 +100,6 @@ std::optional<Publisher> PublisherRepository::findById(int id) const {
 }
 
 std::optional<Publisher> PublisherRepository::findByUsername(const QString& username) const {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
@@ -117,30 +113,19 @@ std::optional<Publisher> PublisherRepository::findByUsername(const QString& user
     return std::nullopt;
 }
 
-//remove
-bool PublisherRepository::remove(int pubId) {
-    if (pubId <= 0) return false;
-
-    QSqlDatabase db = connName.isEmpty()
-                          ? QSqlDatabase::database()
-                          : QSqlDatabase::database(connName);
-
-    QSqlQuery q(db);
-    q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
-    q.bindValue(":id", pubId);
-    q.bindValue(":role", ROLE_PUBLISHER);
-    return q.exec() && q.numRowsAffected() > 0;
-}
-
-//auth
-std::optional<Publisher> PublisherRepository::authenticate(const QString& username, const QString& password) {
+std::optional<Publisher> PublisherRepository::authenticate(const QString& username, const QString& password, const QString& securityAns) {
     auto pubOpt = findByUsername(username);
-    if (pubOpt && pubOpt->verifyPassword(password)) {
+    if (pubOpt && pubOpt->verifyPassword(password) && pubOpt->getSecurityAnswer() == securityAns) {
         return pubOpt;
     }
     return std::nullopt;
 }
 
 
-
-
+bool PublisherRepository::remove(int id) {
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
+    q.bindValue(":id", id);
+    q.bindValue(":role", ROLE_PUBLISHER);
+    return q.exec() && q.numRowsAffected() > 0;
+}

@@ -23,8 +23,11 @@ public:
     Order(int id, int userId, QDateTime orderDate, double rawPrice,
           double discountAmount, double finalPrice, const QList<int>& bookIds);
 
+    //setters
     void setId(int newId);
+    void setBookIds(const QList<int>& ids);
 
+    //getters
     int getId() const;
     int getUserId() const;
     QDateTime getOrderDate() const;

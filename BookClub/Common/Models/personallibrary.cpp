@@ -127,3 +127,68 @@ void PersonalLibrary::setUserId(int newId) {
     userId = newId;
 }
 
+
+// Copy Constructor
+PersonalLibrary::PersonalLibrary(const PersonalLibrary &other)
+    : userId(other.userId), purchasedBooks(other.purchasedBooks), wishlist(other.wishlist) {
+    for (const Shelf* shelf : other.customShelves) {
+        if (shelf) {
+            Shelf* newShelf = new Shelf(shelf->getShelfName());
+            for (int bookId : shelf->getBookIds()) {
+                newShelf->addBook(bookId);
+            }
+            this->customShelves.append(newShelf);
+        }
+    }
+}
+
+// Copy Assignment
+PersonalLibrary& PersonalLibrary::operator=(const PersonalLibrary &other) {
+    if (this != &other) {
+        qDeleteAll(customShelves);
+        customShelves.clear();
+
+        userId = other.userId;
+        purchasedBooks = other.purchasedBooks;
+        wishlist = other.wishlist;
+
+        for (const Shelf* shelf : other.customShelves) {
+            if (shelf) {
+                Shelf* newShelf = new Shelf(shelf->getShelfName());
+                for (int bookId : shelf->getBookIds()) {
+                    newShelf->addBook(bookId);
+                }
+                this->customShelves.append(newShelf);
+            }
+        }
+    }
+    return *this;
+}
+
+// Move Constructor
+PersonalLibrary::PersonalLibrary(PersonalLibrary &&other) noexcept
+    : userId(other.userId),
+    purchasedBooks(std::move(other.purchasedBooks)),
+    wishlist(std::move(other.wishlist)),
+    customShelves(std::move(other.customShelves)) {
+    other.userId = 0;
+    other.customShelves.clear();
+}
+
+// Move Assignment
+PersonalLibrary& PersonalLibrary::operator=(PersonalLibrary &&other) noexcept {
+    if (this != &other) {
+        qDeleteAll(customShelves);
+        customShelves.clear();
+
+        userId = other.userId;
+        purchasedBooks = std::move(other.purchasedBooks);
+        wishlist = std::move(other.wishlist);
+        customShelves = std::move(other.customShelves);
+
+        other.userId = 0;
+        other.customShelves.clear();
+    }
+    return *this;
+}
+

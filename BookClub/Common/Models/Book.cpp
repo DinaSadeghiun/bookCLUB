@@ -1,5 +1,4 @@
-#include "book.h"
-
+#include "Book.h"
 //creating new book
 Book::Book(int publisherId, const QString& title, const QString& author, double price)
     : id(-1),
@@ -7,6 +6,10 @@ Book::Book(int publisherId, const QString& title, const QString& author, double 
     discountId(-1), // No discount initially
     title(title),
     author(author),
+    genre(Genre::Other),
+    description(""),
+    coverImagePath(""),
+    pdfFilePath(""),
     price(price),
     totalRating(0.0),
     ratingCount(0),
@@ -51,12 +54,8 @@ bool Book::getIsAvailable() const { return isAvailable; }
 double Book::getDiscountAmount() const { //***
     if (discountId == -1) return 0.0;
 
-    // TODO: Fetch discount percentage from DB using discountId
     double percent = 0.0;
-    /*
-    Discount discount = DbManager::getInstance().getDiscountById(discountId);
-    percent = discount.getPercentage();
-    */
+
     return (price * percent) / 100.0;
 }
 
@@ -79,7 +78,7 @@ void Book::setPrice(double p) { price = p; }
 void Book::setCoverImagePath(const QString& path) { coverImagePath = path; }
 void Book::setPdfFilePath(const QString& path) { pdfFilePath = path; }
 void Book::setDiscountId(int dId) { discountId = dId; }
-void Book::setAvailable(bool status) { isAvailable = status; }
+void Book::setIsAvailable(bool status) { isAvailable = status; }
 void Book::removeDiscount() { discountId = -1; }
 void Book::setPublisherId(int newId) {
     publisherId = newId;

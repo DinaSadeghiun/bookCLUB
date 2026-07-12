@@ -26,6 +26,32 @@ User::~User() {
     delete this->library;
 }
 
+// Deep Copy
+User::User(const User& other)
+    : Person(other), walletBalance(other.walletBalance), favoriteGenres(other.favoriteGenres)
+{
+    this->cart = new ShoppingCart(*(other.cart));
+    this->library = new PersonalLibrary(*(other.library));
+}
+
+// Copy Assignment Operator
+User& User::operator=(const User& other) {
+    if (this != &other) { \
+        Person::operator=(other);
+
+        this->walletBalance = other.walletBalance;
+        this->favoriteGenres = other.favoriteGenres;
+
+        delete this->cart;
+        delete this->library;
+
+        this->cart = new ShoppingCart(*(other.cart));
+        this->library = new PersonalLibrary(*(other.library));
+    }
+    return *this;
+}
+
+
 //getters
 QString User::getRole() const {
     return "User";

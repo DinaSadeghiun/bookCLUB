@@ -1,10 +1,12 @@
-#include "BookRepository.h"
+#include "DB/bookrepository.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 
-BookRepository::BookRepository(const QString& connectionName)
-    : connName(connectionName) {}
+BookRepository::BookRepository() {
+    db = QSqlDatabase::database("bookclub_db");
+}
+
 
 Book BookRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -26,14 +28,9 @@ Book BookRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool BookRepository::save(Book& book) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
-
-    if (!db.isOpen()) {
-        qDebug() << "Database is not open! Connection name:" << (connName.isEmpty() ? "default" : connName);
-        return false;
-    }
 
     QSqlQuery q(db);
+
     if (book.getId() == -1) {
         // INSERT
         q.prepare("INSERT INTO Books (publisher_id, discount_id, title, author, genre, "
@@ -96,8 +93,8 @@ bool BookRepository::save(Book& book) {
 }
 
 std::optional<Book> BookRepository::findById(int id) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
+
     q.prepare("SELECT * FROM Books WHERE id = :id");
     q.bindValue(":id", id);
 
@@ -113,7 +110,6 @@ std::optional<Book> BookRepository::findById(int id) {
 
 QList<Book> BookRepository::findAll() {
     QList<Book> list;
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Books WHERE is_available = 1");
 
@@ -129,10 +125,9 @@ QList<Book> BookRepository::findAll() {
 
 QList<Book> BookRepository::findByPublisherId(int publisherId) {
     QList<Book> list;
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Books WHERE publisher_id = :pub_id");
-    q.bindValue(":pub_id", publisherId);
+    q.prepare("SELECT * FROM Books WHERE publisher_id = ? AND is_available = 1");
+    q.addBindValue(publisherId);
 
     if (q.exec()) {
         while (q.next()) {
@@ -146,10 +141,9 @@ QList<Book> BookRepository::findByPublisherId(int publisherId) {
 
 QList<Book> BookRepository::findByGenre(Genre genre) {
     QList<Book> list;
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Books WHERE genre = :genre");
-    q.bindValue(":genre", static_cast<int>(genre));
+    q.prepare("SELECT * FROM Books WHERE genre = ? AND is_available = 1");
+    q.addBindValue(static_cast<int>(genre));
 
     if (q.exec()) {
         while (q.next()) {
@@ -162,11 +156,8 @@ QList<Book> BookRepository::findByGenre(Genre genre) {
 }
 
 bool BookRepository::remove(int id) {
-    if (id <= 0) return false;
-
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
-    q.prepare("UPDATE Books SET is_available = 0 WHERE id = :id");
-    q.bindValue(":id", id);
+    q.prepare("UPDATE Books SET is_available = 0 WHERE id = ?");
+    q.addBindValue(id);
     return q.exec() && q.numRowsAffected() > 0;
 }

@@ -6,8 +6,10 @@
 #include <QDebug>
 #include <QDateTime>
 
-AdminRepository::AdminRepository(const QString& connectionName)
-    : connName(connectionName) {}
+AdminRepository::AdminRepository() {
+    db = QSqlDatabase::database("bookclub_db");
+}
+
 
 Admin AdminRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -21,7 +23,6 @@ Admin AdminRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool AdminRepository::save(Admin& a) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
 
     if (a.getId() == -1) {
@@ -58,7 +59,6 @@ bool AdminRepository::save(Admin& a) {
 }
 
 bool AdminRepository::ensureDefaultAdmin() {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT COUNT(*) FROM Persons WHERE role = :role");
     q.bindValue(":role", ROLE_ADMIN);
@@ -73,7 +73,6 @@ bool AdminRepository::ensureDefaultAdmin() {
 
 bool AdminRepository::remove(int adminId) {
     if (adminId <= 0) return false;
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery query(db);
     query.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
     query.bindValue(":id", adminId);
@@ -82,7 +81,6 @@ bool AdminRepository::remove(int adminId) {
 }
 
 std::optional<Admin> AdminRepository::findById(int id) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", id);
@@ -93,7 +91,6 @@ std::optional<Admin> AdminRepository::findById(int id) {
 }
 
 std::optional<Admin> AdminRepository::findByUsername(const QString& username) {
-    QSqlDatabase db = connName.isEmpty() ? QSqlDatabase::database() : QSqlDatabase::database(connName);
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Persons WHERE username = :uname AND role = :role");
     q.bindValue(":uname", Person::encryptData(username));

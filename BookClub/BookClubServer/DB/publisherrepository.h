@@ -6,21 +6,21 @@
 #include <optional>
 #include "Publisher.h"
 
-class PublisherRepository {
-private:
-    QString connName;
-    Publisher fromQuery(QSqlQuery& q) const;
-    static constexpr char ROLE_PUBLISHER[] = "Publisher"; // Centralized role name
+inline const QString ROLE_PUBLISHER = "Publisher";
 
+class PublisherRepository {
 public:
-    explicit PublisherRepository(const QString& connectionName = "");
+    explicit PublisherRepository();
 
     bool save(Publisher& pub);
     std::optional<Publisher> findById(int id) const;
     std::optional<Publisher> findByUsername(const QString& username) const;
-    std::optional<Publisher> authenticate(const QString& username, const QString& password);
+    std::optional<Publisher> authenticate(const QString& username, const QString& password, const QString& securityAns);
     bool remove(int id);
 
+private:
+    QSqlDatabase db;
+    Publisher fromQuery(QSqlQuery& q) const;
 };
 
 #endif

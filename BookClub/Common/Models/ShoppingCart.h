@@ -14,18 +14,15 @@ private:
     QDateTime createdAt;
 
 public:
+    //creat new
     explicit ShoppingCart(int userId);
+
+    // loading from DB
+    ShoppingCart(int id, int userId, const QDateTime& createdAt);
 
     bool addBook(int bookId);
     bool removeBook(int bookId);
     void clearCart();
-
-    // TODO (DB phase): inject BookRepository to calculate prices
-    // double getTotalRawPrice(BookRepository* repo) const;
-    // double getTotalDiscountAmount(BookRepository* repo) const;
-    // double getFinalPayableAmount(BookRepository* repo) const;
-
-    // TODO (DB phase): Order* checkout(BookRepository* repo);
 
     //getters
     int getId() const;
@@ -34,6 +31,7 @@ public:
 
     //setters
     void setUserId(int newId);
+    void setId(int newId);
 
     bool isEmpty() const;
     QDateTime getCreatedAt() const;

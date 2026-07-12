@@ -62,7 +62,7 @@ public:
     void setCoverImagePath(const QString& path);
     void setPdfFilePath(const QString& path);
     void setDiscountId(int dId);
-    void setAvailable(bool status);
+    void setIsAvailable(bool status);
     void setPublisherId(int newId);
 
     // Methods

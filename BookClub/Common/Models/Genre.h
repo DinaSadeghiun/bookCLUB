@@ -15,9 +15,11 @@ enum class Genre {
     SelfHelp,
     Poetry,
     Children,
-    Other
+    Other,
+    Unknown
 };
 
 QString genreToString(Genre genre);
+Genre stringToGenre(const QString& genreString);
 
 #endif

@@ -1,7 +1,12 @@
-#include "shoppingcart.h"
+#include "ShoppingCart.h"
 
+//creat new
 ShoppingCart::ShoppingCart(int userId)
     : id(-1), userId(userId), createdAt(QDateTime::currentDateTime()) {}
+
+//loading from DB
+ShoppingCart::ShoppingCart(int id, int userId, const QDateTime& createdAt)
+    : id(id), userId(userId), createdAt(createdAt) {}
 
 bool ShoppingCart::addBook(int bookId) {
     if (itemIds.contains(bookId)) return false;
@@ -23,9 +28,8 @@ int ShoppingCart::getUserId() const { return userId; }
 const QList<int>& ShoppingCart::getItemIds() const { return itemIds; }
 
 //setters
-void ShoppingCart::setUserId(int newId) {
-    userId = newId;
-}
+void ShoppingCart::setUserId(int newId) { userId = newId; }
+void ShoppingCart::setId(int newId) { id = newId; }
 
 
 bool ShoppingCart::isEmpty() const { return itemIds.isEmpty(); }

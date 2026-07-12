@@ -5,16 +5,16 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <optional>
+inline const QString ROLE_ADMIN = "Admin";
 
 class AdminRepository {
 private:
-    QString connName;
-    static constexpr char ROLE_ADMIN[] = "Admin";
+    QSqlDatabase db;
 
     Admin fromQuery(QSqlQuery& q) const;
 
 public:
-    explicit AdminRepository(const QString& connectionName = "");
+    explicit AdminRepository();
 
     bool save(Admin& a);
     bool remove(int id);
