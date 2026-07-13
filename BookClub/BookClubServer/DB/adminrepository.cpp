@@ -14,16 +14,20 @@ AdminRepository::AdminRepository(DatabaseManager* manager)
 Admin AdminRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
     QString username = Person::decryptData(q.value("username").toString());
-    QString password = q.value("password_hash").toString();
+    QString passwordHash = q.value("password_hash").toString();
     QDateTime created = QDateTime::fromSecsSinceEpoch(q.value("created_at").toLongLong());
     bool active = q.value("is_active").toBool();
     QString secA = Person::decryptData(q.value("security_answer").toString());
 
-    return Admin(id, username, password, created, active, secA);
+    return Admin(id, username, passwordHash, created, active, secA);
 }
 
 bool AdminRepository::save(Admin& a) {
     QSqlDatabase db = dbManager->getDatabase();
+    if (!db.transaction()) {
+        qCritical() << "Failed to start transaction:" << db.lastError().text();
+        return false;
+    }
 
     QSqlQuery q(db);
 
@@ -38,7 +42,8 @@ bool AdminRepository::save(Admin& a) {
         q.bindValue(":active", a.getIsActive() ? 1 : 0);
 
         if (!q.exec()) {
-            qDebug() << "Admin Insert Failed:" << q.lastError().text();
+            qCritical() << "Admin Insert Failed:" << q.lastError().text();
+            db.rollback();
             return false;
         }
         a.setId(q.lastInsertId().toInt());
@@ -53,11 +58,12 @@ bool AdminRepository::save(Admin& a) {
         q.bindValue(":role", ROLE_ADMIN);
 
         if (!q.exec()) {
-            qDebug() << "Admin Update Failed:" << q.lastError().text();
+            qCritical() << "Admin Update Failed:" << q.lastError().text();
+            db.rollback();
             return false;
         }
     }
-    return true;
+    return db.commit();
 }
 
 bool AdminRepository::ensureDefaultAdmin() {
@@ -76,34 +82,58 @@ bool AdminRepository::ensureDefaultAdmin() {
 
 bool AdminRepository::remove(int adminId) {
     QSqlDatabase db = dbManager->getDatabase();
-    if (!db.transaction()) return false;
+    if (!db.transaction()) {
+        qCritical() << "Failed to start transaction:" << db.lastError().text();
+        return false;
+    }
     QSqlQuery q(db);
 
     q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", adminId);
     q.bindValue(":role", ROLE_ADMIN);
-    return q.exec() && q.numRowsAffected() > 0;
+
+    if (q.exec()) {
+        if (q.numRowsAffected() > 0) {
+            return db.commit();
+        } else {
+            qDebug() << "No admin found with ID:" << adminId << "or role mismatch.";
+            db.rollback();
+            return false;
+        }
+    } else {
+        qCritical() << "Admin Remove Failed:" << q.lastError().text();
+        db.rollback();
+        return false;
+    }
 }
 
 std::optional<Admin> AdminRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Persons WHERE id = :id AND role = :role");
+    // Explicitly select necessary columns
+    q.prepare("SELECT id, username, password_hash, created_at, is_active, security_answer FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", id);
     q.bindValue(":role", ROLE_ADMIN);
 
     if (q.exec() && q.next()) return fromQuery(q);
+    if (q.lastError().isValid()) {
+        qCritical() << "findById failed:" << q.lastError().text();
+    }
     return std::nullopt;
 }
 
 std::optional<Admin> AdminRepository::findByUsername(const QString& username) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Persons WHERE username = :uname AND role = :role");
+    // Explicitly select necessary columns
+    q.prepare("SELECT id, username, password_hash, created_at, is_active, security_answer FROM Persons WHERE username = :uname AND role = :role");
     q.bindValue(":uname", Person::encryptData(username));
     q.bindValue(":role", ROLE_ADMIN);
 
     if (q.exec() && q.next()) return fromQuery(q);
+    if (q.lastError().isValid()) {
+        qCritical() << "findByUsername failed:" << q.lastError().text();
+    }
     return std::nullopt;
 }
 

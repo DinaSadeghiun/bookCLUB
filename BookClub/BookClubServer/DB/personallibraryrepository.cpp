@@ -1,4 +1,4 @@
-#include "DB/personallibraryreposiroty.h"
+#include "DB/personallibraryrepository.h"
 #include "databasemanager.h"
 #include <QSqlQuery>
 #include <QSqlError>
