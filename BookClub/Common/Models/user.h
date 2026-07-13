@@ -1,6 +1,6 @@
 #ifndef USER_H
 #define USER_H
-
+#include "QString"
 #include "person.h"
 #include "genre.h"
 #include "shoppingcart.h"

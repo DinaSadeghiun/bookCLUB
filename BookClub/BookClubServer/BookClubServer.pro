@@ -12,10 +12,11 @@ SOURCES += \
     DB/discountrepository.cpp \
     DB/notificationrepository.cpp \
     DB/orderrepository.cpp \
-    DB/personallibraryreposiroty.cpp \
+    DB/personallibraryrepository.cpp \
     DB/publisherrepository.cpp \
     DB/shoppingcartrepository.cpp \
     DB/userrepository.cpp \
+    Services/userservice.cpp \
     main.cpp
 
 HEADERS += \
@@ -26,9 +27,10 @@ HEADERS += \
     DB/discountrepository.h \
     DB/notificationrepository.h \
     DB/orderrepository.h \
-    DB/personallibraryreposiroty.h \
+    DB/personallibraryrepository.h \
     DB/publisherrepository.h \
     DB/shoppingcartrepository.h \
-    DB/userrepository.h
+    DB/userrepository.h \
+    Services/userservice.h
 
 include(../Common/Common.pri)
