@@ -9,8 +9,13 @@ Item {
     required property string userRole
     property var userGenres: []
     property int cartItemCount: 0
-
     property int currentTab: 0
+
+    // Background for the entire dashboard
+    Rectangle {
+        anchors.fill: parent
+        color: "#1A0F1F" // Match GenreSelection background
+    }
 
     Component.onCompleted: loadCurrentView()
     onCurrentTabChanged: loadCurrentView()
@@ -37,56 +42,129 @@ Item {
 
         // ---------- Sidebar ----------
         Rectangle {
+            id: sidebar
             Layout.preferredWidth: 220
             Layout.fillHeight: true
-            color: "#1E1E1E"
+            color: "#2D1B33" // Dark Purple sidebar
+
+            // Subtle Gold Border on the right
+            Rectangle {
+                width: 1
+                anchors.right: parent.right
+                height: parent.height
+                color: "#D4AF37"
+                opacity: 0.3
+            }
 
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 16
-                spacing: 12
+                spacing: 15
 
-                Image {
+                // Giraffe Logo Area
+                Rectangle {
                     Layout.alignment: Qt.AlignHCenter
-                    source: "qrc:/assets/images/giraffe.png"
-                    fillMode: Image.PreserveAspectFit
-                    Layout.preferredWidth: 80
-                    Layout.preferredHeight: 80
+                    width: 100
+                    height: 100
+                    radius: 50
+                    color: "#1A0F1F"
+                    border.color: "#D4AF37"
+                    border.width: 2
+
+                    Image {
+                        anchors.centerIn: parent
+                        source: "qrc:/assets/images/giraffe.png"
+                        fillMode: Image.PreserveAspectFit
+                        width: 70
+                        height: 70
+                    }
                 }
 
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: username
-                    color: "white"
+                    text: "Welcome, " + username
+                    color: "#D4AF37" // Gold text
+                    font.pixelSize: 18
                     font.bold: true
                 }
 
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: userRole
+                    color: "#D4AF37"
+                    font.pixelSize: 12
+                    opacity: 0.7
+                }
+
+                Item { Layout.preferredHeight: 20 } // Spacer
+
+                // Navigation Buttons
                 Repeater {
                     model: ["Home", "Library", "Search", "Cart", "Settings"]
                     delegate: Button {
+                        id: navButton
                         Layout.fillWidth: true
-                        text: modelData
-                        highlighted: currentTab === index
+                        Layout.preferredHeight: 45
+
+                        background: Rectangle {
+                            color: currentTab === index ? "#D4AF37" : "transparent"
+                            radius: 8
+                            border.color: currentTab === index ? "#D4AF37" : "transparent"
+                        }
+
+                        contentItem: Text {
+                            text: modelData
+                            color: currentTab === index ? "#1A0F1F" : "#D4AF37"
+                            font.pixelSize: 16
+                            font.bold: currentTab === index
+                            leftPadding: 15
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
                         onClicked: currentTab = index
 
                         // Cart badge
                         Rectangle {
                             visible: index === 3 && cartItemCount > 0
-                            width: 20; height: 20; radius: 10
-                            color: "#D4AF37"
+                            width: 22; height: 22; radius: 11
+                            color: currentTab === index ? "#1A0F1F" : "#D4AF37"
                             anchors.right: parent.right
-                            anchors.top: parent.top
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+
                             Text {
                                 anchors.centerIn: parent
                                 text: cartItemCount
-                                color: "black"
+                                color: currentTab === index ? "#D4AF37" : "#1A0F1F"
                                 font.pixelSize: 11
+                                font.bold: true
                             }
                         }
                     }
                 }
 
                 Item { Layout.fillHeight: true } // spacer
+
+                // Logout Button (Optional but fits the theme)
+                Button {
+                    Layout.fillWidth: true
+                    text: "Logout"
+                    onClicked: {
+                        if (dashboardRoot.StackView.view)
+                            dashboardRoot.StackView.view.pop()
+                    }
+                    background: Rectangle {
+                        color: "transparent"
+                        border.color: "#D4AF37"
+                        border.width: 1
+                        radius: 8
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#D4AF37"
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                }
             }
         }
 
@@ -96,8 +174,25 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
+            // Animation for smooth tab switching
+            onSourceChanged: {
+                opacity = 0
+                fadeIn.start()
+            }
+
+            NumberAnimation {
+                id: fadeIn
+                target: contentLoader
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 250
+            }
+
             Connections {
                 target: contentLoader.item
+                ignoreUnknownSignals: true // Prevents errors if onLogoutRequested isn't in every view
+
                 function onLogoutRequested() {
                     var sv = dashboardRoot.StackView.view
                     if (sv) {

@@ -18,5 +18,6 @@
         <file>assets/genres/romance.png</file>
         <file>assets/genres/sciFI.png</file>
         <file>assets/genres/selfHelp.png</file>
+        <file>LibraryView.qml</file>
     </qresource>
 </RCC>
