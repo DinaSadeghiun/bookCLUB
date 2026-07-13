@@ -117,6 +117,7 @@ release/qrc_resources.cpp: ../../../BookClubClient/resources.qrc \
 		../../../BookClubClient/SignUp.qml \
 		../../../BookClubClient/GenreSelection.qml \
 		../../../BookClubClient/LibraryView.qml \
+		../../../BookClubClient/SearchView.qml \
 		../../../BookClubClient/Dashboard.qml \
 		../../../BookClubClient/Login.qml \
 		../../../BookClubClient/main.qml \

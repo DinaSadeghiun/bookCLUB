@@ -19,5 +19,6 @@
         <file>assets/genres/sciFI.png</file>
         <file>assets/genres/selfHelp.png</file>
         <file>LibraryView.qml</file>
+        <file>SearchView.qml</file>
     </qresource>
 </RCC>
