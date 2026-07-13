@@ -20,5 +20,6 @@
         <file>assets/genres/selfHelp.png</file>
         <file>LibraryView.qml</file>
         <file>SearchView.qml</file>
+        <file>CartView.qml</file>
     </qresource>
 </RCC>

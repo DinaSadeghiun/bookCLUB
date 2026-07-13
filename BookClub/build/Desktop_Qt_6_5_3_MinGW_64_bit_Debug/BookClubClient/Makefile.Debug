@@ -116,6 +116,7 @@ debug/qrc_resources.cpp: ../../../BookClubClient/resources.qrc \
 		D:/QT/6.5.3/mingw_64/bin/rcc.exe \
 		../../../BookClubClient/SignUp.qml \
 		../../../BookClubClient/GenreSelection.qml \
+		../../../BookClubClient/CartView.qml \
 		../../../BookClubClient/LibraryView.qml \
 		../../../BookClubClient/SearchView.qml \
 		../../../BookClubClient/Dashboard.qml \
