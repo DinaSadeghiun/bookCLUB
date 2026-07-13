@@ -8,12 +8,14 @@
 #include <optional>
 #include "Comment.h"
 
+class DatabaseManager;
+
 class CommentRepository {
 
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
 public:
-    explicit CommentRepository();
+    explicit CommentRepository(DatabaseManager* manager);
 
     bool save(Comment& comment);
     bool remove(int id);

@@ -7,10 +7,11 @@
 #include <optional>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+class DatabaseManager;
 
 class ShoppingCartRepository {
 public:
-    explicit ShoppingCartRepository();
+    explicit ShoppingCartRepository(DatabaseManager* manager);
 
     bool save(ShoppingCart& cart);
     std::optional<ShoppingCart> findById(int id);
@@ -18,10 +19,10 @@ public:
     bool remove(int id);
 
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
     ShoppingCart fromQuery(QSqlQuery& q) const;
-    bool syncCartItems(int cartId, const QList<int>& itemIds);
+    bool syncCartItems(QSqlQuery& q, int cartId, const QList<int>& itemIds);
     QList<int> loadCartItems(int cartId);
 };
 

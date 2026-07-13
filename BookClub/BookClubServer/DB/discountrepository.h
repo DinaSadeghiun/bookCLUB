@@ -6,12 +6,13 @@
 #include <optional>
 #include <QSqlDatabase>
 #include "Discount.h"
+class DatabaseManager;
 
 class DiscountRepository {
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
 public:
-    explicit DiscountRepository();
+    explicit DiscountRepository(DatabaseManager* manager);
 
     bool save(Discount& discount);
     bool remove(int id);

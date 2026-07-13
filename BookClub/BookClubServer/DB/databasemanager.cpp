@@ -11,6 +11,11 @@ void DatabaseManager::closeDatabase() {
     if (db.isOpen()) db.close();
 }
 
+QSqlDatabase DatabaseManager::getDatabase() const {
+    return db;
+}
+
+
 bool DatabaseManager::initDatabase(const QString& dbName) {
     db = QSqlDatabase::addDatabase("QSQLITE", "bookclub_db");
     db.setDatabaseName(dbName);

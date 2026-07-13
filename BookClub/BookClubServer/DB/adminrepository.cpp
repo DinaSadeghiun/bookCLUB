@@ -1,4 +1,5 @@
 #include "AdminRepository.h"
+#include "databasemanager.h"
 #include "person.h"
 #include "Admin.h"
 #include <QSqlError>
@@ -6,9 +7,8 @@
 #include <QDebug>
 #include <QDateTime>
 
-AdminRepository::AdminRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+AdminRepository::AdminRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 
 Admin AdminRepository::fromQuery(QSqlQuery& q) const {
@@ -23,6 +23,8 @@ Admin AdminRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool AdminRepository::save(Admin& a) {
+    QSqlDatabase db = dbManager->getDatabase();
+
     QSqlQuery q(db);
 
     if (a.getId() == -1) {
@@ -59,6 +61,7 @@ bool AdminRepository::save(Admin& a) {
 }
 
 bool AdminRepository::ensureDefaultAdmin() {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT COUNT(*) FROM Persons WHERE role = :role");
     q.bindValue(":role", ROLE_ADMIN);
@@ -72,15 +75,18 @@ bool AdminRepository::ensureDefaultAdmin() {
 }
 
 bool AdminRepository::remove(int adminId) {
-    if (adminId <= 0) return false;
-    QSqlQuery query(db);
-    query.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
-    query.bindValue(":id", adminId);
-    query.bindValue(":role", ROLE_ADMIN);
-    return query.exec() && query.numRowsAffected() > 0;
+    QSqlDatabase db = dbManager->getDatabase();
+    if (!db.transaction()) return false;
+    QSqlQuery q(db);
+
+    q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
+    q.bindValue(":id", adminId);
+    q.bindValue(":role", ROLE_ADMIN);
+    return q.exec() && q.numRowsAffected() > 0;
 }
 
 std::optional<Admin> AdminRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", id);
@@ -91,6 +97,7 @@ std::optional<Admin> AdminRepository::findById(int id) {
 }
 
 std::optional<Admin> AdminRepository::findByUsername(const QString& username) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Persons WHERE username = :uname AND role = :role");
     q.bindValue(":uname", Person::encryptData(username));

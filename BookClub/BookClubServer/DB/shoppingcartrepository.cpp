@@ -1,12 +1,12 @@
 #include "shoppingcartrepository.h"
+#include "databasemanager.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDateTime>
 #include <QDebug>
 
-ShoppingCartRepository::ShoppingCartRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+ShoppingCartRepository::ShoppingCartRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 ShoppingCart ShoppingCartRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -19,8 +19,8 @@ ShoppingCart ShoppingCartRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool ShoppingCartRepository::save(ShoppingCart& cart) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
-
     QSqlQuery q(db);
     if (cart.getId() == -1) {
         q.prepare("INSERT INTO ShoppingCarts (user_id, created_at) VALUES (?, ?)");
@@ -44,7 +44,7 @@ bool ShoppingCartRepository::save(ShoppingCart& cart) {
         }
     }
 
-    if (!syncCartItems(cart.getId(), cart.getItemIds())) {
+    if (!syncCartItems(q, cart.getId(), cart.getItemIds())) {
         db.rollback();
         return false;
     }
@@ -53,6 +53,7 @@ bool ShoppingCartRepository::save(ShoppingCart& cart) {
 }
 
 std::optional<ShoppingCart> ShoppingCartRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM ShoppingCarts WHERE id = ?");
     q.addBindValue(id);
@@ -67,6 +68,7 @@ std::optional<ShoppingCart> ShoppingCartRepository::findById(int id) {
 }
 
 std::optional<ShoppingCart> ShoppingCartRepository::findByUserId(int userId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM ShoppingCarts WHERE user_id = ?");
     q.addBindValue(userId);
@@ -81,8 +83,8 @@ std::optional<ShoppingCart> ShoppingCartRepository::findByUserId(int userId) {
 }
 
 bool ShoppingCartRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
-
     QSqlQuery q(db);
     q.prepare("DELETE FROM CartItems WHERE cart_id = ?");
     q.addBindValue(id);
@@ -95,23 +97,31 @@ bool ShoppingCartRepository::remove(int id) {
     return db.commit();
 }
 
-bool ShoppingCartRepository::syncCartItems(int cartId, const QList<int>& itemIds) {
-    QSqlQuery q(db);
+bool ShoppingCartRepository::syncCartItems(QSqlQuery& q, int cartId, const QList<int>& itemIds) {
+
     q.prepare("DELETE FROM CartItems WHERE cart_id = ?");
     q.addBindValue(cartId);
     if (!q.exec()) return false;
 
-    q.prepare("INSERT INTO CartItems (cart_id, book_id) VALUES (?, ?)");
     for (int bookId : itemIds) {
+        q.clear();
+        q.prepare("INSERT INTO CartItems (cart_id, book_id) VALUES (?, ?)");
         q.addBindValue(cartId);
         q.addBindValue(bookId);
-        if (!q.exec()) return false;
+        if (!q.exec()) {
+            qWarning() << "Failed to insert cart item [CartID:" << cartId << ", BookID:" << bookId << "]:" << q.lastError().text();
+            return false;
+        }
+
     }
     return true;
 }
 
+
+
 QList<int> ShoppingCartRepository::loadCartItems(int cartId) {
     QList<int> items;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT book_id FROM CartItems WHERE cart_id = ?");
     q.addBindValue(cartId);

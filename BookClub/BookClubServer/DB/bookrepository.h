@@ -8,14 +8,16 @@
 #include <optional>
 #include "Book.h"
 
+class DatabaseManager;
+
 class BookRepository {
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
     Book fromQuery(QSqlQuery& q) const;
 
 public:
-    explicit BookRepository();
+    explicit BookRepository(DatabaseManager* manager);
 
     bool save(Book& book);
     std::optional<Book> findById(int id);

@@ -1,4 +1,5 @@
 #include "DB/personallibraryreposiroty.h"
+#include "databasemanager.h"
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QVariant>
@@ -6,12 +7,12 @@
 #include <QDebug>
 #include <QSet>
 
-PersonalLibraryRepository::PersonalLibraryRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+PersonalLibraryRepository::PersonalLibraryRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 QList<int> PersonalLibraryRepository::loadPurchasedBooks(int userId) const {
     QList<int> books;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT book_id FROM PurchasedBooks WHERE user_id = ?");
     q.addBindValue(userId);
@@ -22,6 +23,7 @@ QList<int> PersonalLibraryRepository::loadPurchasedBooks(int userId) const {
 
 QList<int> PersonalLibraryRepository::loadWishlist(int userId) const {
     QList<int> books;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT book_id FROM Wishlist WHERE user_id = ?");
     q.addBindValue(userId);
@@ -32,6 +34,7 @@ QList<int> PersonalLibraryRepository::loadWishlist(int userId) const {
 
 QList<QPair<QString, QList<int>>> PersonalLibraryRepository::loadShelves(int userId) const {
     QList<QPair<QString, QList<int>>> result;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, name FROM CustomShelves WHERE user_id = ?");
     q.addBindValue(userId);
@@ -56,6 +59,7 @@ QList<QPair<QString, QList<int>>> PersonalLibraryRepository::loadShelves(int use
 }
 
 std::optional<PersonalLibrary> PersonalLibraryRepository::findByUserId(int userId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT person_id FROM Users WHERE person_id = :id");
     q.bindValue(":id", userId);
@@ -72,6 +76,7 @@ std::optional<PersonalLibrary> PersonalLibraryRepository::findByUserId(int userI
 }
 
 int PersonalLibraryRepository::resolveShelfId(int userId, const QString& name) const {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id FROM CustomShelves WHERE user_id = :uid AND name = :name");
     q.bindValue(":uid", userId);
@@ -81,6 +86,7 @@ int PersonalLibraryRepository::resolveShelfId(int userId, const QString& name) c
 }
 
 bool PersonalLibraryRepository::save(const PersonalLibrary& lib) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
 
     int userId = lib.getUserId();
@@ -149,6 +155,7 @@ bool PersonalLibraryRepository::save(const PersonalLibrary& lib) {
 }
 
 bool PersonalLibraryRepository::addPurchasedBook(int userId, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("INSERT OR IGNORE INTO PurchasedBooks (user_id, book_id, purchased_at) VALUES (?, ?, ?)");
     q.addBindValue(userId); q.addBindValue(bookId); q.addBindValue(QDateTime::currentSecsSinceEpoch());

@@ -6,15 +6,16 @@
 #include <QSqlQuery>
 #include <optional>
 inline const QString ROLE_ADMIN = "Admin";
+class DatabaseManager;
 
 class AdminRepository {
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
     Admin fromQuery(QSqlQuery& q) const;
 
 public:
-    explicit AdminRepository();
+    explicit AdminRepository(DatabaseManager* manager);
 
     bool save(Admin& a);
     bool remove(int id);

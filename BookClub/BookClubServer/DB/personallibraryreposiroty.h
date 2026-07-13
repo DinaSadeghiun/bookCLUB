@@ -8,11 +8,11 @@
 #include <QPair>
 #include "personallibrary.h"
 
-class QSqlQuery;
+class DatabaseManager;
 
 class PersonalLibraryRepository {
 public:
-    explicit PersonalLibraryRepository();
+    explicit PersonalLibraryRepository(DatabaseManager* manager);
 
     std::optional<PersonalLibrary> findByUserId(int userId);
     bool save(const PersonalLibrary& lib);
@@ -27,7 +27,7 @@ public:
     bool removeBookFromShelf(int userId, const QString& shelfName, int bookId);
 
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
     QList<int> loadPurchasedBooks(int userId) const;
     QList<int> loadWishlist(int userId) const;

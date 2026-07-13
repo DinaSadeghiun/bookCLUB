@@ -1,12 +1,12 @@
 #include "publisherrepository.h"
+#include "databasemanager.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 #include <QDateTime>
 
-PublisherRepository::PublisherRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+PublisherRepository::PublisherRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -25,6 +25,7 @@ Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool PublisherRepository::save(Publisher& pub) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
 
     QSqlQuery q(db);
@@ -86,6 +87,7 @@ bool PublisherRepository::save(Publisher& pub) {
 }
 
 std::optional<Publisher> PublisherRepository::findById(int id) const {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
@@ -100,6 +102,7 @@ std::optional<Publisher> PublisherRepository::findById(int id) const {
 }
 
 std::optional<Publisher> PublisherRepository::findByUsername(const QString& username) const {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
@@ -123,6 +126,7 @@ std::optional<Publisher> PublisherRepository::authenticate(const QString& userna
 
 
 bool PublisherRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", id);

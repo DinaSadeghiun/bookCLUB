@@ -1,4 +1,5 @@
 #include "orderrepository.h"
+#include "databasemanager.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
@@ -6,13 +7,13 @@
 #include <QDateTime>
 #include <QDebug>
 
-OrderRepository::OrderRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+OrderRepository::OrderRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
+
 
 bool OrderRepository::save(Order& order) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
-
     QSqlQuery q(db);
     q.prepare(
         "INSERT INTO Orders (user_id, order_date, raw_price, discount_amount, final_price) "
@@ -54,6 +55,7 @@ bool OrderRepository::save(Order& order) {
 }
 
 std::optional<Order> OrderRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, user_id, order_date, raw_price, discount_amount, final_price "
               "FROM Orders WHERE id = ?");
@@ -69,6 +71,7 @@ std::optional<Order> OrderRepository::findById(int id) {
 
 QList<Order> OrderRepository::findByUserId(int userId) {
     QList<Order> orders;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Orders WHERE user_id = ? ORDER BY order_date DESC");
     q.addBindValue(userId);
@@ -85,6 +88,7 @@ QList<Order> OrderRepository::findByUserId(int userId) {
 
 QList<Order> OrderRepository::findAll() {
     QList<Order> orders;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
     if (q.exec("SELECT * FROM Orders ORDER BY order_date DESC")) {
@@ -98,8 +102,8 @@ QList<Order> OrderRepository::findAll() {
 }
 
 bool OrderRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
-
     QSqlQuery q(db);
 
     q.prepare("DELETE FROM Orders WHERE id = ?");
@@ -125,6 +129,7 @@ Order OrderRepository::fromQuery(QSqlQuery& q) {
 }
 
 void OrderRepository::loadOrderBooks(Order& order) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT book_id FROM OrderBooks WHERE order_id = ?");
     q.addBindValue(order.getId());

@@ -15,6 +15,7 @@ public:
     static DatabaseManager& instance();
     bool initDatabase(const QString& dbName = "bookclub.db");
     void closeDatabase();
+    QSqlDatabase getDatabase() const;
 
 private:
     bool createTables();

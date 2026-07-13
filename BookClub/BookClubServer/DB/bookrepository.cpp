@@ -1,11 +1,11 @@
 #include "DB/bookrepository.h"
+#include "databasemanager.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 
-BookRepository::BookRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+BookRepository::BookRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 
 Book BookRepository::fromQuery(QSqlQuery& q) const {
@@ -28,7 +28,7 @@ Book BookRepository::fromQuery(QSqlQuery& q) const {
 }
 
 bool BookRepository::save(Book& book) {
-
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
     if (book.getId() == -1) {
@@ -93,6 +93,7 @@ bool BookRepository::save(Book& book) {
 }
 
 std::optional<Book> BookRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
     q.prepare("SELECT * FROM Books WHERE id = :id");
@@ -109,6 +110,7 @@ std::optional<Book> BookRepository::findById(int id) {
 }
 
 QList<Book> BookRepository::findAll() {
+    QSqlDatabase db = dbManager->getDatabase();
     QList<Book> list;
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Books WHERE is_available = 1");
@@ -124,6 +126,7 @@ QList<Book> BookRepository::findAll() {
 }
 
 QList<Book> BookRepository::findByPublisherId(int publisherId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QList<Book> list;
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Books WHERE publisher_id = ? AND is_available = 1");
@@ -141,6 +144,7 @@ QList<Book> BookRepository::findByPublisherId(int publisherId) {
 
 QList<Book> BookRepository::findByGenre(Genre genre) {
     QList<Book> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Books WHERE genre = ? AND is_available = 1");
     q.addBindValue(static_cast<int>(genre));
@@ -156,6 +160,7 @@ QList<Book> BookRepository::findByGenre(Genre genre) {
 }
 
 bool BookRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("UPDATE Books SET is_available = 0 WHERE id = ?");
     q.addBindValue(id);

@@ -1,13 +1,14 @@
 #include "UserRepository.h"
+#include "databasemanager.h"
 #include "person.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDebug>
 #include <QDateTime>
 
-UserRepository::UserRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+UserRepository::UserRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
+
 
 User UserRepository::fromQuery(QSqlQuery& q) const {
     int id = q.value("id").toInt();
@@ -26,6 +27,7 @@ User UserRepository::fromQuery(QSqlQuery& q) const {
 
 QList<Genre> UserRepository::loadUserGenres(int userId) const {
     QList<Genre> genres;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT genre FROM UserGenres WHERE user_id = ?");
     q.addBindValue(userId);
@@ -39,6 +41,7 @@ QList<Genre> UserRepository::loadUserGenres(int userId) const {
 }
 
 bool UserRepository::save(User& u) {
+    QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
 
     QSqlQuery q(db);
@@ -114,6 +117,7 @@ bool UserRepository::save(User& u) {
 }
 
 std::optional<User> UserRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
@@ -128,6 +132,7 @@ std::optional<User> UserRepository::findById(int id) {
 }
 
 std::optional<User> UserRepository::findByUsername(const QString& username) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
@@ -142,6 +147,7 @@ std::optional<User> UserRepository::findByUsername(const QString& username) {
 }
 
 bool UserRepository::remove(int userId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("DELETE FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", userId);

@@ -10,14 +10,15 @@
 #include <QDebug>
 #include <optional>
 #include "Notification.h"
+class DatabaseManager;
 
 class NotificationRepository {
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
     Notification fromQuery(QSqlQuery& q);
 
 public:
-    NotificationRepository();
+    explicit NotificationRepository(DatabaseManager* manager);
 
     bool save(Notification& notification);
     std::optional<Notification> findById(int id);

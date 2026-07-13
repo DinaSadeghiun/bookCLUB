@@ -1,4 +1,5 @@
 #include "discountrepository.h"
+#include "databasemanager.h"
 #include <QtSql/QSqlDatabase>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
@@ -6,11 +7,11 @@
 #include <QDateTime>
 #include <QDebug>
 
-DiscountRepository::DiscountRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+DiscountRepository::DiscountRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 bool DiscountRepository::save(Discount& discount) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
     if (discount.getId() == -1) {
@@ -41,6 +42,7 @@ bool DiscountRepository::save(Discount& discount) {
 }
 
 bool DiscountRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("DELETE FROM Discounts WHERE id = :id");
     q.bindValue(":id", id);
@@ -48,6 +50,7 @@ bool DiscountRepository::remove(int id) {
 }
 
 std::optional<Discount> DiscountRepository::findById(int id) const {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, value, type, start_date, end_date, is_active FROM Discounts WHERE id = :id");
     q.bindValue(":id", id);
@@ -67,6 +70,7 @@ std::optional<Discount> DiscountRepository::findById(int id) const {
 
 QList<Discount> DiscountRepository::findAllActive() const {
     QList<Discount> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Discounts WHERE is_active = 1");
 
@@ -85,6 +89,7 @@ QList<Discount> DiscountRepository::findAllActive() const {
 
 QList<Discount> DiscountRepository::findAll() const {
     QList<Discount> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT * FROM Discounts WHERE is_active = 1");
     while (q.next()) {

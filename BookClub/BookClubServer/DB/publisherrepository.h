@@ -7,10 +7,11 @@
 #include "Publisher.h"
 
 inline const QString ROLE_PUBLISHER = "Publisher";
+class DatabaseManager;
 
 class PublisherRepository {
 public:
-    explicit PublisherRepository();
+    explicit PublisherRepository(DatabaseManager* manager);
 
     bool save(Publisher& pub);
     std::optional<Publisher> findById(int id) const;
@@ -19,7 +20,7 @@ public:
     bool remove(int id);
 
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
     Publisher fromQuery(QSqlQuery& q) const;
 };
 

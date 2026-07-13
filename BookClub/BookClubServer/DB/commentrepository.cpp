@@ -1,15 +1,16 @@
 #include "commentrepository.h"
+#include "databasemanager.h"
 #include <QSqlError>
 #include <QVariant>
 #include <QDateTime>
 #include <QDebug>
 
-CommentRepository::CommentRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+CommentRepository::CommentRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
 
 
 bool CommentRepository::save(Comment& comment) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     bool isInsert = (comment.getId() == -1);
 
@@ -41,6 +42,7 @@ bool CommentRepository::save(Comment& comment) {
 }
 
 bool CommentRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("DELETE FROM Comments WHERE id = :id");
     q.bindValue(":id", id);
@@ -48,6 +50,7 @@ bool CommentRepository::remove(int id) {
 }
 
 std::optional<Comment> CommentRepository::findById(int id) const {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, user_id, book_id, text, rating, date "
               "FROM Comments WHERE id = :id");
@@ -68,6 +71,7 @@ std::optional<Comment> CommentRepository::findById(int id) const {
 
 QList<Comment> CommentRepository::findByBookId(int bookId) const {
     QList<Comment> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, user_id, book_id, text, rating, date "
               "FROM Comments WHERE book_id = :bid");
@@ -92,6 +96,7 @@ QList<Comment> CommentRepository::findByBookId(int bookId) const {
 
 QList<Comment> CommentRepository::findAll() const {
     QList<Comment> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("SELECT id, user_id, book_id, text, rating, date FROM Comments");
 

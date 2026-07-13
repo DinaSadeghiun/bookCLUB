@@ -7,10 +7,11 @@
 #include <optional>
 
 inline const QString ROLE_USER = "User";
+class DatabaseManager;
 
 class UserRepository {
 public:
-    explicit UserRepository();
+    explicit UserRepository(DatabaseManager* manager);
 
     bool save(User& u);
     bool remove(int id);
@@ -19,7 +20,7 @@ public:
     std::optional<User> authenticate(const QString& username, const QString& password);
 
 private:
-    QSqlDatabase db;
+    DatabaseManager* dbManager;
 
     User fromQuery(QSqlQuery& q) const;
     QList<Genre> loadUserGenres(int userId) const;

@@ -1,8 +1,10 @@
 #include "notificationrepository.h"
+#include "databasemanager.h"
 
-NotificationRepository::NotificationRepository() {
-    db = QSqlDatabase::database("bookclub_db");
-}
+NotificationRepository::NotificationRepository(DatabaseManager* manager)
+    : dbManager(manager) {}
+
+
 
 Notification NotificationRepository::fromQuery(QSqlQuery& q) {
     int id = q.value("id").toInt();
@@ -20,6 +22,7 @@ Notification NotificationRepository::fromQuery(QSqlQuery& q) {
 }
 
 bool NotificationRepository::save(Notification& notification) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare(
         "INSERT INTO Notifications (type, recipient_id, related_book_id, message, created_at, is_read) "
@@ -50,6 +53,7 @@ bool NotificationRepository::save(Notification& notification) {
 }
 
 std::optional<Notification> NotificationRepository::findById(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare(
         "SELECT id, type, recipient_id, related_book_id, message, created_at, is_read "
@@ -65,6 +69,7 @@ std::optional<Notification> NotificationRepository::findById(int id) {
 
 QList<Notification> NotificationRepository::findByRecipientId(int recipientId) {
     QList<Notification> list;
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare(
         "SELECT id, type, recipient_id, related_book_id, message, created_at, is_read "
@@ -83,6 +88,7 @@ QList<Notification> NotificationRepository::findByRecipientId(int recipientId) {
 }
 
 bool NotificationRepository::markAsRead(int notificationId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("UPDATE Notifications SET is_read = 1 WHERE id = ?");
     q.addBindValue(notificationId);
@@ -90,6 +96,7 @@ bool NotificationRepository::markAsRead(int notificationId) {
 }
 
 bool NotificationRepository::markAllAsReadForUser(int recipientId) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("UPDATE Notifications SET is_read = 1 WHERE recipient_id = ?");
     q.addBindValue(recipientId);
@@ -97,6 +104,7 @@ bool NotificationRepository::markAllAsReadForUser(int recipientId) {
 }
 
 bool NotificationRepository::remove(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("DELETE FROM Notifications WHERE id = ?");
     q.addBindValue(id);
