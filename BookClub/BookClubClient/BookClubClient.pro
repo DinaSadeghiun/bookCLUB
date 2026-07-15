@@ -17,7 +17,7 @@ DISTFILES += \
     BookCard.qml \
     CartView.qml \
     Dashboard.qml \
-    ForgetPassword.qml \
+    ForgotPassword.qml \
     GenreSelection.qml \
     HomeView.qml \
     LibraryView.qml \

@@ -21,5 +21,6 @@
         <file>LibraryView.qml</file>
         <file>SearchView.qml</file>
         <file>CartView.qml</file>
+        <file>ForgotPassword.qml</file>
     </qresource>
 </RCC>

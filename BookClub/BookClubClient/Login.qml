@@ -125,11 +125,19 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: console.log("Navigate to Forgot Password Page")
+                onClicked: {
+                    stackView.push("ForgotPassword.qml")
+                }
             }
         }
 
         Item { Layout.preferredHeight: 10 }
+        // Place this inside the root element of Login.qml
+
+
+
+
+
 
         Row {
             spacing: 5
