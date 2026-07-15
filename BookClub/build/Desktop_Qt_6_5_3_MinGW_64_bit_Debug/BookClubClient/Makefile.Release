@@ -117,6 +117,7 @@ release/qrc_resources.cpp: ../../../BookClubClient/resources.qrc \
 		D:/QT/6.5.3/mingw_64/bin/rcc.exe \
 		../../../BookClubClient/ForgotPassword.qml \
 		../../../BookClubClient/SignUp.qml \
+		../../../BookClubClient/SettingsView.qml \
 		../../../BookClubClient/GenreSelection.qml \
 		../../../BookClubClient/CartView.qml \
 		../../../BookClubClient/LibraryView.qml \

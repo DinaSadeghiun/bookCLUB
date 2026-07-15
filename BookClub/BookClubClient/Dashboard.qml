@@ -191,7 +191,7 @@ Item {
 
             Connections {
                 target: contentLoader.item
-                ignoreUnknownSignals: true // Prevents errors if onLogoutRequested isn't in every view
+                ignoreUnknownSignals: true
 
                 function onLogoutRequested() {
                     var sv = dashboardRoot.StackView.view
@@ -200,7 +200,14 @@ Item {
                         sv.push("Login.qml")
                     }
                 }
+
+                function onUserGenresChanged() {
+                    if (contentLoader.item && contentLoader.item.userGenres !== undefined) {
+                        dashboardRoot.userGenres = contentLoader.item.userGenres
+                    }
+                }
             }
+
         }
     }
 }
