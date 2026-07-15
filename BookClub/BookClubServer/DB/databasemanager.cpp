@@ -11,7 +11,7 @@ void DatabaseManager::closeDatabase() {
     if (db.isOpen()) db.close();
 }
 
-QSqlDatabase DatabaseManager::getDatabase() const {
+QSqlDatabase& DatabaseManager::getDatabase() {
     return db;
 }
 

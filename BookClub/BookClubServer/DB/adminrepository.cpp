@@ -110,7 +110,6 @@ bool AdminRepository::remove(int adminId) {
 std::optional<Admin> AdminRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    // Explicitly select necessary columns
     q.prepare("SELECT id, username, password_hash, created_at, is_active, security_answer FROM Persons WHERE id = :id AND role = :role");
     q.bindValue(":id", id);
     q.bindValue(":role", ROLE_ADMIN);
@@ -125,7 +124,6 @@ std::optional<Admin> AdminRepository::findById(int id) {
 std::optional<Admin> AdminRepository::findByUsername(const QString& username) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    // Explicitly select necessary columns
     q.prepare("SELECT id, username, password_hash, created_at, is_active, security_answer FROM Persons WHERE username = :uname AND role = :role");
     q.bindValue(":uname", Person::encryptData(username));
     q.bindValue(":role", ROLE_ADMIN);
