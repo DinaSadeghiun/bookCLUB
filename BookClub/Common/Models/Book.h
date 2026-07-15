@@ -22,13 +22,13 @@ private:
 
 public:
     //creating new book
-    Book(int publisherId, const QString& title, const QString& author, double price);
+    Book(const QString& title, const QString& author, double price, Genre genre, int publisherId = 0);
     //LOADING from DB
     Book(int id, int publisherId, int discountId,
          const QString& title, const QString& author, Genre genre,
          const QString& description, const QString& coverImagePath,
          const QString& pdfFilePath, double price,
-         int totalRating, int ratingCount, int salesCount, bool isAvailable);
+         double totalRating, int ratingCount, int salesCount, bool isAvailable);
 
     ~Book() = default;
 
@@ -64,6 +64,9 @@ public:
     void setDiscountId(int dId);
     void setIsAvailable(bool status);
     void setPublisherId(int newId);
+    void setTotalRating(double rating);
+    void setRatingCount(int count);
+
 
     // Methods
     void removeDiscount();

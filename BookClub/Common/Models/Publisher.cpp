@@ -21,8 +21,6 @@ QString Publisher::getRole() const {
 // Getters
 QString Publisher::getCompanyName() const { return companyName; }
 double Publisher::getRevenue() const { return revenue; }
-//QList<int> Publisher::getBookIds() const { return bookIds; }
-//QList<int> Publisher::getDiscountIds() const { return discountIds; }
 
 // Setters
 void Publisher::setCompanyName(const QString& name) { this->companyName = name; }
@@ -32,7 +30,6 @@ void Publisher::setId(int newId) {
     }
 }
 void Publisher::setRevenue(double amount) { revenue = amount; }
-
 
 // Statistics (computed externally, injected here)
 SalesStats Publisher::getSalesStats() const { return salesStats; }

@@ -62,5 +62,4 @@ void Comment::setId(int id) {
 void Comment::edit(const QString &newText, int newRating) {
     setText(newText);
     setRating(newRating);
-    this->date = QDateTime::currentDateTime();
 }

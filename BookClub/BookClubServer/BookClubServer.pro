@@ -16,6 +16,10 @@ SOURCES += \
     DB/publisherrepository.cpp \
     DB/shoppingcartrepository.cpp \
     DB/userrepository.cpp \
+    Services/adminservice.cpp \
+    Services/bookservice.cpp \
+    Services/commentservice.cpp \
+    Services/publisherservice.cpp \
     Services/userservice.cpp \
     main.cpp
 
@@ -31,6 +35,10 @@ HEADERS += \
     DB/publisherrepository.h \
     DB/shoppingcartrepository.h \
     DB/userrepository.h \
+    Services/adminservice.h \
+    Services/bookservice.h \
+    Services/commentservice.h \
+    Services/publisherservice.h \
     Services/userservice.h
 
 include(../Common/Common.pri)
