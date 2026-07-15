@@ -37,19 +37,11 @@ public:
     // Getters
     QString getCompanyName() const;
     double getRevenue() const;
-    //QList<int> getBookIds() const;
-    //QList<int> getDiscountIds() const;
 
     // Setters
     void setCompanyName(const QString& name);
     void setRevenue(double amount);
     void setId(int newId) override;
-
-    // Book management
-    void addBook(int bookId);
-    void removeBook(int bookId);
-    bool hasBook(int bookId) const;
-
 
     // Statistics (computed externally, injected here)
     SalesStats getSalesStats() const;

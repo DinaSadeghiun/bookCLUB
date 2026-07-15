@@ -37,6 +37,14 @@ bool Person::verifyPassword(const QString& password) const {
     return this->passwordHash == hashPassword(password);
 }
 
+bool Person::verifySecurityAnswer(const QString& answer) const {
+    if (answer.trimmed().isEmpty() || this->securityAnswer.isEmpty()) {
+        return false;
+    }
+    return this->securityAnswer.trimmed().compare(answer.trimmed(), Qt::CaseInsensitive) == 0;
+}
+
+
 // Setters
 void Person::setId(int newId) {
     if (id == -1) {
@@ -79,6 +87,19 @@ bool Person::canLogin() const {
 //Account Managemenet
 bool Person::changePassword(const QString& oldPassword, const QString& newPassword) {
     if (!verifyPassword(oldPassword)) {
+        return false;
+    }
+
+    if (newPassword.trimmed().isEmpty()) {
+        return false;
+    }
+
+    setPassword(newPassword);
+    return true;
+}
+
+bool Person::changePasswordWithSecurityAnswer(const QString& securityAnswer, const QString& newPassword) {
+    if (!verifySecurityAnswer(securityAnswer)) {
         return false;
     }
 
