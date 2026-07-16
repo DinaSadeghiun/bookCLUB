@@ -1,12 +1,12 @@
 #include "Book.h"
 //creating new book
-Book::Book(int publisherId, const QString& title, const QString& author, double price)
+Book::Book(const QString& title, const QString& author, double price, Genre genre, int publisherId)
     : id(-1),
     publisherId(publisherId),
     discountId(-1), // No discount initially
     title(title),
     author(author),
-    genre(Genre::Other),
+    genre(genre),
     description(""),
     coverImagePath(""),
     pdfFilePath(""),
@@ -22,7 +22,7 @@ Book::Book(int id, int publisherId, int discountId,
            const QString& title, const QString& author, Genre genre,
            const QString& description, const QString& coverImagePath,
            const QString& pdfFilePath, double price,
-           int totalRating, int ratingCount, int salesCount, bool isAvailable)
+           double totalRating, int ratingCount, int salesCount, bool isAvailable)
     : id(id), publisherId(publisherId), discountId(discountId),
     title(title), author(author), genre(genre),
     description(description), coverImagePath(coverImagePath),
@@ -83,6 +83,9 @@ void Book::removeDiscount() { discountId = -1; }
 void Book::setPublisherId(int newId) {
     publisherId = newId;
 }
+void Book::setTotalRating(double rating) { totalRating = rating; }
+void Book::setRatingCount(int count)     { ratingCount = count; }
+
 
 void Book::incrementSalesCount() { salesCount++; }
 

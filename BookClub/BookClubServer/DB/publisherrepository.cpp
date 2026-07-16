@@ -116,9 +116,9 @@ std::optional<Publisher> PublisherRepository::findByUsername(const QString& user
     return std::nullopt;
 }
 
-std::optional<Publisher> PublisherRepository::authenticate(const QString& username, const QString& password, const QString& securityAns) {
+std::optional<Publisher> PublisherRepository::authenticate(const QString& username, const QString& password) {
     auto pubOpt = findByUsername(username);
-    if (pubOpt && pubOpt->verifyPassword(password) && pubOpt->getSecurityAnswer() == securityAns) {
+    if (pubOpt && pubOpt->verifyPassword(password)) {
         return pubOpt;
     }
     return std::nullopt;

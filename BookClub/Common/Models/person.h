@@ -37,6 +37,7 @@ public:
 
     // Password verification
     bool verifyPassword(const QString& password) const;
+    bool verifySecurityAnswer(const QString& answer) const;
 
     // Setters
     virtual void setId(int newId);
@@ -56,6 +57,7 @@ public:
 
     // Account management
     bool changePassword(const QString& oldPassword, const QString& newPassword);
+    bool changePasswordWithSecurityAnswer(const QString& securityAnswer, const QString& newPassword);
     bool changeUsername(const QString& newUsername, const QString& password);
 
 public:

@@ -25,6 +25,9 @@ public:
     QList<Book> findByPublisherId(int publisherId);
     QList<Book> findByGenre(Genre genre);
     bool remove(int id); // Soft delete: is_available = 0
+    //search
+    QList<Book> searchBooks(const QString& query);
+
 };
 
 #endif

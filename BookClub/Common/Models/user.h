@@ -44,7 +44,6 @@ public:
     bool deposit(double amount);
     bool withdraw(double amount);
     void addFavoriteGenre(Genre g);
-    bool updateFavoriteGenres(const QList<Genre>& newGenres);
 };
 
 #endif

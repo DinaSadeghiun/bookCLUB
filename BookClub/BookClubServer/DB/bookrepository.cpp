@@ -166,3 +166,35 @@ bool BookRepository::remove(int id) {
     q.addBindValue(id);
     return q.exec() && q.numRowsAffected() > 0;
 }
+
+//search by name or author name or company name of publisher
+QList<Book> BookRepository::searchBooks(const QString& query) {
+    QList<Book> list;
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+
+    q.prepare("SELECT b.* FROM Books b "
+              "INNER JOIN Publishers p ON b.publisher_id = p.person_id "
+              "WHERE (b.title LIKE :query1 "
+              "   OR b.author LIKE :query2 "
+              "   OR p.company_name LIKE :query3) "
+              "AND b.is_available = 1");
+
+    QString searchPattern = "%" + query.trimmed() + "%";
+
+    q.bindValue(":query1", searchPattern);
+    q.bindValue(":query2", searchPattern);
+    q.bindValue(":query3", searchPattern);
+
+    if (q.exec()) {
+        while (q.next()) {
+            list.append(fromQuery(q));
+        }
+    } else {
+        qDebug() << "searchBooks Query Failed:" << q.lastError().text();
+    }
+    return list;
+}
+
+
+

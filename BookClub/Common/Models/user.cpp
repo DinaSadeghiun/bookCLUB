@@ -111,9 +111,3 @@ bool User::withdraw(double amount) {
 void User::addFavoriteGenre(Genre g) {
     if (!favoriteGenres.contains(g)) favoriteGenres.append(g);
 }
-
-bool User::updateFavoriteGenres(const QList<Genre>& newGenres) {
-    if (newGenres.isEmpty() || newGenres.size() > 3) return false;
-    favoriteGenres = newGenres;
-    return true;
-}

@@ -72,7 +72,12 @@ QList<Discount> DiscountRepository::findAllActive() const {
     QList<Discount> list;
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Discounts WHERE is_active = 1");
+    q.prepare("SELECT id, value, type, start_date, end_date, is_active FROM Discounts WHERE is_active = 1");
+
+    if (!q.exec()) {
+        qCritical() << "findAllActive failed:" << q.lastError().text();
+        return list;
+    }
 
     while (q.next()) {
         list.append(Discount(
@@ -91,7 +96,13 @@ QList<Discount> DiscountRepository::findAll() const {
     QList<Discount> list;
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Discounts WHERE is_active = 1");
+    q.prepare("SELECT id, value, type, start_date, end_date, is_active FROM Discounts");
+
+    if (!q.exec()) {
+        qCritical() << "findAll failed:" << q.lastError().text();
+        return list;
+    }
+
     while (q.next()) {
         list.append(Discount(
             q.value("id").toInt(),
