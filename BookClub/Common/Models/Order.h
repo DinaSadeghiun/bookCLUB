@@ -6,6 +6,7 @@
 #include <QList>
 
 class Order {
+private:
     int id;
     int userId;
     QDateTime orderDate;
@@ -20,14 +21,14 @@ public:
           double finalPrice, const QList<int>& bookIds);
 
     // Load from DB
-    Order(int id, int userId, QDateTime orderDate, double rawPrice,
+    Order(int id, int userId, const QDateTime& orderDate, double rawPrice,
           double discountAmount, double finalPrice, const QList<int>& bookIds);
 
-    //setters
+    // Setters
     void setId(int newId);
     void setBookIds(const QList<int>& ids);
 
-    //getters
+    // Getters
     int getId() const;
     int getUserId() const;
     QDateTime getOrderDate() const;

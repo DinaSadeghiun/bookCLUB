@@ -73,7 +73,8 @@ QList<Order> OrderRepository::findByUserId(int userId) {
     QList<Order> orders;
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Orders WHERE user_id = ? ORDER BY order_date DESC");
+    q.prepare("SELECT id, user_id, order_date, raw_price, discount_amount, final_price "
+              "FROM Orders WHERE user_id = ? ORDER BY order_date DESC");
     q.addBindValue(userId);
 
     if (q.exec()) {
@@ -86,12 +87,14 @@ QList<Order> OrderRepository::findByUserId(int userId) {
     return orders;
 }
 
+
 QList<Order> OrderRepository::findAll() {
     QList<Order> orders;
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
-    if (q.exec("SELECT * FROM Orders ORDER BY order_date DESC")) {
+    if (q.exec("SELECT id, user_id, order_date, raw_price, discount_amount, final_price "
+               "FROM Orders ORDER BY order_date DESC")) {
         while (q.next()) {
             Order order = fromQuery(q);
             loadOrderBooks(order);

@@ -19,7 +19,10 @@ SOURCES += \
     Services/adminservice.cpp \
     Services/bookservice.cpp \
     Services/commentservice.cpp \
+    Services/orderservice.cpp \
+    Services/personallibraryservice.cpp \
     Services/publisherservice.cpp \
+    Services/shoppingcartservice.cpp \
     Services/userservice.cpp \
     main.cpp
 
@@ -38,7 +41,10 @@ HEADERS += \
     Services/adminservice.h \
     Services/bookservice.h \
     Services/commentservice.h \
+    Services/orderservice.h \
+    Services/personallibraryservice.h \
     Services/publisherservice.h \
+    Services/shoppingcartservice.h \
     Services/userservice.h
 
 include(../Common/Common.pri)

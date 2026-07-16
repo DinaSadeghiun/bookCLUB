@@ -89,12 +89,12 @@ QList<Book> BookService::search(const QString& query) const {
 //price affter discount
 std::optional<double> BookService::getBookFinalPrice(int bookId) const {
     if (bookId <= 0) {
-        return 0.0;
+        return std::nullopt;
     }
 
     auto bookOpt = bookRepo->findById(bookId);
     if (!bookOpt.has_value()) {
-        return 0.0;
+        return std::nullopt;
     }
 
     Book book = bookOpt.value();

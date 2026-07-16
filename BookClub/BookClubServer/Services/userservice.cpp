@@ -105,6 +105,14 @@ bool UserService::changeUserUsername(int userId, const QString& newUsername, con
     return userRepo->save(*userOpt);
 }
 
+bool UserService::deleteUser(int userId) {
+    if (userId <= 0) {
+        return false;
+    }
+    return userRepo->remove(userId);
+}
+
+
 //balance mng
 bool UserService::depositBalance(int userId, double amount) {
     if (amount <= 0.0) {

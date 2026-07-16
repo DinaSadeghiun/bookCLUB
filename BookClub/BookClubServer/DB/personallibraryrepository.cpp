@@ -161,3 +161,115 @@ bool PersonalLibraryRepository::addPurchasedBook(int userId, int bookId) {
     q.addBindValue(userId); q.addBindValue(bookId); q.addBindValue(QDateTime::currentSecsSinceEpoch());
     return q.exec();
 }
+
+bool PersonalLibraryRepository::addToWishlist(int userId, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("INSERT OR IGNORE INTO Wishlist (user_id, book_id, added_at) VALUES (:userId, :bookId, :addedAt)");
+    query.bindValue(":userId", userId);
+    query.bindValue(":bookId", bookId);
+    query.bindValue(":addedAt", QDateTime::currentSecsSinceEpoch());
+
+    if (!query.exec()) {
+        qWarning() << "Failed to add book to wishlist:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool PersonalLibraryRepository::removeFromWishlist(int userId, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM Wishlist WHERE user_id = :userId AND book_id = :bookId");
+    query.bindValue(":userId", userId);
+    query.bindValue(":bookId", bookId);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to remove book from wishlist:" << query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+
+bool PersonalLibraryRepository::addShelf(int userId, const QString& shelfName) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("INSERT OR IGNORE INTO CustomShelves (user_id, name) VALUES (:userId, :name)");
+    query.bindValue(":userId", userId);
+    query.bindValue(":name", shelfName.trimmed());
+
+    if (!query.exec()) {
+        qWarning() << "Failed to add shelf:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool PersonalLibraryRepository::removeShelf(int userId, const QString& shelfName) {
+    QSqlDatabase db = dbManager->getDatabase();
+
+    int shelfId = resolveShelfId(userId, shelfName);
+    if (shelfId == -1) return false;
+
+    db.transaction();
+
+    QSqlQuery deleteBooksQuery(db);
+    deleteBooksQuery.prepare("DELETE FROM ShelfBooks WHERE shelf_id = :shelfId");
+    deleteBooksQuery.bindValue(":shelfId", shelfId);
+    if (!deleteBooksQuery.exec()) {
+        db.rollback();
+        qWarning() << "Failed to clear shelf books before removing shelf:" << deleteBooksQuery.lastError().text();
+        return false;
+    }
+
+    QSqlQuery deleteShelfQuery(db);
+    deleteShelfQuery.prepare("DELETE FROM CustomShelves WHERE id = :shelfId");
+    deleteShelfQuery.bindValue(":shelfId", shelfId);
+    if (!deleteShelfQuery.exec()) {
+        db.rollback();
+        qWarning() << "Failed to delete shelf:" << deleteShelfQuery.lastError().text();
+        return false;
+    }
+
+    db.commit();
+    return true;
+}
+
+bool PersonalLibraryRepository::addBookToShelf(int userId, const QString& shelfName, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    int shelfId = resolveShelfId(userId, shelfName);
+    if (shelfId == -1) {
+        return false;
+    }
+
+    QSqlQuery query(db);
+    query.prepare("INSERT OR IGNORE INTO ShelfBooks (shelf_id, book_id) VALUES (:shelfId, :bookId)");
+    query.bindValue(":shelfId", shelfId);
+    query.bindValue(":bookId", bookId);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to add book to shelf:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool PersonalLibraryRepository::removeBookFromShelf(int userId, const QString& shelfName, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    int shelfId = resolveShelfId(userId, shelfName);
+    if (shelfId == -1) {
+        return false;
+    }
+
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM ShelfBooks WHERE shelf_id = :shelfId AND book_id = :bookId");
+    query.bindValue(":shelfId", shelfId);
+    query.bindValue(":bookId", bookId);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to remove book from shelf:" << query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+

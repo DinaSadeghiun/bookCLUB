@@ -14,7 +14,7 @@ Order::Order(int userId, double rawPrice, double discountAmount,
     Q_ASSERT(!bookIds.isEmpty());
 }
 
-Order::Order(int id, int userId, QDateTime orderDate, double rawPrice,
+Order::Order(int id, int userId, const QDateTime& orderDate, double rawPrice,
              double discountAmount, double finalPrice, const QList<int>& bookIds)
     : id(id) ,
     userId(userId),

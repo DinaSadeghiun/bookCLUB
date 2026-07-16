@@ -32,7 +32,7 @@ public:
     // Account Management
     bool changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword);
     bool changeUserUsername(int userId, const QString& newUsername, const QString& password);
-
+    bool deleteUser(int userId);
 
     // Wallet Operations
     bool depositBalance(int userId, double amount);
