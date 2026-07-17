@@ -116,6 +116,25 @@ bool UserRepository::save(User& u) {
     return db.commit();
 }
 
+QList<User> UserRepository::findAll() const {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+
+    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+              "JOIN Users u ON p.id = u.person_id "
+              "WHERE p.role = :role");
+
+    q.bindValue(":role", ROLE_USER);
+
+    QList<User> result;
+    if (q.exec()) {
+        while (q.next()) {
+            result.append(fromQuery(q));
+        }
+    }
+    return result;
+}
+
 std::optional<User> UserRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);

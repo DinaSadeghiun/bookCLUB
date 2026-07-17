@@ -14,6 +14,7 @@ public:
     explicit PublisherRepository(DatabaseManager* manager);
 
     bool save(Publisher& pub);
+    QList<Publisher> findAll() const;
     std::optional<Publisher> findById(int id) const;
     std::optional<Publisher> findByUsername(const QString& username) const;
     std::optional<Publisher> authenticate(const QString& username, const QString& password);

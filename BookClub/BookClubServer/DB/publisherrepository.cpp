@@ -86,6 +86,25 @@ bool PublisherRepository::save(Publisher& pub) {
     return db.commit();
 }
 
+QList<Publisher> PublisherRepository::findAll() const {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+
+    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+              "JOIN Publishers pub ON p.id = pub.person_id "
+              "WHERE p.role = :role");
+
+    q.bindValue(":role", ROLE_PUBLISHER);
+
+    QList<Publisher> result;
+    if (q.exec()) {
+        while (q.next()) {
+            result.append(fromQuery(q));
+        }
+    }
+    return result;
+}
+
 std::optional<Publisher> PublisherRepository::findById(int id) const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
