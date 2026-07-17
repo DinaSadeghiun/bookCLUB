@@ -23,5 +23,6 @@
         <file>CartView.qml</file>
         <file>ForgotPassword.qml</file>
         <file>SettingsView.qml</file>
+        <file>HomeView.qml</file>
     </qresource>
 </RCC>

@@ -7,6 +7,17 @@ ScrollView {
     contentWidth: availableWidth
     clip: true
 
+    // Internal state properties to handle Add/Edit action and the target index
+    property string activeAction: "Add"
+    property int selectedShelfIndex: -1
+
+    // Dynamic model for shelves
+    ListModel {
+        id: shelvesModel
+        ListElement { name: "Science" }
+        ListElement { name: "History" }
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "#1A0F1F"
@@ -167,19 +178,26 @@ ScrollView {
             // 4. Shelves Management
             ColumnLayout {
                 spacing: 15
+
                 Button {
                     text: "+ Add New Shelf"
                     Layout.preferredWidth: 150
                     Layout.preferredHeight: 40
                     contentItem: Text { text: parent.text; color: "#1A0F1F"; font.bold: true; horizontalAlignment: Text.AlignHCenter }
                     background: Rectangle { color: "#D4AF37"; radius: 5 }
+
+                    onClicked: {
+                        libraryView.activeAction = "Add"
+                        shelfInputField.text = ""
+                        shelfDialog.open()
+                    }
                 }
 
                 ListView {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     spacing: 10
-                    model: ["Science", "History"]
+                    model: shelvesModel
                     delegate: Rectangle {
                         width: parent.width
                         height: 60
@@ -191,9 +209,10 @@ ScrollView {
                         RowLayout {
                             anchors.fill: parent
                             anchors.margins: 10
+                            spacing: 10
 
                             Text {
-                                text: modelData
+                                text: model.name
                                 color: "white"
                                 font.bold: true
                                 Layout.fillWidth: true
@@ -201,17 +220,92 @@ ScrollView {
 
                             Button {
                                 text: "Edit Name"
-                                contentItem: Text { text: parent.text; color: "white" }
+                                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
                                 background: Rectangle { color: "#5c3d75"; radius: 4 }
+                                onClicked: {
+                                    libraryView.activeAction = "Edit"
+                                    libraryView.selectedShelfIndex = index
+                                    shelfInputField.text = model.name
+                                    shelfDialog.open()
+                                }
                             }
 
                             Button {
-                                text: "Move Books"
-                                contentItem: Text { text: parent.text; color: "#1A0F1F" }
-                                background: Rectangle { color: "#D4AF37"; radius: 4 }
+                                text: "Delete"
+                                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
+                                background: Rectangle { color: "#FF5555"; radius: 4 }
+                                onClicked: {
+                                    shelvesModel.remove(index)
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Modal popup dialog for handling Shelf input operations safely
+    Dialog {
+        id: shelfDialog
+        title: libraryView.activeAction === "Add" ? "Create New Shelf" : "Edit Shelf Name"
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        anchors.centerIn: parent
+        modal: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#2D1B33"
+            border.color: "#D4AF37"
+            border.width: 2
+            radius: 8
+        }
+
+        // Custom styled headers for matching UI colors
+        header: Rectangle {
+            color: "#1A0F1F"
+            implicitHeight: 40
+            radius: 8
+            Text {
+                text: shelfDialog.title
+                color: "#D4AF37"
+                anchors.centerIn: parent
+                font.bold: true
+            }
+        }
+
+        ColumnLayout {
+            spacing: 10
+            width: 260
+
+            Text {
+                text: "Shelf Name:"
+                color: "#A08EAD"
+                font.pixelSize: 13
+            }
+
+            TextField {
+                id: shelfInputField
+                Layout.fillWidth: true
+                color: "white"
+                placeholderText: "Enter shelf name..."
+                placeholderTextColor: "#807090"
+                background: Rectangle {
+                    color: "#1A0F1F"
+                    border.color: parent.activeFocus ? "#D4AF37" : "#5c3d75"
+                    border.width: 1
+                    radius: 4
+                }
+            }
+        }
+
+        onAccepted: {
+            var trimmedText = shelfInputField.text.trim()
+            if (trimmedText !== "") {
+                if (libraryView.activeAction === "Add") {
+                    shelvesModel.append({ "name": trimmedText })
+                } else if (libraryView.activeAction === "Edit" && libraryView.selectedShelfIndex !== -1) {
+                    shelvesModel.setProperty(libraryView.selectedShelfIndex, "name", trimmedText)
                 }
             }
         }

@@ -58,7 +58,8 @@ OBJECTS       = release/main.o \
 		release/qrc_resources.o \
 		release/moc_usermanager.o
 
-DIST          = BookCard.qml \
+DIST          = AdminDashboard.qml \
+		BookCard.qml \
 		CartView.qml \
 		Dashboard.qml \
 		ForgotPassword.qml \
@@ -122,6 +123,7 @@ release/qrc_resources.cpp: ../../../BookClubClient/resources.qrc \
 		../../../BookClubClient/CartView.qml \
 		../../../BookClubClient/LibraryView.qml \
 		../../../BookClubClient/SearchView.qml \
+		../../../BookClubClient/HomeView.qml \
 		../../../BookClubClient/Dashboard.qml \
 		../../../BookClubClient/Login.qml \
 		../../../BookClubClient/main.qml \

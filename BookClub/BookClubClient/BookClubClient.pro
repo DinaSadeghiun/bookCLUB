@@ -1,4 +1,5 @@
 QT += core gui quick qml widgets
+#QT += pdf pdfwidgets
 
 CONFIG += c++17
 
@@ -14,6 +15,7 @@ RESOURCES += \
 
 
 DISTFILES += \
+    AdminDashboard.qml \
     BookCard.qml \
     CartView.qml \
     Dashboard.qml \
@@ -34,5 +36,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     usermanager.h
+
 
 
