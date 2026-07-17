@@ -3,7 +3,6 @@
 
 #include <QString>
 #include <QList>
-#include <QList>
 #include <optional>
 #include <QObject>
 
@@ -69,6 +68,7 @@ signals:
     void adminCredentialsChanged(int adminId);
     void userStatusChanged(int userId, bool isActive);
     void userDeleted(int userId);
+    void publisherStatusChanged(int publisherId, bool isActive);
     void publisherDeleted(int publisherId);
     void bookRemovedByAdmin(int bookId);
     void bookUpdatedByAdmin(int bookId);

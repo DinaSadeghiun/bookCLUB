@@ -3,8 +3,8 @@
 #include "bookservice.h"
 #include <QDebug>
 
-ShoppingCartService::ShoppingCartService(ShoppingCartRepository* repo, BookService* bookSvc)
-    : cartRepo(repo), bookService(bookSvc) {}
+ShoppingCartService::ShoppingCartService(ShoppingCartRepository* repo, BookService* bookSvc, QObject* parent)
+    : QObject(parent), cartRepo(repo), bookService(bookSvc) {}
 
 
 ShoppingCart ShoppingCartService::getOrCreateCart(int userId) {
@@ -37,7 +37,11 @@ bool ShoppingCartService::addBookToCart(int userId, int bookId) {
     }
 
     cart.addBook(bookId);
-    return cartRepo->save(cart);
+    if (cartRepo->save(cart)) {
+        emit bookAddedToCart(userId, bookId);
+        return true;
+    }
+    return false;
 }
 
 bool ShoppingCartService::removeBookFromCart(int userId, int bookId) {
@@ -52,7 +56,11 @@ bool ShoppingCartService::removeBookFromCart(int userId, int bookId) {
     }
 
     cart.removeBook(bookId);
-    return cartRepo->save(cart);
+    if (cartRepo->save(cart)) {
+        emit bookRemovedFromCart(userId, bookId);
+        return true;
+    }
+    return false;
 }
 
 bool ShoppingCartService::clearCart(int userId) {
@@ -63,7 +71,11 @@ bool ShoppingCartService::clearCart(int userId) {
 
     ShoppingCart cart = cartOpt.value();
     cart.clearCart();
-    return cartRepo->save(cart);
+    if (cartRepo->save(cart)) {
+        emit cartCleared(userId);
+        return true;
+    }
+    return false;
 }
 
 CartDetails ShoppingCartService::getCartDetails(int userId) {

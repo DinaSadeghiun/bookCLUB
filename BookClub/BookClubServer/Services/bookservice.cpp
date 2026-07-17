@@ -4,8 +4,8 @@
 #include <QDateTime>
 #include <QDebug>
 
-BookService::BookService(BookRepository* repo, DiscountRepository* discRepo)
-    : bookRepo(repo), discountRepo(discRepo) {}
+BookService::BookService(BookRepository* repo, DiscountRepository* discRepo, QObject* parent)
+    : QObject(parent), bookRepo(repo), discountRepo(discRepo) {}
 
 bool BookService::validateBook(const Book& book) const {
     if (book.getTitle().trimmed().isEmpty()) {
@@ -35,7 +35,11 @@ bool BookService::addBook(Book& book) {
     if (!validateBook(book)) {
         return false;
     }
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit bookAdded(book.getId(), book.getPublisherId());
+        return true;
+    }
+    return false;
 }
 
 bool BookService::updateBook(Book& book) {
@@ -46,14 +50,22 @@ bool BookService::updateBook(Book& book) {
     if (!validateBook(book)) {
         return false;
     }
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit bookUpdated(book.getId());
+        return true;
+    }
+    return false;
 }
 
 bool BookService::removeBook(int bookId) {
     if (bookId <= 0) {
         return false;
     }
-    return bookRepo->remove(bookId);
+    if (bookRepo->remove(bookId)) {
+        emit bookRemoved(bookId);
+        return true;
+    }
+    return false;
 }
 
 std::optional<Book> BookService::getBookById(int id) const {
@@ -86,7 +98,6 @@ QList<Book> BookService::search(const QString& query) const {
     return bookRepo->searchBooks(trimmedQuery);
 }
 
-//price affter discount
 std::optional<double> BookService::getBookFinalPrice(int bookId) const {
     if (bookId <= 0) {
         return std::nullopt;
@@ -142,5 +153,9 @@ bool BookService::rateBook(int bookId, double rating) {
 
     Book book = bookOpt.value();
     book.addRating(rating);
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit bookRatingUpdated(bookId, book.getAverageRating());
+        return true;
+    }
+    return false;
 }

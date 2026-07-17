@@ -1,6 +1,7 @@
 #ifndef PUBLISHERSERVICE_H
 #define PUBLISHERSERVICE_H
 
+#include <QObject>
 #include <optional>
 #include <QList>
 #include <QString>
@@ -15,21 +16,25 @@ class PublisherRepository;
 class BookRepository;
 class DiscountRepository;
 
-class PublisherService {
+class PublisherService : public QObject {
+    Q_OBJECT
 private:
     PublisherRepository* pubRepo;
     BookRepository* bookRepo;
     DiscountRepository* discountRepo;
 
 public:
-    // Constructor injecting repositories via pointer
-    PublisherService(PublisherRepository* pRepo, BookRepository* bRepo, DiscountRepository* dRepo);
+    explicit PublisherService(PublisherRepository* pRepo,
+                              BookRepository* bRepo,
+                              DiscountRepository* dRepo,
+                              QObject* parent = nullptr);
 
     // Authentication & Registration
-    std::optional<Publisher> registerPublisher(const QString& username,
-                                               const QString& password,
-                                               const QString& companyName,
-                                               const QString& securityAns = "1");
+    QString registerPublisher(const QString& username,
+                              const QString& password,
+                              const QString& companyName,
+                              const QString& securityAns = "1");
+
 
     std::optional<Publisher> login(const QString& username, const QString& password);
 
@@ -38,7 +43,7 @@ public:
                                          const QString& newPassword);
 
 
-    // Profile Settings (Leveraging Person methods)
+    // Profile Settings
     bool changePublisherPassword(int publisherId, const QString& oldPassword, const QString& newPassword);
     bool changePublisherUsername(int publisherId, const QString& newUsername, const QString& password);
 
@@ -55,6 +60,15 @@ public:
     // Stats & Financials
     std::optional<SalesStats> calculateSalesStats(int publisherId) const;
     double getPublisherRevenue(int publisherId) const;
+
+signals:
+    void publisherRegistered(int publisherId);
+    void publisherCredentialsChanged(int publisherId);
+    void bookAdded(int publisherId, int bookId);
+    void bookRemoved(int publisherId, int bookId);
+    void bookPriceUpdated(int bookId, double newPrice);
+    void discountApplied(int bookId, int discountId);
+    void discountRemoved(int bookId);
 };
 
 #endif

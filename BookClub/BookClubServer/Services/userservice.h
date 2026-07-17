@@ -1,6 +1,7 @@
 #ifndef USERSERVICE_H
 #define USERSERVICE_H
 
+#include <QObject>
 #include <QString>
 #include <QList>
 #include <optional>
@@ -10,12 +11,13 @@
 // Forward declaration
 class UserRepository;
 
-class UserService {
+class UserService : public QObject{
+    Q_OBJECT
 private:
     UserRepository* userRepo;
 
 public:
-    explicit UserService(UserRepository* repository);
+    explicit UserService(UserRepository* repository, QObject* parent = nullptr);
 
     // Authentication & Registration
     QString registerUser(const QString& username,
@@ -42,6 +44,13 @@ public:
     // Genres Preference Management
     bool updateUserFavoriteGenres(int userId, const QList<Genre>& genres);
     QList<Genre> getUserFavoriteGenres(int userId) const;
+
+signals:
+    void userRegistered(int userId);
+    void userCredentialsChanged(int userId);
+    void walletBalanceChanged(int userId, double newBalance);
+    void favoriteGenresChanged(int userId);
+
 };
 
 #endif

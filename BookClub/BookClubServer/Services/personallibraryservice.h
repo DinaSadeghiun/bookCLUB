@@ -11,6 +11,11 @@ class BookRepository;
 
 class PersonalLibraryService : public QObject {
     Q_OBJECT
+
+private:
+    PersonalLibraryRepository* personalLibRepo;
+    BookRepository* bookRepo;
+
 public:
     explicit PersonalLibraryService(PersonalLibraryRepository* personalLibRepo,
                                     BookRepository* bookRepo = nullptr,
@@ -39,9 +44,11 @@ public:
     // Composite Operation: Move Book
     bool moveBookBetweenShelves(int userId, int bookId, const QString& fromShelf, const QString& toShelf);
 
-private:
-    PersonalLibraryRepository* personalLibRepo;
-    BookRepository* bookRepo;
+signals:
+    void wishlistUpdated(int userId);
+    void shelvesUpdated(int userId);
+    void shelfContentUpdated(int userId, const QString& shelfName);
+
 };
 
 #endif

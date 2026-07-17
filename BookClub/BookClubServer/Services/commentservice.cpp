@@ -4,8 +4,10 @@
 #include <QDebug>
 #include <utility>
 
-CommentService::CommentService(CommentRepository* cRepo, BookRepository* bRepo)
-    : commentRepo(cRepo), bookRepo(bRepo) {}
+CommentService::CommentService(CommentRepository* cRepo,
+                               BookRepository* bRepo,
+                               QObject* parent)
+    : QObject(parent), commentRepo(cRepo), bookRepo(bRepo) {}
 
 bool CommentService::addComment(Comment& comment) {
     if (comment.getText().trimmed().isEmpty()) {
@@ -17,11 +19,12 @@ bool CommentService::addComment(Comment& comment) {
         return false;
     }
 
-    if (!commentRepo->save(comment)) {
-        return false;
+    if (commentRepo->save(comment)) {
+        emit commentAdded(comment.getBookId(), comment.getId());
+        updateBookStatistics(comment.getBookId());
+        return true;
     }
-
-    return updateBookStatistics(comment.getBookId());
+    return false;
 }
 
 bool CommentService::removeComment(int commentId) {
@@ -34,11 +37,12 @@ bool CommentService::removeComment(int commentId) {
 
     int bookId = commentOpt.value().getBookId();
 
-    if (!commentRepo->remove(commentId)) {
-        return false;
+    if (commentRepo->remove(commentId)) {
+        emit commentRemoved(bookId, commentId);
+        updateBookStatistics(bookId);
+        return true;
     }
-
-    return updateBookStatistics(bookId);
+    return false;
 }
 
 std::optional<Comment> CommentService::getCommentById(int id) const {
@@ -59,9 +63,9 @@ bool CommentService::updateBookStatistics(int bookId) {
     QList<Comment> comments = commentRepo->findByBookId(bookId);
 
     int count = comments.size();
+    double total = 0.0;
 
     if (count > 0) {
-        double total = 0.0;
         for (const auto& c : std::as_const(comments)) {
             total += c.getRating();
         }
@@ -72,6 +76,12 @@ bool CommentService::updateBookStatistics(int bookId) {
         book.setRatingCount(0);
     }
 
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        double averageRating = count > 0 ? (total / count) : 0.0;
+        emit bookRatingUpdated(bookId, averageRating, count);
+        return true;
+    }
+    return false;
 }
+
 

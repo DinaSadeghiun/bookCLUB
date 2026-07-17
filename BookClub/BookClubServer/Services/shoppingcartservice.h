@@ -1,6 +1,7 @@
 #ifndef SHOPPINGCARTSERVICE_H
 #define SHOPPINGCARTSERVICE_H
 
+#include <QObject>
 #include <QList>
 #include <optional>
 #include "ShoppingCart.h"
@@ -17,7 +18,8 @@ struct CartDetails {
     double finalPriceToPay = 0.0;
 };
 
-class ShoppingCartService {
+class ShoppingCartService : public QObject {
+    Q_OBJECT
 private:
     ShoppingCartRepository* cartRepo;
     BookService* bookService;
@@ -25,7 +27,7 @@ private:
     ShoppingCart getOrCreateCart(int userId);
 
 public:
-    explicit ShoppingCartService(ShoppingCartRepository* repo, BookService* bookSvc);
+    explicit ShoppingCartService(ShoppingCartRepository* repo, BookService* bookSvc, QObject* parent = nullptr);
     ~ShoppingCartService() = default;
 
     bool addBookToCart(int userId, int bookId);
@@ -33,6 +35,12 @@ public:
     bool clearCart(int userId);
 
     CartDetails getCartDetails(int userId);
+
+signals:
+    void bookAddedToCart(int userId, int bookId);
+    void bookRemovedFromCart(int userId, int bookId);
+    void cartCleared(int userId);
+
 };
 
 #endif

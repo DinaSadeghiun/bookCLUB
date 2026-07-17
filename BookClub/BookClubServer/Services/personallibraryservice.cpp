@@ -36,12 +36,21 @@ bool PersonalLibraryService::addToWishlist(int userId, int bookId) {
     if (hasPurchased(userId, bookId)) {
         return false;
     }
-    return personalLibRepo->addToWishlist(userId, bookId);
+    if (personalLibRepo->addToWishlist(userId, bookId)) {
+        emit wishlistUpdated(userId);
+        return true;
+    }
+    return false;
 }
 
 bool PersonalLibraryService::removeFromWishlist(int userId, int bookId) {
-    return personalLibRepo->removeFromWishlist(userId, bookId);
+    if (personalLibRepo->removeFromWishlist(userId, bookId)) {
+        emit wishlistUpdated(userId);
+        return true;
+    }
+    return false;
 }
+
 
 bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
     auto libOpt = personalLibRepo->findByUserId(userId);
@@ -56,12 +65,21 @@ bool PersonalLibraryService::createShelf(int userId, const QString& shelfName) {
     if (trimmedName.isEmpty()) {
         return false;
     }
-    return personalLibRepo->addShelf(userId, trimmedName);
+    if (personalLibRepo->addShelf(userId, trimmedName)) {
+        emit shelvesUpdated(userId);
+        return true;
+    }
+    return false;
 }
 
 bool PersonalLibraryService::deleteShelf(int userId, const QString& shelfName) {
-    return personalLibRepo->removeShelf(userId, shelfName.trimmed());
+    if (personalLibRepo->removeShelf(userId, shelfName.trimmed())) {
+        emit shelvesUpdated(userId);
+        return true;
+    }
+    return false;
 }
+
 
 QList<QString> PersonalLibraryService::getShelfNames(int userId) {
     QList<QString> names;
@@ -81,12 +99,23 @@ bool PersonalLibraryService::addBookToShelf(int userId, const QString& shelfName
     if (!hasPurchased(userId, bookId)) {
         return false;
     }
-    return personalLibRepo->addBookToShelf(userId, shelfName.trimmed(), bookId);
+    QString trimmedName = shelfName.trimmed();
+    if (personalLibRepo->addBookToShelf(userId, trimmedName, bookId)) {
+        emit shelfContentUpdated(userId, trimmedName);
+        return true;
+    }
+    return false;
 }
 
 bool PersonalLibraryService::removeBookFromShelf(int userId, const QString& shelfName, int bookId) {
-    return personalLibRepo->removeBookFromShelf(userId, shelfName.trimmed(), bookId);
+    QString trimmedName = shelfName.trimmed();
+    if (personalLibRepo->removeBookFromShelf(userId, trimmedName, bookId)) {
+        emit shelfContentUpdated(userId, trimmedName);
+        return true;
+    }
+    return false;
 }
+
 
 QList<int> PersonalLibraryService::getBooksInShelf(int userId, const QString& shelfName) {
     auto libOpt = personalLibRepo->findByUserId(userId);
@@ -104,25 +133,28 @@ bool PersonalLibraryService::moveBookBetweenShelves(int userId, int bookId,
                                                     const QString& fromShelf,
                                                     const QString& toShelf) {
     QString trimmedFrom = fromShelf.trimmed();
-    QString trimmedTo = toShelf.trimmed();
+    QString trimmedTo   = toShelf.trimmed();
 
-    if (trimmedFrom == trimmedTo) {
-        return true;
-    }
+    if (trimmedFrom == trimmedTo) return true;
 
-    auto libOpt = personalLibRepo->findByUserId(userId);
-    if (!libOpt.has_value()) {
+    // verify book is in source shelf
+    QList<int> books = getBooksInShelf(userId, trimmedFrom);
+    if (!books.contains(bookId)) return false;
+
+    // verify target shelf exists
+    QList<QString> shelves = getShelfNames(userId);
+    if (!shelves.contains(trimmedTo)) return false;
+
+    if (!personalLibRepo->removeBookFromShelf(userId, trimmedFrom, bookId))
+        return false;
+
+    if (!personalLibRepo->addBookToShelf(userId, trimmedTo, bookId)) {
+        // rollback
+        personalLibRepo->addBookToShelf(userId, trimmedFrom, bookId);
         return false;
     }
 
-    PersonalLibrary& lib = *libOpt;
-
-    if (!lib.removeBookFromShelf(trimmedFrom, bookId)) {
-        return false;
-    }
-    if (!lib.addBookToShelf(trimmedTo, bookId)) {
-        return false;
-    }
-
-    return personalLibRepo->save(lib);
+    emit shelfContentUpdated(userId, trimmedFrom);
+    emit shelfContentUpdated(userId, trimmedTo);
+    return true;
 }

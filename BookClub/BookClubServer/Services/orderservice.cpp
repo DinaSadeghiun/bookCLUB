@@ -13,8 +13,10 @@
 OrderService::OrderService(OrderRepository* oRepo,
                            ShoppingCartService* cartSvc,
                            UserService* userSvc,
-                           PersonalLibraryRepository* libRepo)
-    : orderRepo(oRepo), cartService(cartSvc), userService(userSvc), personalLibRepo(libRepo) {}
+                           PersonalLibraryRepository* libRepo,
+                           QObject* parent)
+    : QObject(parent), orderRepo(oRepo), cartService(cartSvc),
+    userService(userSvc), personalLibRepo(libRepo) {}
 
 bool OrderService::checkout(int userId) {
     if (userId <= 0) {
@@ -77,6 +79,8 @@ bool OrderService::checkout(int userId) {
         query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
         return false;
     }
+
+    emit checkoutCompleted(userId, newOrder.getId(), details.finalPriceToPay);
 
     // 7. Clear the cart (Non-critical operation, performed post-release)
     if (!cartService->clearCart(userId)) {

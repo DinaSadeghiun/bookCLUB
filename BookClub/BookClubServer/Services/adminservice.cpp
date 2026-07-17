@@ -131,8 +131,13 @@ bool AdminService::setAccountStatus(int personId, bool active) {
     auto pubOpt = pubRepo->findById(personId);
     if (pubOpt) {
         pubOpt->setIsActive(active);
-        return pubRepo->save(*pubOpt);
+        if (pubRepo->save(*pubOpt)) {
+            emit publisherStatusChanged(personId, active);
+            return true;
+        }
+        return false;
     }
+
     return false;
 }
 

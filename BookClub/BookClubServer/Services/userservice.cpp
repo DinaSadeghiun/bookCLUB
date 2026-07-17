@@ -1,8 +1,9 @@
 #include "Services/userservice.h"
 #include "DB/userrepository.h"
 
-UserService::UserService(UserRepository* repository)
-    : userRepo(repository) {}
+UserService::UserService(UserRepository* repository, QObject* parent)
+    : QObject(parent), userRepo(repository) {}
+
 
 //auth management
 QString UserService::registerUser(const QString& username,
@@ -29,6 +30,7 @@ QString UserService::registerUser(const QString& username,
     User newUser(trimmedUser, password, trimmedAns, initialBalance);
 
     if (userRepo->save(newUser)) {
+        emit userRegistered(newUser.getId());
         return "SUCCESS";
     } else {
         return "DATABASE_ERROR";
@@ -70,7 +72,11 @@ bool UserService::resetPasswordWithSecurityAnswer(const QString& username,
         return false;
     }
 
-    return userRepo->save(*userOpt);
+    if (userRepo->save(*userOpt)) {
+        emit userCredentialsChanged(userOpt->getId());
+        return true;
+    }
+    return false;
 }
 
 bool UserService::changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword) {
@@ -83,7 +89,11 @@ bool UserService::changeUserPassword(int userId, const QString& oldPassword, con
         return false;
     }
 
-    return userRepo->save(*userOpt);
+    if (userRepo->save(*userOpt)) {
+        emit userCredentialsChanged(userId);
+        return true;
+    }
+    return false;
 }
 
 bool UserService::changeUserUsername(int userId, const QString& newUsername, const QString& password) {
@@ -102,7 +112,11 @@ bool UserService::changeUserUsername(int userId, const QString& newUsername, con
         return false;
     }
 
-    return userRepo->save(*userOpt);
+    if (userRepo->save(*userOpt)) {
+        emit userCredentialsChanged(userId);
+        return true;
+    }
+    return false;
 }
 
 bool UserService::deleteUser(int userId) {
@@ -125,7 +139,10 @@ bool UserService::depositBalance(int userId, double amount) {
     }
 
     if (userOpt->deposit(amount)) {
-        return userRepo->save(*userOpt);
+        if (userRepo->save(*userOpt)) {
+            emit walletBalanceChanged(userId, userOpt->getWalletBalance());
+            return true;
+        }
     }
     return false;
 }
@@ -140,8 +157,11 @@ bool UserService::withdrawBalance(int userId, double amount) {
         return false;
     }
 
-    if (userOpt->withdraw(amount)) {
-        return userRepo->save(*userOpt);
+    if (userOpt->deposit(amount)) {
+        if (userRepo->save(*userOpt)) {
+            emit walletBalanceChanged(userId, userOpt->getWalletBalance());
+            return true;
+        }
     }
     return false;
 }
@@ -159,7 +179,10 @@ bool UserService::updateUserFavoriteGenres(int userId, const QList<Genre>& genre
     }
 
     if (userOpt->setFavoriteGenres(genres)) {
-        return userRepo->save(*userOpt);
+        if (userRepo->save(*userOpt)) {
+            emit favoriteGenresChanged(userId);
+            return true;
+        }
     }
     return false;
 }

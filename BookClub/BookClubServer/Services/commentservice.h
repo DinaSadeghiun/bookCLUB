@@ -1,6 +1,7 @@
 #ifndef COMMENTSERVICE_H
 #define COMMENTSERVICE_H
 
+#include <QObject>
 #include <QList>
 #include <QString>
 #include <optional>
@@ -9,7 +10,8 @@
 class CommentRepository;
 class BookRepository;
 
-class CommentService {
+class CommentService : public QObject {
+    Q_OBJECT
 private:
     CommentRepository* commentRepo;
     BookRepository* bookRepo;
@@ -17,7 +19,9 @@ private:
     bool updateBookStatistics(int bookId);
 
 public:
-    explicit CommentService(CommentRepository* cRepo, BookRepository* bRepo);
+    explicit CommentService(CommentRepository* cRepo,
+                            BookRepository* bRepo,
+                            QObject* parent = nullptr);
     ~CommentService() = default;
 
     bool addComment(Comment& comment);
@@ -25,6 +29,11 @@ public:
 
     std::optional<Comment> getCommentById(int id) const;
     QList<Comment> getCommentsByBook(int bookId) const;
+
+signals:
+    void commentAdded(int bookId, int commentId);
+    void commentRemoved(int bookId, int commentId);
+    void bookRatingUpdated(int bookId, double averageRating, int ratingCount);
 };
 
 #endif

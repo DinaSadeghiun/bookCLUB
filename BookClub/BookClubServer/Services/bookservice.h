@@ -1,6 +1,7 @@
 #ifndef BOOKSERVICE_H
 #define BOOKSERVICE_H
 
+#include <QObject>
 #include <QList>
 #include <QString>
 #include <optional>
@@ -10,7 +11,8 @@
 class BookRepository;
 class DiscountRepository;
 
-class BookService {
+class BookService : public QObject {
+    Q_OBJECT
 private:
     BookRepository* bookRepo;
     DiscountRepository* discountRepo;
@@ -18,7 +20,7 @@ private:
     bool validateBook(const Book& book) const;
 
 public:
-    explicit BookService(BookRepository* repo, DiscountRepository* discRepo);
+    explicit BookService(BookRepository* repo, DiscountRepository* discRepo, QObject* parent = nullptr);
     ~BookService() = default;
 
     bool addBook(Book& book);
@@ -33,6 +35,12 @@ public:
 
     std::optional<double> getBookFinalPrice(int bookId) const;
     bool rateBook(int bookId, double rating);
+
+signals:
+    void bookAdded(int bookId, int publisherId);
+    void bookUpdated(int bookId);
+    void bookRemoved(int bookId);
+    void bookRatingUpdated(int bookId, double newAverageRating);
 };
 
 #endif

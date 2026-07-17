@@ -4,34 +4,38 @@
 #include "Publisher.h"
 #include <algorithm>
 
-PublisherService::PublisherService(PublisherRepository* pRepo, BookRepository* bRepo, DiscountRepository* dRepo)
-    : pubRepo(pRepo), bookRepo(bRepo), discountRepo(dRepo) {}
+PublisherService::PublisherService(PublisherRepository* pRepo, BookRepository* bRepo, DiscountRepository* dRepo, QObject* parent)
+    : QObject(parent), pubRepo(pRepo), bookRepo(bRepo), discountRepo(dRepo) {}
 
-std::optional<Publisher> PublisherService::registerPublisher(const QString& username,
-                                                             const QString& password,
-                                                             const QString& companyName,
-                                                             const QString& securityAns) {
+
+QString PublisherService::registerPublisher(const QString& username,
+                                            const QString& password,
+                                            const QString& companyName,
+                                            const QString& securityAns)
+{
     QString trimmedUser = username.trimmed();
     QString trimmedCompany = companyName.trimmed();
+    QString trimmedAns = securityAns.trimmed();
 
-    if (trimmedUser.isEmpty() || password.isEmpty() || trimmedCompany.isEmpty()) {
-        return std::nullopt;
+    if (trimmedUser.isEmpty() || password.isEmpty() || trimmedCompany.isEmpty() || trimmedAns.isEmpty()) {
+        return "EMPTY_FIELDS";
     }
 
-    // Check if publisher already exists
-    if (pubRepo->findByUsername(trimmedUser).has_value()) {
-        return std::nullopt;
+    auto existingPub = pubRepo->findByUsername(trimmedUser);
+    if (existingPub.has_value()) {
+        return "USERNAME_TAKEN";
     }
 
-    // Create new publisher
-    Publisher newPub(trimmedUser, password, securityAns, trimmedCompany);
+    Publisher newPub(trimmedUser, password, trimmedAns, trimmedCompany);
 
     if (pubRepo->save(newPub)) {
-        return newPub;
+        emit publisherRegistered(newPub.getId());
+        return "SUCCESS";
+    } else {
+        return "DATABASE_ERROR";
     }
-
-    return std::nullopt;
 }
+
 
 std::optional<Publisher> PublisherService::login(const QString& username, const QString& password) {
     QString trimmedUser = username.trimmed();
@@ -64,10 +68,12 @@ bool PublisherService::resetPasswordWithSecurityAnswer(const QString& username,
         return false;
     }
 
-      if (pubOpt->changePasswordWithSecurityAnswer(trimmedAnswer, trimmedNewPassword)) {
-        return pubRepo->save(*pubOpt);
+    if (pubOpt->changePasswordWithSecurityAnswer(trimmedAnswer, trimmedNewPassword)) {
+        if (pubRepo->save(*pubOpt)) {
+            emit publisherCredentialsChanged(pubOpt->getId());
+            return true;
+        }
     }
-
     return false;
 }
 
@@ -82,7 +88,11 @@ bool PublisherService::changePublisherPassword(int publisherId, const QString& o
         return false;
     }
 
-    return pubRepo->save(*pubOpt);
+    if (pubRepo->save(*pubOpt)) {
+        emit publisherCredentialsChanged(publisherId);
+        return true;
+    }
+    return false;
 }
 
 bool PublisherService::changePublisherUsername(int publisherId, const QString& newUsername, const QString& password) {
@@ -101,7 +111,12 @@ bool PublisherService::changePublisherUsername(int publisherId, const QString& n
         return false;
     }
 
-    return pubRepo->save(*pubOpt);
+    if (pubRepo->save(*pubOpt)) {
+        emit publisherCredentialsChanged(publisherId);
+        return true;
+    }
+    return false;
+
 }
 
 // add book
@@ -114,7 +129,11 @@ bool PublisherService::addNewBook(int publisherId, Book& book) {
     book.setPublisherId(publisherId);
     book.setIsAvailable(true);
 
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit bookAdded(publisherId, book.getId());
+        return true;
+    }
+    return false;
 }
 
 // remove book
@@ -124,7 +143,11 @@ bool PublisherService::removeBook(int publisherId, int bookId) {
         return false;
     }
 
-    return bookRepo->remove(bookId);
+    if (bookRepo->remove(bookId)) {
+        emit bookRemoved(publisherId, bookId);
+        return true;
+    }
+    return false;
 }
 
 bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPrice) {
@@ -138,7 +161,12 @@ bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPr
     }
 
     bookOpt->setPrice(newPrice);
-    return bookRepo->save(*bookOpt);
+    bookOpt->setPrice(newPrice);
+    if (bookRepo->save(*bookOpt)) {
+        emit bookPriceUpdated(bookId, newPrice);
+        return true;
+    }
+    return false;
 }
 
 QList<Book> PublisherService::getPublisherBooks(int publisherId) {
@@ -167,7 +195,11 @@ bool PublisherService::applyDiscountToBook(int publisherId, int bookId, int disc
     }
 
     book.setDiscountId(discountId);
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit discountApplied(bookId, discountId);
+        return true;
+    }
+    return false;
 }
 
 bool PublisherService::removeDiscountFromBook(int publisherId, int bookId) {
@@ -185,7 +217,11 @@ bool PublisherService::removeDiscountFromBook(int publisherId, int bookId) {
     }
 
     book.removeDiscount();
-    return bookRepo->save(book);
+    if (bookRepo->save(book)) {
+        emit discountRemoved(bookId);
+        return true;
+    }
+    return false;
 }
 
 std::optional<SalesStats> PublisherService::calculateSalesStats(int publisherId) const {
