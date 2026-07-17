@@ -2,19 +2,77 @@
 #define ADMINSERVICE_H
 
 #include <QString>
+#include <QList>
+#include <QList>
 #include <optional>
-#include "Admin.h"
-#include "DB/adminrepository.h"
+#include <QObject>
 
-class AdminService {
+#include "Admin.h"
+#include "user.h"
+#include "Publisher.h"
+#include "Book.h"
+#include "Comment.h"
+
+#include "DB/adminrepository.h"
+#include "DB/userrepository.h"
+#include "DB/publisherrepository.h"
+#include "DB/bookrepository.h"
+#include "DB/commentrepository.h"
+
+class AdminService : public QObject {
+    Q_OBJECT
+
 private:
     AdminRepository* adminRepo;
+    UserRepository* userRepo;
+    PublisherRepository* pubRepo;
+    BookRepository* bookRepo;
+    CommentRepository* commentRepo;
 
 public:
-    explicit AdminService(AdminRepository* repo);
+    explicit AdminService(AdminRepository* aRepo,
+                          UserRepository* uRepo,
+                          PublisherRepository* pRepo,
+                          BookRepository* bRepo,
+                          CommentRepository* cRepo,
+                          QObject* parent = nullptr);
+
+    //Auth
     QString registerAdmin(const QString& username, const QString& password, const QString& securityAnswer);
     std::optional<Admin> loginAdmin(const QString& username, const QString& password);
     bool resetPasswordWithSecurityAnswer(const QString& username, const QString& answer, const QString& newPassword);
+
+    //Users and Publisher
+    QList<User> getAllUsers() const;
+    QList<Publisher> getAllPublishers() const;
+    std::optional<User> getUserDetails(int userId) const;
+    std::optional<Publisher> getPublisherDetails(int publisherId) const;
+
+
+    bool blockUser(int userId);
+    bool unblockUser(int userId);
+    bool deleteUserAccount(int userId);
+    bool deletePublisherAccount(int publisherId);
+    bool setAccountStatus(int personId, bool active);
+
+    //Books
+    QList<Book> getAllBooks() const;
+    bool removeBookByAdmin(int bookId);
+    bool updateBookDetailsByAdmin(int bookId, const QString& title, double price);
+
+    //Comments
+    QList<Comment> getAllComments() const;
+    bool removeCommentByAdmin(int commentId);
+
+signals:
+    void adminRegistered(int adminId);
+    void adminCredentialsChanged(int adminId);
+    void userStatusChanged(int userId, bool isActive);
+    void userDeleted(int userId);
+    void publisherDeleted(int publisherId);
+    void bookRemovedByAdmin(int bookId);
+    void bookUpdatedByAdmin(int bookId);
+    void commentRemovedByAdmin(int commentId);
 };
 
 #endif
