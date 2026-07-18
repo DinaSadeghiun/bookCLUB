@@ -4,10 +4,18 @@
 #include <QDebug>
 
 ShoppingCartService::ShoppingCartService(ShoppingCartRepository* repo, BookService* bookSvc, QObject* parent)
-    : QObject(parent), cartRepo(repo), bookService(bookSvc) {}
+    : QObject(parent), cartRepo(repo), bookService(bookSvc)
+{
+    Q_ASSERT(cartRepo != nullptr);
+    Q_ASSERT(bookService != nullptr);
+}
 
 
 ShoppingCart ShoppingCartService::getOrCreateCart(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !cartRepo) {
+        return ShoppingCart(userId);
+    }
     auto cartOpt = cartRepo->findByUserId(userId);
     if (cartOpt.has_value()) {
         return cartOpt.value();
@@ -21,7 +29,11 @@ ShoppingCart ShoppingCartService::getOrCreateCart(int userId) {
 
 
 bool ShoppingCartService::addBookToCart(int userId, int bookId) {
-    if (userId <= 0 || bookId <= 0) return false;
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !cartRepo || !bookService) {
+        return false;
+    }
 
     auto bookOpt = bookService->getBookById(bookId);
     if (!bookOpt.has_value()) {
@@ -45,7 +57,11 @@ bool ShoppingCartService::addBookToCart(int userId, int bookId) {
 }
 
 bool ShoppingCartService::removeBookFromCart(int userId, int bookId) {
-    if (userId <= 0 || bookId <= 0) return false;
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !cartRepo) {
+        return false;
+    }
 
     auto cartOpt = cartRepo->findByUserId(userId);
     if (!cartOpt.has_value()) return false;
@@ -64,8 +80,10 @@ bool ShoppingCartService::removeBookFromCart(int userId, int bookId) {
 }
 
 bool ShoppingCartService::clearCart(int userId) {
-    if (userId <= 0) return false;
-
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !cartRepo) {
+        return false;
+    }
     auto cartOpt = cartRepo->findByUserId(userId);
     if (!cartOpt.has_value()) return true;
 
@@ -80,7 +98,10 @@ bool ShoppingCartService::clearCart(int userId) {
 
 CartDetails ShoppingCartService::getCartDetails(int userId) {
     CartDetails details;
-    if (userId <= 0) return details;
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !cartRepo || !bookService) {
+        return details;
+    }
 
     auto cartOpt = cartRepo->findByUserId(userId);
     if (!cartOpt.has_value()) {

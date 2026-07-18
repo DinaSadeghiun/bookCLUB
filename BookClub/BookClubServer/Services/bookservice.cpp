@@ -5,9 +5,16 @@
 #include <QDebug>
 
 BookService::BookService(BookRepository* repo, DiscountRepository* discRepo, QObject* parent)
-    : QObject(parent), bookRepo(repo), discountRepo(discRepo) {}
+    : QObject(parent), bookRepo(repo), discountRepo(discRepo)
+{
+    Q_ASSERT(bookRepo != nullptr);
+    Q_ASSERT(discountRepo != nullptr);
+}
 
 bool BookService::validateBook(const Book& book) const {
+    if (!bookRepo) {
+        return false;
+    }
     if (book.getTitle().trimmed().isEmpty()) {
         qDebug() << "Validation Failed: Title is empty.";
         return false;
@@ -28,6 +35,9 @@ bool BookService::validateBook(const Book& book) const {
 }
 
 bool BookService::addBook(Book& book) {
+    if (!bookRepo) {
+        return false;
+    }
     if (book.getId() != -1) {
         qDebug() << "Add Book Failed: Book already has an ID.";
         return false;
@@ -43,6 +53,9 @@ bool BookService::addBook(Book& book) {
 }
 
 bool BookService::updateBook(Book& book) {
+    if (!bookRepo) {
+        return false;
+    }
     if (book.getId() == -1) {
         qDebug() << "Update Book Failed: Book must have a valid ID.";
         return false;
@@ -58,6 +71,9 @@ bool BookService::updateBook(Book& book) {
 }
 
 bool BookService::removeBook(int bookId) {
+    if (!bookRepo) {
+        return false;
+    }
     if (bookId <= 0) {
         return false;
     }
@@ -69,6 +85,9 @@ bool BookService::removeBook(int bookId) {
 }
 
 std::optional<Book> BookService::getBookById(int id) const {
+    if (!bookRepo) {
+        return {};
+    }
     if (id <= 0) {
         return std::nullopt;
     }
@@ -76,21 +95,31 @@ std::optional<Book> BookService::getBookById(int id) const {
 }
 
 QList<Book> BookService::getAllAvailableBooks() const {
+    if (!bookRepo) {
+        return {};
+    }
     return bookRepo->findAll();
 }
 
 QList<Book> BookService::getBooksByPublisher(int publisherId) const {
-    if (publisherId <= 0) {
+    Q_ASSERT(publisherId > 0);
+    if (publisherId <= 0 || !bookRepo) {
         return QList<Book>();
     }
     return bookRepo->findByPublisherId(publisherId);
 }
 
 QList<Book> BookService::getBooksByGenre(Genre genre) const {
+    if (!bookRepo) {
+        return {};
+    }
     return bookRepo->findByGenre(genre);
 }
 
 QList<Book> BookService::search(const QString& query) const {
+    if (!bookRepo) {
+        return {};
+    }
     QString trimmedQuery = query.trimmed();
     if (trimmedQuery.isEmpty()) {
         return {};
@@ -99,7 +128,8 @@ QList<Book> BookService::search(const QString& query) const {
 }
 
 std::optional<double> BookService::getBookFinalPrice(int bookId) const {
-    if (bookId <= 0) {
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !bookRepo || !discountRepo) {
         return std::nullopt;
     }
 
@@ -140,6 +170,11 @@ std::optional<double> BookService::getBookFinalPrice(int bookId) const {
 }
 
 bool BookService::rateBook(int bookId, double rating) {
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !bookRepo) {
+        return false;
+    }
+
     if (rating < 1.0 || rating > 5.0) {
         qDebug() << "Rate Book Failed: Rating must be between 1.0 and 5.0.";
         return false;

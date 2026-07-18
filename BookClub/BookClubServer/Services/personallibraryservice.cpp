@@ -6,9 +6,17 @@
 PersonalLibraryService::PersonalLibraryService(PersonalLibraryRepository* personalLibRepo,
                                                BookRepository* bookRepo,
                                                QObject* parent)
-    : QObject(parent), personalLibRepo(personalLibRepo), bookRepo(bookRepo) {}
+    : QObject(parent), personalLibRepo(personalLibRepo), bookRepo(bookRepo)
+{
+    Q_ASSERT(personalLibRepo != nullptr);
+    Q_ASSERT(bookRepo != nullptr);
+}
 
 QList<int> PersonalLibraryService::getPurchasedBooks(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return QList<int>();
+    }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
         return QList<int>();
@@ -17,6 +25,11 @@ QList<int> PersonalLibraryService::getPurchasedBooks(int userId) {
 }
 
 bool PersonalLibraryService::hasPurchased(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
         return false;
@@ -25,6 +38,10 @@ bool PersonalLibraryService::hasPurchased(int userId, int bookId) {
 }
 
 QList<int> PersonalLibraryService::getWishlist(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return QList<int>();
+    }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
         return QList<int>();
@@ -33,6 +50,11 @@ QList<int> PersonalLibraryService::getWishlist(int userId) {
 }
 
 bool PersonalLibraryService::addToWishlist(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     if (hasPurchased(userId, bookId)) {
         return false;
     }
@@ -44,6 +66,11 @@ bool PersonalLibraryService::addToWishlist(int userId, int bookId) {
 }
 
 bool PersonalLibraryService::removeFromWishlist(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     if (personalLibRepo->removeFromWishlist(userId, bookId)) {
         emit wishlistUpdated(userId);
         return true;
@@ -53,6 +80,11 @@ bool PersonalLibraryService::removeFromWishlist(int userId, int bookId) {
 
 
 bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
         return false;
@@ -61,6 +93,10 @@ bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
 }
 
 bool PersonalLibraryService::createShelf(int userId, const QString& shelfName) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return false;
+    }
     QString trimmedName = shelfName.trimmed();
     if (trimmedName.isEmpty()) {
         return false;
@@ -73,15 +109,26 @@ bool PersonalLibraryService::createShelf(int userId, const QString& shelfName) {
 }
 
 bool PersonalLibraryService::deleteShelf(int userId, const QString& shelfName) {
-    if (personalLibRepo->removeShelf(userId, shelfName.trimmed())) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return false;
+    }
+    QString trimmedName = shelfName.trimmed();
+    if (trimmedName.isEmpty()) {
+        return false;
+    }
+    if (personalLibRepo->removeShelf(userId, trimmedName)) {
         emit shelvesUpdated(userId);
         return true;
     }
     return false;
 }
 
-
 QList<QString> PersonalLibraryService::getShelfNames(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return {};
+    }
     QList<QString> names;
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
@@ -96,6 +143,11 @@ QList<QString> PersonalLibraryService::getShelfNames(int userId) {
 }
 
 bool PersonalLibraryService::addBookToShelf(int userId, const QString& shelfName, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     if (!hasPurchased(userId, bookId)) {
         return false;
     }
@@ -108,6 +160,11 @@ bool PersonalLibraryService::addBookToShelf(int userId, const QString& shelfName
 }
 
 bool PersonalLibraryService::removeBookFromShelf(int userId, const QString& shelfName, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     QString trimmedName = shelfName.trimmed();
     if (personalLibRepo->removeBookFromShelf(userId, trimmedName, bookId)) {
         emit shelfContentUpdated(userId, trimmedName);
@@ -118,6 +175,10 @@ bool PersonalLibraryService::removeBookFromShelf(int userId, const QString& shel
 
 
 QList<int> PersonalLibraryService::getBooksInShelf(int userId, const QString& shelfName) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return QList<int>();
+    }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
         return QList<int>();
@@ -132,6 +193,11 @@ QList<int> PersonalLibraryService::getBooksInShelf(int userId, const QString& sh
 bool PersonalLibraryService::moveBookBetweenShelves(int userId, int bookId,
                                                     const QString& fromShelf,
                                                     const QString& toShelf) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
     QString trimmedFrom = fromShelf.trimmed();
     QString trimmedTo   = toShelf.trimmed();
 

@@ -7,9 +7,17 @@
 CommentService::CommentService(CommentRepository* cRepo,
                                BookRepository* bRepo,
                                QObject* parent)
-    : QObject(parent), commentRepo(cRepo), bookRepo(bRepo) {}
+    : QObject(parent), commentRepo(cRepo), bookRepo(bRepo)
+{
+    Q_ASSERT(commentRepo != nullptr);
+    Q_ASSERT(bRepo != nullptr);
+}
 
 bool CommentService::addComment(Comment& comment) {
+    if (!commentRepo) {
+        return false;
+    }
+
     if (comment.getText().trimmed().isEmpty()) {
         qDebug() << "Add Comment Failed: Text cannot be empty.";
         return false;
@@ -28,7 +36,8 @@ bool CommentService::addComment(Comment& comment) {
 }
 
 bool CommentService::removeComment(int commentId) {
-    if (commentId <= 0) return false;
+    Q_ASSERT(commentId > 0);
+    if (commentId <= 0 || !commentRepo || !bookRepo) return false;
 
     auto commentOpt = commentRepo->findById(commentId);
     if (!commentOpt.has_value()) {
@@ -46,16 +55,21 @@ bool CommentService::removeComment(int commentId) {
 }
 
 std::optional<Comment> CommentService::getCommentById(int id) const {
-    if (id <= 0) return std::nullopt;
+    Q_ASSERT(id > 0);
+    if (id <= 0 || !commentRepo) return std::nullopt;
     return commentRepo->findById(id);
 }
 
 QList<Comment> CommentService::getCommentsByBook(int bookId) const {
-    if (bookId <= 0) return QList<Comment>();
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !commentRepo) return QList<Comment>();
     return commentRepo->findByBookId(bookId);
 }
 
 bool CommentService::updateBookStatistics(int bookId) {
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !bookRepo || !commentRepo) return false;
+
     auto bookOpt = bookRepo->findById(bookId);
     if (!bookOpt.has_value()) return false;
 

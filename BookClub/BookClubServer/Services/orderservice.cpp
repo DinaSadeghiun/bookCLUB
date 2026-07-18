@@ -3,7 +3,6 @@
 #include "DB/personallibraryrepository.h"
 #include "shoppingcartservice.h"
 #include "Services/userservice.h"
-#include "DB/personallibraryrepository.h"
 #include <QDebug>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -16,13 +15,21 @@ OrderService::OrderService(OrderRepository* oRepo,
                            PersonalLibraryRepository* libRepo,
                            QObject* parent)
     : QObject(parent), orderRepo(oRepo), cartService(cartSvc),
-    userService(userSvc), personalLibRepo(libRepo) {}
+    userService(userSvc), personalLibRepo(libRepo)
+{
+    Q_ASSERT(orderRepo != nullptr);
+    Q_ASSERT(cartService != nullptr);
+    Q_ASSERT(userService != nullptr);
+    Q_ASSERT(personalLibRepo != nullptr);
+}
 
 bool OrderService::checkout(int userId) {
-    if (userId <= 0) {
-        qDebug() << "Checkout Failed: Invalid user ID.";
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !orderRepo || !cartService || !userService || !personalLibRepo) {
+        qDebug() << "Checkout Failed: Invalid user ID or uninitialized dependencies.";
         return false;
     }
+
 
     // 1. Fetch cart details and calculate prices
     CartDetails details = cartService->getCartDetails(userId);
@@ -92,6 +99,7 @@ bool OrderService::checkout(int userId) {
 }
 
 QList<Order> OrderService::getOrderHistory(int userId) const {
-    if (userId <= 0) return {};
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !orderRepo) return {};
     return orderRepo->findByUserId(userId);
 }

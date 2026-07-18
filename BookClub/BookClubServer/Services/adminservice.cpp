@@ -6,9 +6,21 @@ AdminService::AdminService(AdminRepository* aRepo,
                            BookRepository* bRepo,
                            CommentRepository* cRepo,
                            QObject* parent)
-    : QObject(parent), adminRepo(aRepo), userRepo(uRepo), pubRepo(pRepo), bookRepo(bRepo), commentRepo(cRepo) {}
+    : QObject(parent), adminRepo(aRepo), userRepo(uRepo),
+    pubRepo(pRepo), bookRepo(bRepo), commentRepo(cRepo)
+{
+    Q_ASSERT(adminRepo != nullptr);
+    Q_ASSERT(userRepo != nullptr);
+    Q_ASSERT(pubRepo != nullptr);
+    Q_ASSERT(bookRepo != nullptr);
+    Q_ASSERT(commentRepo != nullptr);
+}
 
 QString AdminService::registerAdmin(const QString& username, const QString& password, const QString& securityAnswer) {
+    if (!adminRepo) {
+        return "DATABASE_ERROR";
+    }
+
     if (username.trimmed().isEmpty() || password.trimmed().isEmpty() || securityAnswer.trimmed().isEmpty()) {
         return "EMPTY_FIELDS";
     }
@@ -29,6 +41,10 @@ QString AdminService::registerAdmin(const QString& username, const QString& pass
 
 std::optional<Admin> AdminService::loginAdmin(const QString& username, const QString& password) {
     auto adminOpt = adminRepo->findByUsername(username);
+    if (!adminRepo) {
+        return std::nullopt;
+    }
+
     if (adminOpt && adminOpt->verifyPassword(password)) {
         return adminOpt;
     }
@@ -42,6 +58,10 @@ bool AdminService::resetPasswordWithSecurityAnswer(const QString& username,
     auto trimmedUsername = username.trimmed();
     auto trimmedAnswer = answer.trimmed();
     auto trimmedNewPassword = newPassword.trimmed();
+
+    if (!adminRepo) {
+        return false;
+    }
 
     if (trimmedUsername.isEmpty() || trimmedAnswer.isEmpty() || trimmedNewPassword.isEmpty()) {
         return false;
@@ -62,22 +82,34 @@ bool AdminService::resetPasswordWithSecurityAnswer(const QString& username,
 }
 
 QList<User> AdminService::getAllUsers() const {
+    if (!userRepo) return {};
     return userRepo->findAll();
 }
 
 QList<Publisher> AdminService::getAllPublishers() const {
+    if (!pubRepo) return {};
     return pubRepo->findAll();
 }
 
 std::optional<User> AdminService::getUserDetails(int userId) const {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return std::nullopt;
+    }
     return userRepo->findById(userId);
 }
 
 std::optional<Publisher> AdminService::getPublisherDetails(int publisherId) const {
+    Q_ASSERT(publisherId > 0);
+    if (publisherId <= 0 || !pubRepo) {
+        return std::nullopt;
+    }
     return pubRepo->findById(publisherId);
 }
 
 bool AdminService::blockUser(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) return false;
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) return false;
 
@@ -90,6 +122,8 @@ bool AdminService::blockUser(int userId) {
 }
 
 bool AdminService::unblockUser(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) return false;
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) return false;
 
@@ -102,6 +136,8 @@ bool AdminService::unblockUser(int userId) {
 }
 
 bool AdminService::deleteUserAccount(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) return false;
     if (userRepo->remove(userId)) {
         emit userDeleted(userId);
         return true;
@@ -110,6 +146,8 @@ bool AdminService::deleteUserAccount(int userId) {
 }
 
 bool AdminService::deletePublisherAccount(int publisherId) {
+    Q_ASSERT(publisherId > 0);
+    if (publisherId <= 0 || !pubRepo) return false;
     if (pubRepo->remove(publisherId)) {
         emit publisherDeleted(publisherId);
         return true;
@@ -118,6 +156,8 @@ bool AdminService::deletePublisherAccount(int publisherId) {
 }
 
 bool AdminService::setAccountStatus(int personId, bool active) {
+    Q_ASSERT(personId > 0);
+    if (personId <= 0 || !userRepo || !pubRepo) return false;
     auto userOpt = userRepo->findById(personId);
     if (userOpt) {
         userOpt->setIsActive(active);
@@ -142,10 +182,13 @@ bool AdminService::setAccountStatus(int personId, bool active) {
 }
 
 QList<Book> AdminService::getAllBooks() const {
+    if (!bookRepo) return {};
     return bookRepo->findAll();
 }
 
 bool AdminService::removeBookByAdmin(int bookId) {
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !bookRepo) return false;
     if (bookRepo->remove(bookId)) {
         emit bookRemovedByAdmin(bookId);
         return true;
@@ -154,6 +197,13 @@ bool AdminService::removeBookByAdmin(int bookId) {
 }
 
 bool AdminService::updateBookDetailsByAdmin(int bookId, const QString& title, double price) {
+    Q_ASSERT(bookId > 0);
+    if (bookId <= 0 || !bookRepo) return false;
+
+    if (title.trimmed().isEmpty() || price < 0) {
+        return false;
+    }
+
     auto bookOpt = bookRepo->findById(bookId);
     if (!bookOpt) return false;
 
@@ -168,10 +218,13 @@ bool AdminService::updateBookDetailsByAdmin(int bookId, const QString& title, do
 }
 
 QList<Comment> AdminService::getAllComments() const {
+    if (!commentRepo) return {};
     return commentRepo->findAll();
 }
 
 bool AdminService::removeCommentByAdmin(int commentId) {
+    Q_ASSERT(commentId > 0);
+    if (commentId <= 0 || !commentRepo) return false;
     if (commentRepo->remove(commentId)) {
         emit commentRemovedByAdmin(commentId);
         return true;

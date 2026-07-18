@@ -2,7 +2,10 @@
 #include "DB/userrepository.h"
 
 UserService::UserService(UserRepository* repository, QObject* parent)
-    : QObject(parent), userRepo(repository) {}
+    : QObject(parent), userRepo(repository)
+{
+    Q_ASSERT(userRepo != nullptr);
+}
 
 
 //auth management
@@ -11,6 +14,9 @@ QString UserService::registerUser(const QString& username,
                                   const QString& securityAnswer,
                                   double initialBalance)
 {
+    if (!userRepo) {
+        return "DATABASE_ERROR";
+    }
     QString trimmedUser = username.trimmed();
     QString trimmedAns = securityAnswer.trimmed();
 
@@ -38,6 +44,9 @@ QString UserService::registerUser(const QString& username,
 }
 
 std::optional<User> UserService::loginUser(const QString& username, const QString& password) {
+    if (!userRepo) {
+        return std::nullopt;
+    }
     QString trimmedUser = username.trimmed();
     if (trimmedUser.isEmpty() || password.isEmpty()) {
         return std::nullopt;
@@ -58,6 +67,9 @@ bool UserService::resetPasswordWithSecurityAnswer(const QString& username,
                                                   const QString& securityAnswer,
                                                   const QString& newPassword)
 {
+    if (!userRepo) {
+        return false;
+    }
     QString trimmedUser = username.trimmed();
     if (trimmedUser.isEmpty()) {
         return false;
@@ -80,6 +92,10 @@ bool UserService::resetPasswordWithSecurityAnswer(const QString& username,
 }
 
 bool UserService::changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return false;
+    }
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) {
         return false;
@@ -97,6 +113,10 @@ bool UserService::changeUserPassword(int userId, const QString& oldPassword, con
 }
 
 bool UserService::changeUserUsername(int userId, const QString& newUsername, const QString& password) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return false;
+    }
     QString trimmedNewUser = newUsername.trimmed();
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) {
@@ -120,7 +140,8 @@ bool UserService::changeUserUsername(int userId, const QString& newUsername, con
 }
 
 bool UserService::deleteUser(int userId) {
-    if (userId <= 0) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
         return false;
     }
     return userRepo->remove(userId);
@@ -129,10 +150,10 @@ bool UserService::deleteUser(int userId) {
 
 //balance mng
 bool UserService::depositBalance(int userId, double amount) {
-    if (amount <= 0.0) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || amount <= 0.0 || !userRepo) {
         return false;
     }
-
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) {
         return false;
@@ -148,7 +169,8 @@ bool UserService::depositBalance(int userId, double amount) {
 }
 
 bool UserService::withdrawBalance(int userId, double amount) {
-    if (amount <= 0.0) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || amount <= 0.0 || !userRepo) {
         return false;
     }
 
@@ -167,12 +189,20 @@ bool UserService::withdrawBalance(int userId, double amount) {
 }
 
 double UserService::getWalletBalance(int userId) const {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return 0.0;
+    }
     auto userOpt = userRepo->findById(userId);
     return userOpt ? userOpt->getWalletBalance() : 0.0;
 }
 
 //genres
 bool UserService::updateUserFavoriteGenres(int userId, const QList<Genre>& genres) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return false;
+    }
     auto userOpt = userRepo->findById(userId);
     if (!userOpt) {
         return false;
@@ -188,6 +218,10 @@ bool UserService::updateUserFavoriteGenres(int userId, const QList<Genre>& genre
 }
 
 QList<Genre> UserService::getUserFavoriteGenres(int userId) const {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return QList<Genre>();
+    }
     auto userOpt = userRepo->findById(userId);
     return userOpt ? userOpt->getFavoriteGenres() : QList<Genre>();
 }

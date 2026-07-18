@@ -2,11 +2,20 @@
 #include <utility>
 
 NotificationService::NotificationService(NotificationRepository* repo, QObject* parent)
-    : QObject(parent), notificationRepo(repo) {}
+    : QObject(parent), notificationRepo(repo)
+{
+    Q_ASSERT(notificationRepo != nullptr);
+}
 
 bool NotificationService::sendNotification(NotificationType type, int recipientId, int relatedBookId, const QString& message) {
+    Q_ASSERT(recipientId > 0);
+    Q_ASSERT(relatedBookId >= 0);
+    if (recipientId <= 0 || !notificationRepo) {
+        return false;
+    }
+
     QString trimmedMessage = message.trimmed();
-    if (trimmedMessage.isEmpty() || recipientId <= 0 || !notificationRepo) {
+    if (trimmedMessage.isEmpty()) {
         return false;
     }
 
@@ -20,13 +29,18 @@ bool NotificationService::sendNotification(NotificationType type, int recipientI
 }
 
 QList<Notification> NotificationService::getNotificationsForeRecipient(int recipientId) {
-    if (recipientId <= 0 || !notificationRepo) return {};
+    Q_ASSERT(recipientId > 0);
+    if (recipientId <= 0 || !notificationRepo) {
+        return {};
+    }
     return notificationRepo->findByRecipientId(recipientId);
 }
 
 QList<Notification> NotificationService::getUnreadNotificationsFoRecipient(int recipientId) {
-    if (recipientId <= 0 || !notificationRepo) return {};
-
+    Q_ASSERT(recipientId > 0);
+    if (recipientId <= 0 || !notificationRepo) {
+        return {};
+    }
     QList<Notification> all = notificationRepo->findByRecipientId(recipientId);
     QList<Notification> unread;
     for (const auto& n : std::as_const(all)) {
@@ -38,8 +52,11 @@ QList<Notification> NotificationService::getUnreadNotificationsFoRecipient(int r
 }
 
 bool NotificationService::markAsRead(int notificationId, int recipientId) {
-    if (notificationId <= 0 || recipientId <= 0 || !notificationRepo) return false;
-
+    Q_ASSERT(notificationId > 0);
+    Q_ASSERT(recipientId > 0);
+    if (notificationId <= 0 || recipientId <= 0 || !notificationRepo) {
+        return false;
+    }
     auto notificationOpt = notificationRepo->findById(notificationId);
     if (!notificationOpt.has_value() || notificationOpt->getRecipientId() != recipientId) {
         return false;
@@ -53,7 +70,10 @@ bool NotificationService::markAsRead(int notificationId, int recipientId) {
 }
 
 bool NotificationService::markAllAsRead(int recipientId) {
-    if (recipientId <= 0 || !notificationRepo) return false;
+    Q_ASSERT(recipientId > 0);
+    if (recipientId <= 0 || !notificationRepo) {
+        return false;
+    }
 
     if (notificationRepo->markAllAsReadForUser(recipientId)) {
         emit notificationsUpdated(recipientId);
@@ -63,8 +83,11 @@ bool NotificationService::markAllAsRead(int recipientId) {
 }
 
 bool NotificationService::deleteNotification(int notificationId, int recipientId) {
-    if (notificationId <= 0 || recipientId <= 0 || !notificationRepo) return false;
-
+    Q_ASSERT(notificationId > 0);
+    Q_ASSERT(recipientId > 0);
+    if (notificationId <= 0 || recipientId <= 0 || !notificationRepo) {
+        return false;
+    }
     auto notificationOpt = notificationRepo->findById(notificationId);
     if (!notificationOpt.has_value() || notificationOpt->getRecipientId() != recipientId) {
         return false;
