@@ -179,7 +179,7 @@ bool UserService::withdrawBalance(int userId, double amount) {
         return false;
     }
 
-    if (userOpt->deposit(amount)) {
+    if (userOpt->withdraw(amount)) {
         if (userRepo->save(*userOpt)) {
             emit walletBalanceChanged(userId, userOpt->getWalletBalance());
             return true;

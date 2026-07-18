@@ -3,6 +3,8 @@
 #include "DB/personallibraryrepository.h"
 #include "shoppingcartservice.h"
 #include "Services/userservice.h"
+#include "DB/bookrepository.h"
+#include "Services/publisherservice.h"
 #include <QDebug>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -13,9 +15,16 @@ OrderService::OrderService(OrderRepository* oRepo,
                            ShoppingCartService* cartSvc,
                            UserService* userSvc,
                            PersonalLibraryRepository* libRepo,
+                           BookRepository* bRepo,
+                           PublisherService* pubSvc,
                            QObject* parent)
-    : QObject(parent), orderRepo(oRepo), cartService(cartSvc),
-    userService(userSvc), personalLibRepo(libRepo)
+    : QObject(parent),
+    orderRepo(oRepo),
+    cartService(cartSvc),
+    userService(userSvc),
+    personalLibRepo(libRepo),
+    bookRepo(bRepo),
+    publisherSvc(pubSvc)
 {
     Q_ASSERT(orderRepo != nullptr);
     Q_ASSERT(cartService != nullptr);
@@ -73,8 +82,18 @@ bool OrderService::checkout(int userId) {
 
     // 5. Transfer purchased books to user's personal library (runs inner transaction inside PersonalLibraryRepository)
     for (int bookId : std::as_const(details.bookIds)) {
+        auto bookOpt = bookRepo->findById(bookId);
+        if (!bookOpt.has_value()) {
+            query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
+            return false;
+        }
+
+        if (!publisherSvc->addRevenue(bookOpt->getPublisherId(), bookOpt->getFinalPrice())) {
+            query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
+            return false;
+        }
+
         if (!personalLibRepo->addPurchasedBook(userId, bookId)) {
-            qDebug() << "Checkout Failed: Could not add book" << bookId << "to Personal Library.";
             query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
             return false;
         }

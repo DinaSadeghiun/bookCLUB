@@ -182,6 +182,26 @@ bool PublisherService::removeBook(int publisherId, int bookId) {
     return false;
 }
 
+//add revenue
+bool PublisherService::addRevenue(int publisherId, double amount) {
+    Q_ASSERT(publisherId > 0);
+    Q_ASSERT(amount > 0);
+        if (publisherId <= 0 || amount <= 0 || !pubRepo) {
+        return false;
+    }
+    auto optPub = pubRepo->findById(publisherId);
+    if (!optPub.has_value()) {
+        qDebug() << "Publisher not found for ID:" << publisherId;
+        return false;
+    }
+
+    Publisher pub = optPub.value();
+
+    pub.addRevenue(amount);
+
+    return pubRepo->save(pub);
+}
+
 bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPrice) {
     Q_ASSERT(publisherId > 0);
     Q_ASSERT(bookId > 0);

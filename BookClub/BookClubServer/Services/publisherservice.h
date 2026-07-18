@@ -51,6 +51,7 @@ public:
     bool addNewBook(int publisherId, Book& book);
     bool updateBookPrice(int publisherId, int bookId, double newPrice);
     bool removeBook(int publisherId, int bookId);
+    bool addRevenue(int publisherId, double amount);
     QList<Book> getPublisherBooks(int publisherId);
     // Discount Management
     bool applyDiscountToBook(int publisherId, int bookId, int discountId);

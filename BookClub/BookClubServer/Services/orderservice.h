@@ -10,6 +10,8 @@ class OrderRepository;
 class ShoppingCartService;
 class UserService;
 class PersonalLibraryRepository;
+class BookRepository;
+class PublisherService;
 
 class OrderService : public QObject {
     Q_OBJECT
@@ -18,12 +20,16 @@ private:
     ShoppingCartService* cartService;
     UserService* userService;
     PersonalLibraryRepository* personalLibRepo;
+    BookRepository* bookRepo;
+    PublisherService* publisherSvc;
 
 public:
     explicit OrderService(OrderRepository* oRepo,
                           ShoppingCartService* cartSvc,
                           UserService* userSvc,
                           PersonalLibraryRepository* libRepo,
+                          BookRepository* bRepo,
+                          PublisherService* pubSvc,
                           QObject* parent = nullptr);
     ~OrderService() = default;
 
