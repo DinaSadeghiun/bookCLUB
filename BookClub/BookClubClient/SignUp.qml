@@ -71,17 +71,21 @@ Rectangle {
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
 
+        // --- Role Selection Section ---
+        ButtonGroup { id: roleGroup }
+
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            spacing: 30
+            spacing: 15
 
             RadioButton {
                 id: radioNormal
                 text: "User"
                 checked: true
+                ButtonGroup.group: roleGroup
                 contentItem: Text {
                     text: radioNormal.text
-                    font.pixelSize: 16
+                    font.pixelSize: 14
                     color: "white"
                     leftPadding: radioNormal.indicator.width + radioNormal.spacing
                     verticalAlignment: Text.AlignVCenter
@@ -91,11 +95,25 @@ Rectangle {
             RadioButton {
                 id: radioPublisher
                 text: "Publisher"
+                ButtonGroup.group: roleGroup
                 contentItem: Text {
                     text: radioPublisher.text
-                    font.pixelSize: 16
+                    font.pixelSize: 14
                     color: "white"
                     leftPadding: radioPublisher.indicator.width + radioPublisher.spacing
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            RadioButton {
+                id: radioAdmin
+                text: "Admin"
+                ButtonGroup.group: roleGroup
+                contentItem: Text {
+                    text: radioAdmin.text
+                    font.pixelSize: 14
+                    color: "white"
+                    leftPadding: radioAdmin.indicator.width + radioAdmin.spacing
                     verticalAlignment: Text.AlignVCenter
                 }
             }
@@ -124,12 +142,18 @@ Rectangle {
             }
 
             onClicked: {
-                if (usernameField.text === "" || passwordField.text === "") {
+                if (usernameField.text === "" || passwordField.text === "" || emailField.text === "") {
                     console.log("Error: Fields cannot be empty!")
                 } else if (passwordField.text !== confirmPasswordField.text) {
                     console.log("Error: Passwords do not match!")
                 } else {
-                    console.log("Success! Registering as:", radioNormal.checked ? "User" : "Publisher")
+                    var selectedRole = "User"
+                    if (radioPublisher.checked) {
+                        selectedRole = "Publisher"
+                    } else if (radioAdmin.checked) {
+                        selectedRole = "Admin"
+                    }
+                    console.log("Success! Registering as:", selectedRole)
                     stackView.pop()
                 }
             }
