@@ -6,6 +6,9 @@ Item {
     id: loginPage
     anchors.fill: parent
 
+    property string username: ""
+    property string userRole: ""
+
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
@@ -21,7 +24,7 @@ Item {
 
         Image {
             id: mascotIcon
-            source: "qrc:/images/giraffe.png"
+            source: "qrc:/assets/images/giraffe.png"
             Layout.preferredWidth: 100
             Layout.preferredHeight: 100
             Layout.alignment: Qt.AlignHCenter
@@ -123,16 +126,22 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    console.log("Navigate to Forgot Password Page")
+                    stackView.push("ForgotPassword.qml")
                 }
             }
         }
 
         Item { Layout.preferredHeight: 10 }
+        // Place this inside the root element of Login.qml
 
-        RowLayout {
-            Layout.alignment: Qt.AlignHCenter
+
+
+
+
+
+        Row {
             spacing: 5
+            Layout.alignment: Qt.AlignHCenter
 
             Text {
                 text: "Don't have an account?"
@@ -144,18 +153,20 @@ Item {
                 text: "Sign Up"
                 font.pixelSize: 14
                 font.bold: true
-                color: "#FFD700"
+                color: "#4CAF50"
 
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        console.log("Navigating to Sign Up Page...")
-                        stackView.push("SignUp.qml")
+                        if (typeof rootStackView !== "undefined" && rootStackView !== null) {
+                            rootStackView.push("qrc:/SignUp.qml")
+                        } else {
+                            console.error("rootStackView is not accessible!")
+                        }
                     }
                 }
             }
         }
     }
 }
-

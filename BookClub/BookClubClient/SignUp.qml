@@ -42,14 +42,6 @@ Rectangle {
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
 
-        TextField {
-            id: emailField
-            placeholderText: "Email Address"
-            Layout.fillWidth: true
-            Layout.preferredHeight: 45
-            color: "#2C003E"
-            background: Rectangle { radius: 10; color: "#F5F5F5" }
-        }
 
         TextField {
             id: passwordField
@@ -142,37 +134,41 @@ Rectangle {
             }
 
             onClicked: {
-                if (usernameField.text === "" || passwordField.text === "" || emailField.text === "") {
-                    console.log("Error: Fields cannot be empty!")
-                } else if (passwordField.text !== confirmPasswordField.text) {
-                    console.log("Error: Passwords do not match!")
-                } else {
-                    var selectedRole = "User"
-                    if (radioPublisher.checked) {
-                        selectedRole = "Publisher"
-                    } else if (radioAdmin.checked) {
-                        selectedRole = "Admin"
-                    }
-                    console.log("Success! Registering as:", selectedRole)
-                    stackView.pop()
-                }
-            }
-        }
+                           if (usernameField.text === "" || passwordField.text === "" ) {
+                               console.log("Error: Fields cannot be empty!")
+                           } else if (passwordField.text !== confirmPasswordField.text) {
+                               console.log("Error: Passwords do not match!")
+                           } else {
+                               // 1. Determine selected role
+                               var selectedRole = "User"
+                               if (radioPublisher.checked) {
+                                   selectedRole = "Publisher"
+                               } else if (radioAdmin.checked) {
+                                   selectedRole = "Admin"
+                               }
+                               console.log("Success! Registering as:", selectedRole)
 
-        Text {
-            text: "Already have an account? <b>Login</b>"
-            font.pixelSize: 14
-            color: "#FFFFFF"
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
+                               // 2. Perform conditional navigation based on role
+                               if (selectedRole === "Admin") {
+                                   // Admin bypasses GenreSelection and goes straight to AdminDashboard
+                                   signUpPage.StackView.view.replace("AdminDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else if (selectedRole === "Publisher") {
+                                   // Publisher goes to PublisherDashboard (or a appropriate view)
+                                   signUpPage.StackView.view.replace("PublisherDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else {
+                                   // Regular user goes to GenreSelection page first
+                                   signUpPage.StackView.view.push("GenreSelection.qml", {
+                                                                      "username": usernameField.text,
+                                                                      "userRole": selectedRole
+                                                                  })
+                               }
+                           }
+                       }
 
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    stackView.pop()
-                }
-            }
-        }
+
     }
-}
+}}
