@@ -1,15 +1,7 @@
-#include "mainwindow.h"
-#include "databasemanager.h"
-#include <QApplication>
+#include <QCoreApplication>
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    if (!DatabaseManager::instance().initDatabase()) {
-        return -1;
-
-    }
-    MainWindow w;
-    w.show();
-    return QApplication::exec();
+    QCoreApplication a(argc, argv);
+    return a.exec();
 }
