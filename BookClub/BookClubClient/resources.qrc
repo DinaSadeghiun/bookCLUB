@@ -25,5 +25,6 @@
         <file>SettingsView.qml</file>
         <file>HomeView.qml</file>
         <file>AdminDashboard.qml</file>
+        <file>PublisherDashboard.qml</file>
     </qresource>
 </RCC>

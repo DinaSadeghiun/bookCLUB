@@ -150,12 +150,12 @@ Rectangle {
                                // 2. Perform conditional navigation based on role
                                if (selectedRole === "Admin") {
                                    // Admin bypasses GenreSelection and goes straight to AdminDashboard
-                                   signUpPage.StackView.view.replace("qrc:/AdminDashboard.qml", {
+                                   signUpPage.StackView.view.replace("AdminDashboard.qml", {
                                                                          "username": usernameField.text
                                                                      })
                                } else if (selectedRole === "Publisher") {
                                    // Publisher goes to PublisherDashboard (or a appropriate view)
-                                   signUpPage.StackView.view.replace("qrc:/PublisherDashboard.qml", {
+                                   signUpPage.StackView.view.replace("PublisherDashboard.qml", {
                                                                          "username": usernameField.text
                                                                      })
                                } else {
@@ -168,21 +168,6 @@ Rectangle {
                            }
                        }
 
-        Text {
-            text: "Already have an account? <b>Login</b>"
-            font.pixelSize: 14
-            color: "#FFFFFF"
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
 
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    signUpPage.StackView.view.pop()
-
-                }
-            }
-        }
     }
 }}

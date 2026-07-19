@@ -23,6 +23,7 @@ DISTFILES += \
     GenreSelection.qml \
     HomeView.qml \
     LibraryView.qml \
+    PublisherDashboard.qml \
     SearchView.qml \
     SettingsView.qml \
     UserPanel.qml \
