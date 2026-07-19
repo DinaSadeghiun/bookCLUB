@@ -133,26 +133,40 @@ Rectangle {
             }
 
             onClicked: {
-                if (usernameField.text === "" || passwordField.text === "" ) {
-                    console.log("Error: Fields cannot be empty!")
-                } else if (passwordField.text !== confirmPasswordField.text) {
-                    console.log("Error: Passwords do not match!")
-                } else {
-                    var selectedRole = "User"
-                    if (radioPublisher.checked) {
-                        selectedRole = "Publisher"
-                    } else if (radioAdmin.checked) {
-                        selectedRole = "Admin"
-                    }
-                    console.log("Success! Registering as:", selectedRole)
-                    signUpPage.StackView.view.push("GenreSelection.qml", {
-                                                       "username": usernameField.text,
-                                                       "userRole": selectedRole
-                                                   })
+                           if (usernameField.text === "" || passwordField.text === "" ) {
+                               console.log("Error: Fields cannot be empty!")
+                           } else if (passwordField.text !== confirmPasswordField.text) {
+                               console.log("Error: Passwords do not match!")
+                           } else {
+                               // 1. Determine selected role
+                               var selectedRole = "User"
+                               if (radioPublisher.checked) {
+                                   selectedRole = "Publisher"
+                               } else if (radioAdmin.checked) {
+                                   selectedRole = "Admin"
+                               }
+                               console.log("Success! Registering as:", selectedRole)
 
-                }
-            }
-        }
+                               // 2. Perform conditional navigation based on role
+                               if (selectedRole === "Admin") {
+                                   // Admin bypasses GenreSelection and goes straight to AdminDashboard
+                                   signUpPage.StackView.view.replace("qrc:/AdminDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else if (selectedRole === "Publisher") {
+                                   // Publisher goes to PublisherDashboard (or a appropriate view)
+                                   signUpPage.StackView.view.replace("qrc:/PublisherDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else {
+                                   // Regular user goes to GenreSelection page first
+                                   signUpPage.StackView.view.push("GenreSelection.qml", {
+                                                                      "username": usernameField.text,
+                                                                      "userRole": selectedRole
+                                                                  })
+                               }
+                           }
+                       }
 
         Text {
             text: "Already have an account? <b>Login</b>"
@@ -171,4 +185,4 @@ Rectangle {
             }
         }
     }
-}
+}}

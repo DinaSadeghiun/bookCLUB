@@ -24,5 +24,6 @@
         <file>ForgotPassword.qml</file>
         <file>SettingsView.qml</file>
         <file>HomeView.qml</file>
+        <file>AdminDashboard.qml</file>
     </qresource>
 </RCC>
