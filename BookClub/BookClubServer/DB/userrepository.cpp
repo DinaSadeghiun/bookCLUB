@@ -135,6 +135,27 @@ QList<User> UserRepository::findAll() const {
     return result;
 }
 
+QList<User> UserRepository::searchUsers(const QString& query) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+
+    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+              "JOIN Users u ON p.id = u.person_id "
+              "WHERE p.username = :uname AND p.role = :role");
+
+    q.bindValue(":uname", Person::encryptData(query));
+    q.bindValue(":role", ROLE_USER);
+
+    QList<User> result;
+    if (q.exec()) {
+        while (q.next()) {
+            result.append(fromQuery(q));
+        }
+    }
+    return result;
+}
+
+
 std::optional<User> UserRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);

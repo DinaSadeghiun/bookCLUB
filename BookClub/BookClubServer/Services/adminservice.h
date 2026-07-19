@@ -44,6 +44,8 @@ public:
     //Users and Publisher
     QList<User> getAllUsers() const;
     QList<Publisher> getAllPublishers() const;
+    QList<User> searchUsers(const QString& query) const;
+    QList<Publisher> searchPublishers(const QString& query) const;
     std::optional<User> getUserDetails(int userId) const;
     std::optional<Publisher> getPublisherDetails(int publisherId) const;
 

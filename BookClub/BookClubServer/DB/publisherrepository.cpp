@@ -105,6 +105,28 @@ QList<Publisher> PublisherRepository::findAll() const {
     return result;
 }
 
+QList<Publisher> PublisherRepository::searchPublishers(const QString& queryStr) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+
+    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+              "JOIN Publishers pub ON p.id = pub.person_id "
+              "WHERE p.role = :role AND (pub.company_name LIKE :cname OR p.username = :uname)");
+
+    q.bindValue(":role", ROLE_PUBLISHER);
+    q.bindValue(":cname", "%" + queryStr + "%");
+    q.bindValue(":uname", Person::encryptData(queryStr));
+
+    QList<Publisher> result;
+    if (q.exec()) {
+        while (q.next()) {
+            result.append(fromQuery(q));
+        }
+    }
+    return result;
+}
+
+
 std::optional<Publisher> PublisherRepository::findById(int id) const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);

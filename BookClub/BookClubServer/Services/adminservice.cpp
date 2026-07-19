@@ -91,6 +91,21 @@ QList<Publisher> AdminService::getAllPublishers() const {
     return pubRepo->findAll();
 }
 
+QList<User> AdminService::searchUsers(const QString& query) const {
+    if (!userRepo || query.trimmed().isEmpty()) {
+        return getAllUsers();
+    }
+    return userRepo->searchUsers(query.trimmed());
+}
+
+QList<Publisher> AdminService::searchPublishers(const QString& query) const {
+    if (!pubRepo || query.trimmed().isEmpty()) {
+        return getAllPublishers();
+    }
+    return pubRepo->searchPublishers(query.trimmed());
+}
+
+
 std::optional<User> AdminService::getUserDetails(int userId) const {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !userRepo) {

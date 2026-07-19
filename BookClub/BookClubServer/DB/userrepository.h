@@ -17,6 +17,7 @@ public:
     bool remove(int id);
     QList<User> findAll() const;
     std::optional<User> findById(int id);
+    QList<User> searchUsers(const QString& query);
     std::optional<User> findByUsername(const QString& username);
     std::optional<User> authenticate(const QString& username, const QString& password);
 
