@@ -30,6 +30,8 @@ OrderService::OrderService(OrderRepository* oRepo,
     Q_ASSERT(cartService != nullptr);
     Q_ASSERT(userService != nullptr);
     Q_ASSERT(personalLibRepo != nullptr);
+    Q_ASSERT(bookRepo != nullptr);
+    Q_ASSERT(publisherSvc != nullptr);
 }
 
 bool OrderService::checkout(int userId) {

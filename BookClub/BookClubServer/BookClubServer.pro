@@ -1,4 +1,4 @@
-QT += core sql network
+QT += core sql network testlib
 QT -= gui
 
 CONFIG += console
@@ -16,9 +16,12 @@ SOURCES += \
     DB/publisherrepository.cpp \
     DB/shoppingcartrepository.cpp \
     DB/userrepository.cpp \
+    Network/bookclubserver.cpp \
+    Network/clienthandler.cpp \
     Services/adminservice.cpp \
     Services/bookservice.cpp \
     Services/commentservice.cpp \
+    Services/notificationservice.cpp \
     Services/orderservice.cpp \
     Services/personallibraryservice.cpp \
     Services/publisherservice.cpp \
@@ -38,9 +41,12 @@ HEADERS += \
     DB/publisherrepository.h \
     DB/shoppingcartrepository.h \
     DB/userrepository.h \
+    Network/bookclubserver.h \
+    Network/clienthandler.h \
     Services/adminservice.h \
     Services/bookservice.h \
     Services/commentservice.h \
+    Services/notificationservice.h \
     Services/orderservice.h \
     Services/personallibraryservice.h \
     Services/publisherservice.h \

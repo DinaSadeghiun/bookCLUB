@@ -4,8 +4,6 @@
 NotificationRepository::NotificationRepository(DatabaseManager* manager)
     : dbManager(manager) {}
 
-
-
 Notification NotificationRepository::fromQuery(QSqlQuery& q) {
     int id = q.value("id").toInt();
     auto type = static_cast<NotificationType>(q.value("type").toInt());
@@ -24,10 +22,18 @@ Notification NotificationRepository::fromQuery(QSqlQuery& q) {
 bool NotificationRepository::save(Notification& notification) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare(
-        "INSERT INTO Notifications (type, recipient_id, related_book_id, message, created_at, is_read) "
-        "VALUES (?, ?, ?, ?, ?, ?)"
-        );
+
+    if (notification.getId() == -1) {
+        q.prepare(
+            "INSERT INTO Notifications (type, recipient_id, related_book_id, message, created_at, is_read) "
+            "VALUES (?, ?, ?, ?, ?, ?)"
+            );
+    } else {
+        q.prepare(
+            "UPDATE Notifications SET type = ?, recipient_id = ?, related_book_id = ?, "
+            "message = ?, created_at = ?, is_read = ? WHERE id = ?"
+            );
+    }
 
     q.addBindValue(static_cast<int>(notification.getType()));
     q.addBindValue(notification.getRecipientId());
@@ -35,20 +41,25 @@ bool NotificationRepository::save(Notification& notification) {
     if (notification.getRelatedBookId() > 0) {
         q.addBindValue(notification.getRelatedBookId());
     } else {
-        q.addBindValue(QVariant());
+        q.addBindValue(QVariant(QMetaType(QMetaType::Int)));
     }
-
 
     q.addBindValue(notification.getMessage());
     q.addBindValue(notification.getCreatedAt().toSecsSinceEpoch());
     q.addBindValue(notification.getIsRead() ? 1 : 0);
+
+    if (notification.getId() != -1) {
+        q.addBindValue(notification.getId());
+    }
 
     if (!q.exec()) {
         qDebug() << "NotificationRepository::save failed:" << q.lastError().text();
         return false;
     }
 
-    notification.setId(q.lastInsertId().toInt());
+    if (notification.getId() == -1) {
+        notification.setId(q.lastInsertId().toInt());
+    }
     return true;
 }
 
@@ -92,13 +103,13 @@ bool NotificationRepository::markAsRead(int notificationId) {
     QSqlQuery q(db);
     q.prepare("UPDATE Notifications SET is_read = 1 WHERE id = ?");
     q.addBindValue(notificationId);
-    return q.exec();
+    return q.exec() && q.numRowsAffected() > 0;
 }
 
 bool NotificationRepository::markAllAsReadForUser(int recipientId) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("UPDATE Notifications SET is_read = 1 WHERE recipient_id = ?");
+    q.prepare("UPDATE Notifications SET is_read = 1 WHERE recipient_id = ? AND is_read = 0");
     q.addBindValue(recipientId);
     return q.exec();
 }
@@ -108,5 +119,5 @@ bool NotificationRepository::remove(int id) {
     QSqlQuery q(db);
     q.prepare("DELETE FROM Notifications WHERE id = ?");
     q.addBindValue(id);
-    return q.exec();
+    return q.exec() && q.numRowsAffected() > 0;
 }
