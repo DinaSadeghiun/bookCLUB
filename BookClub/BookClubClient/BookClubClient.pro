@@ -1,22 +1,41 @@
-QT += widgets
+QT += core gui quick qml widgets
+#QT += pdf pdfwidgets
 
 CONFIG += c++17
 
-# You can make your code fail to compile if it uses deprecated APIs.
-# In order to do so, uncomment the following line.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+TARGET = BookClubClient
+TEMPLATE = app
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    usermanager.cpp
 
-HEADERS += \
-    mainwindow.h
+RESOURCES += \
+    resources.qrc
 
-FORMS += \
-    mainwindow.ui
 
-# Default rules for deployment.
+DISTFILES += \
+    AdminDashboard.qml \
+    BookCard.qml \
+    CartView.qml \
+    Dashboard.qml \
+    ForgotPassword.qml \
+    GenreSelection.qml \
+    HomeView.qml \
+    LibraryView.qml \
+    SearchView.qml \
+    SettingsView.qml \
+    UserPanel.qml \
+    main.qml \
+    Login.qml \
+    SignUp.qml
+
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+HEADERS += \
+    usermanager.h
+
+
+

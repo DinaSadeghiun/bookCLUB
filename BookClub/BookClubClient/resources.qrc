@@ -1,0 +1,29 @@
+<RCC>
+    <qresource prefix="/">
+        <file>Login.qml</file>
+        <file>SignUp.qml</file>
+        <file>main.qml</file>
+        <file>images/giraffe.png</file>
+        <file>Dashboard.qml</file>
+        <file>GenreSelection.qml</file>
+        <file>assets/genres/biography.jpg</file>
+        <file>assets/genres/children.png</file>
+        <file>assets/genres/fantasy.png</file>
+        <file>assets/genres/fiction.png</file>
+        <file>assets/genres/history.png</file>
+        <file>assets/genres/mystery.png</file>
+        <file>assets/genres/nonFiction.png</file>
+        <file>assets/genres/other.png</file>
+        <file>assets/genres/poetry.png</file>
+        <file>assets/genres/romance.png</file>
+        <file>assets/genres/sciFI.png</file>
+        <file>assets/genres/selfHelp.png</file>
+        <file>LibraryView.qml</file>
+        <file>SearchView.qml</file>
+        <file>CartView.qml</file>
+        <file>ForgotPassword.qml</file>
+        <file>SettingsView.qml</file>
+        <file>HomeView.qml</file>
+        <file>AdminDashboard.qml</file>
+    </qresource>
+</RCC>

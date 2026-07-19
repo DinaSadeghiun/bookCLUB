@@ -1,0 +1,188 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Rectangle {
+    id: signUpPage
+    anchors.fill: parent
+
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#4B0082" }
+        GradientStop { position: 1.0; color: "#2C003E" }
+    }
+
+    ColumnLayout {
+        anchors.centerIn: parent
+        spacing: 15
+        width: parent.width * 0.85
+
+        Image {
+            id: mascotIcon
+            source: "qrc:/images/giraffe.png"
+            Layout.preferredWidth: 80
+            Layout.preferredHeight: 80
+            Layout.alignment: Qt.AlignHCenter
+            fillMode: Image.PreserveAspectFit
+        }
+
+        Text {
+            text: "Create Account"
+            font.pixelSize: 28
+            font.bold: true
+            color: "#FFD700"
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        TextField {
+            id: usernameField
+            placeholderText: "Username"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 45
+            color: "#2C003E"
+            background: Rectangle { radius: 10; color: "#F5F5F5" }
+        }
+
+
+        TextField {
+            id: passwordField
+            placeholderText: "Password"
+            echoMode: TextInput.Password
+            Layout.fillWidth: true
+            Layout.preferredHeight: 45
+            color: "#2C003E"
+            background: Rectangle { radius: 10; color: "#F5F5F5" }
+        }
+
+        TextField {
+            id: confirmPasswordField
+            placeholderText: "Confirm Password"
+            echoMode: TextInput.Password
+            Layout.fillWidth: true
+            Layout.preferredHeight: 45
+            color: "#2C003E"
+            background: Rectangle { radius: 10; color: "#F5F5F5" }
+        }
+
+        ButtonGroup { id: roleGroup }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 15
+
+            RadioButton {
+                id: radioNormal
+                text: "User"
+                checked: true
+                ButtonGroup.group: roleGroup
+                contentItem: Text {
+                    text: radioNormal.text
+                    font.pixelSize: 14
+                    color: "white"
+                    leftPadding: radioNormal.indicator.width + radioNormal.spacing
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            RadioButton {
+                id: radioPublisher
+                text: "Publisher"
+                ButtonGroup.group: roleGroup
+                contentItem: Text {
+                    text: radioPublisher.text
+                    font.pixelSize: 14
+                    color: "white"
+                    leftPadding: radioPublisher.indicator.width + radioPublisher.spacing
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            RadioButton {
+                id: radioAdmin
+                text: "Admin"
+                ButtonGroup.group: roleGroup
+                contentItem: Text {
+                    text: radioAdmin.text
+                    font.pixelSize: 14
+                    color: "white"
+                    leftPadding: radioAdmin.indicator.width + radioAdmin.spacing
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+
+        Button {
+            id: registerButton
+            text: "REGISTER"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 50
+            Layout.topMargin: 10
+
+            contentItem: Text {
+                text: registerButton.text
+                font.pixelSize: 16
+                font.bold: true
+                color: "#2C003E"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            background: Rectangle {
+                radius: 10
+                color: registerButton.pressed ? "#E6C200" : "#FFD700"
+                Behavior on color { ColorAnimation { duration: 100 } }
+            }
+
+            onClicked: {
+                           if (usernameField.text === "" || passwordField.text === "" ) {
+                               console.log("Error: Fields cannot be empty!")
+                           } else if (passwordField.text !== confirmPasswordField.text) {
+                               console.log("Error: Passwords do not match!")
+                           } else {
+                               // 1. Determine selected role
+                               var selectedRole = "User"
+                               if (radioPublisher.checked) {
+                                   selectedRole = "Publisher"
+                               } else if (radioAdmin.checked) {
+                                   selectedRole = "Admin"
+                               }
+                               console.log("Success! Registering as:", selectedRole)
+
+                               // 2. Perform conditional navigation based on role
+                               if (selectedRole === "Admin") {
+                                   // Admin bypasses GenreSelection and goes straight to AdminDashboard
+                                   signUpPage.StackView.view.replace("qrc:/AdminDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else if (selectedRole === "Publisher") {
+                                   // Publisher goes to PublisherDashboard (or a appropriate view)
+                                   signUpPage.StackView.view.replace("qrc:/PublisherDashboard.qml", {
+                                                                         "username": usernameField.text
+                                                                     })
+                               } else {
+                                   // Regular user goes to GenreSelection page first
+                                   signUpPage.StackView.view.push("GenreSelection.qml", {
+                                                                      "username": usernameField.text,
+                                                                      "userRole": selectedRole
+                                                                  })
+                               }
+                           }
+                       }
+
+        Text {
+            text: "Already have an account? <b>Login</b>"
+            font.pixelSize: 14
+            color: "#FFFFFF"
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 10
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    signUpPage.StackView.view.pop()
+
+                }
+            }
+        }
+    }
+}}
