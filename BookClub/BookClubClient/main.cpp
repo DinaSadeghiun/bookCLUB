@@ -1,17 +1,9 @@
-<<<<<<< HEAD
-#include <QGuiApplication>
-=======
 #include <QApplication>
->>>>>>> feature-signup-roles
 #include <QQmlApplicationEngine>
 
 int main(int argc, char *argv[])
 {
-<<<<<<< HEAD
-    QGuiApplication app(argc, argv);
-=======
     QApplication app(argc, argv);
->>>>>>> feature-signup-roles
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));

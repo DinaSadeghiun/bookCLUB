@@ -221,6 +221,7 @@ Makefile: ../../BookClub.pro D:/QT/6.5.3/mingw_64/mkspecs/win32-g++/qmake.conf D
 		D:/QT/6.5.3/mingw_64/mkspecs/features/qt_config.prf \
 		D:/QT/6.5.3/mingw_64/mkspecs/win32-g++/qmake.conf \
 		D:/QT/6.5.3/mingw_64/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		D:/QT/6.5.3/mingw_64/mkspecs/features/exclusive_builds.prf \
 		D:/QT/6.5.3/mingw_64/mkspecs/features/toolchain.prf \
 		D:/QT/6.5.3/mingw_64/mkspecs/features/default_pre.prf \
@@ -372,6 +373,7 @@ D:/QT/6.5.3/mingw_64/mkspecs/features/qt_functions.prf:
 D:/QT/6.5.3/mingw_64/mkspecs/features/qt_config.prf:
 D:/QT/6.5.3/mingw_64/mkspecs/win32-g++/qmake.conf:
 D:/QT/6.5.3/mingw_64/mkspecs/features/spec_post.prf:
+.qmake.stash:
 D:/QT/6.5.3/mingw_64/mkspecs/features/exclusive_builds.prf:
 D:/QT/6.5.3/mingw_64/mkspecs/features/toolchain.prf:
 D:/QT/6.5.3/mingw_64/mkspecs/features/default_pre.prf:
