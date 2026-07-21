@@ -273,3 +273,13 @@ bool PersonalLibraryRepository::removeBookFromShelf(int userId, const QString& s
     return query.numRowsAffected() > 0;
 }
 
+bool PersonalLibraryRepository::renameShelf(int userId, const QString& oldName, const QString& newName) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("UPDATE CustomShelves SET name = :newName WHERE user_id = :userId AND name = :oldName");
+    query.bindValue(":newName", newName.trimmed());
+    query.bindValue(":userId", userId);
+    query.bindValue(":oldName", oldName.trimmed());
+    return query.exec();
+}
+

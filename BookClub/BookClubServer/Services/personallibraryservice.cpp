@@ -224,3 +224,13 @@ bool PersonalLibraryService::moveBookBetweenShelves(int userId, int bookId,
     emit shelfContentUpdated(userId, trimmedTo);
     return true;
 }
+
+bool PersonalLibraryService::renameShelf(int userId, const QString& oldShelfName, const QString& newShelfName) {
+    QString trimmedOld = oldShelfName.trimmed();
+    QString trimmedNew = newShelfName.trimmed();
+
+    if (trimmedOld.isEmpty() || trimmedNew.isEmpty() || trimmedOld == trimmedNew) {
+        return false;
+    }
+    return personalLibRepo->renameShelf(userId, trimmedOld, trimmedNew);
+}

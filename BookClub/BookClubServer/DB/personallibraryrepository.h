@@ -25,6 +25,7 @@ public:
     bool removeShelf(int userId, const QString& shelfName);
     bool addBookToShelf(int userId, const QString& shelfName, int bookId);
     bool removeBookFromShelf(int userId, const QString& shelfName, int bookId);
+    bool renameShelf(int userId, const QString& oldName, const QString& newName);
 
 private:
     DatabaseManager* dbManager;

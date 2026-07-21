@@ -35,6 +35,7 @@ public:
     bool createShelf(int userId, const QString& shelfName);
     bool deleteShelf(int userId, const QString& shelfName);
     QList<QString> getShelfNames(int userId);
+    bool renameShelf(int userId, const QString& oldShelfName, const QString& newShelfName);
 
     // Shelf Book Management
     bool addBookToShelf(int userId, const QString& shelfName, int bookId);
