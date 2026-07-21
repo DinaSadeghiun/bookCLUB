@@ -208,6 +208,7 @@ void NetworkManager::getOrderHistory(int userId)
 }
 
 // Personal Library
+// wishlist
 void NetworkManager::getWishlist(int userId)
 {
     QJsonObject data;
@@ -230,6 +231,37 @@ void NetworkManager::removeFromWishlist(int userId, int bookId)
     data["bookId"] = bookId;
     sendRequest("removeFromWishlist", data);
 }
+// Favorites
+void NetworkManager::getFavorites(int userId)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    sendRequest("getFavorites", data);
+}
+
+void NetworkManager::addToFavorites(int userId, int bookId)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    sendRequest("addToFavorites", data);
+}
+
+void NetworkManager::removeFromFavorites(int userId, int bookId)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    sendRequest("removeFromFavorites", data);
+}
+
+void NetworkManager::isInFavorites(int userId, int bookId)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    sendRequest("isInFavorites", data);
+}
 
 void NetworkManager::getPurchasedBooks(int userId)
 {
@@ -237,7 +269,7 @@ void NetworkManager::getPurchasedBooks(int userId)
     data["userId"] = userId;
     sendRequest("getPurchasedBooks", data);
 }
-
+//shelves
 void NetworkManager::createShelf(int userId, const QString& shelfName)
 {
     QJsonObject data;

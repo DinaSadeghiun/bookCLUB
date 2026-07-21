@@ -53,6 +53,10 @@ public slots:
     void getWishlist(int userId);
     void addToWishlist(int userId, int bookId);
     void removeFromWishlist(int userId, int bookId);
+    void getFavorites(int userId);
+    void addToFavorites(int userId, int bookId);
+    void removeFromFavorites(int userId, int bookId);
+    void isInFavorites(int userId, int bookId);
     void getPurchasedBooks(int userId);
     void createShelf(int userId, const QString& shelfName);
     void deleteShelf(int userId, const QString& shelfName);
