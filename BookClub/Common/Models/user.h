@@ -19,12 +19,16 @@ public:
 
     //LOAD from DB
     User(int id, const QString& username, const QString& passwordHash, const QDateTime& createdAt,
-         bool isActive, const QString& sa, double balance, QList<Genre> favs);
+         bool isActive, const QString& sa, double balance, QList<Genre> favs={});
 
 
     ~User() override;
     User(const User& other); //copy constructor
     User& operator=(const User& other); //copt assignment operator
+
+    // MOVE SEMANTICS
+    User(User&& other) noexcept;
+    User& operator=(User&& other) noexcept;
 
     QString getRole() const override;
 
@@ -39,11 +43,11 @@ public:
     bool setFavoriteGenres(const QList<Genre>& favs);
     void setWalletBalance(double amount);
 
-
     // Methods
     bool deposit(double amount);
     bool withdraw(double amount);
     void addFavoriteGenre(Genre g);
+
 };
 
 #endif

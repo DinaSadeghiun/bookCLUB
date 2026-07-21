@@ -31,6 +31,12 @@ public:
     bool removeFromWishlist(int userId, int bookId);
     bool isInWishlist(int userId, int bookId);
 
+    // Favorites
+    QList<int> getFaveBooks(int userId);
+    bool addToFaveBooks(int userId, int bookId);
+    bool removeFromFaveBooks(int userId, int bookId);
+    bool isInFaveBooks(int userId, int bookId);
+
     // Custom Shelves
     bool createShelf(int userId, const QString& shelfName);
     bool deleteShelf(int userId, const QString& shelfName);
@@ -47,6 +53,7 @@ public:
 
 signals:
     void wishlistUpdated(int userId);
+    void favoritesUpdated(int userId);
     void shelvesUpdated(int userId);
     void shelfContentUpdated(int userId, const QString& shelfName);
 

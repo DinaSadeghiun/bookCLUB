@@ -31,9 +31,12 @@ public:
                                          const QString& securityAnswer,
                                          const QString& newPassword);
 
+    std::optional<User> getUserById(int userId) const;
+
     // Account Management
     bool changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword);
     bool changeUserUsername(int userId, const QString& newUsername, const QString& password);
+    bool changeSecurityAnswer(int userId, const QString& newAnswer);
     bool deleteUser(int userId);
 
     // Wallet Operations

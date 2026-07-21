@@ -44,6 +44,9 @@ public:
     void setIsActive(bool status);
 
     bool isValid() const;
+
+    static QString typeToString(DiscountType t);
+    static DiscountType stringToType(const QString& str);
 };
 
 #endif

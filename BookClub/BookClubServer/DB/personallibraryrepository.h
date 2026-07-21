@@ -21,6 +21,9 @@ public:
     bool addToWishlist(int userId, int bookId);
     bool removeFromWishlist(int userId, int bookId);
 
+    bool addToFaveBooks(int userId, int bookId);
+    bool removeFromFaveBooks(int userId, int bookId);
+
     bool addShelf(int userId, const QString& shelfName);
     bool removeShelf(int userId, const QString& shelfName);
     bool addBookToShelf(int userId, const QString& shelfName, int bookId);
@@ -32,6 +35,7 @@ private:
 
     QList<int> loadPurchasedBooks(int userId) const;
     QList<int> loadWishlist(int userId) const;
+    QList<int> loadFaveBooks(int userId) const;
     QList<QPair<QString, QList<int>>> loadShelves(int userId) const;
     int resolveShelfId(int userId, const QString& name) const;
 };

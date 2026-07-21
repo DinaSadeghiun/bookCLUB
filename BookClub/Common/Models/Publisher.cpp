@@ -8,9 +8,11 @@ Publisher::Publisher(const QString& name, const QString& password, const QString
 
 //LOAD from DB
 Publisher::Publisher(int id, const QString& name, const QString& passwordHash,
-                     const QDateTime& createdAt, bool isActive, const QString& sa, const QString& companyName)
+                     const QDateTime& createdAt, bool isActive, const QString& sa,
+                     const QString& companyName, double revenue)
     : Person(id, name, passwordHash, createdAt, isActive, sa),
-    companyName(companyName)
+    companyName(companyName),
+    revenue(revenue)
 {}
 
 

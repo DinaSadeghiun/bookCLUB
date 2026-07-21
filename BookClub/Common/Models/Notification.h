@@ -43,6 +43,9 @@ public:
     // Setter for Repository
     void setId(int newId);
 
+    QString notificationTypeToString(NotificationType type);
+    NotificationType stringToNotificationType(const QString& str);
+
 };
 
 #endif

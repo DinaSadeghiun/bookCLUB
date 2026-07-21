@@ -28,7 +28,8 @@ public:
 
     //LOAD from DB
     Publisher(int id, const QString& name, const QString& passwordHash,
-              const QDateTime& createdAt, bool isActive, const QString& sa, const QString& companyName);
+              const QDateTime& createdAt, bool isActive, const QString& sa,
+              const QString& companyName, double revenue=0.0);
 
     ~Publisher() override = default;
 

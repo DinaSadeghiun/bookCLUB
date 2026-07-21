@@ -63,6 +63,24 @@ bool PersonalLibrary::isInWishlist(int bookId) const {
     return wishlist.contains(bookId);
 }
 
+//favorite books
+const QList<int>& PersonalLibrary::getFaveBooks() const {
+    return faveBooks;
+}
+
+void PersonalLibrary::addToFaveBooks(int bookId) {
+    if (!faveBooks.contains(bookId)) {
+        faveBooks.append(bookId);
+    }
+}
+
+bool PersonalLibrary::removeFromFaveBooks(int bookId) {
+    return faveBooks.removeOne(bookId);
+}
+
+bool PersonalLibrary::isInFaveBooks(int bookId) const {
+    return faveBooks.contains(bookId);
+}
 
 //costum shelves
 const QList<PersonalLibrary::Shelf*>& PersonalLibrary::getCustomShelves() const
@@ -100,7 +118,7 @@ PersonalLibrary::Shelf* PersonalLibrary::findShelf(const QString &name) const {
     return nullptr;
 }
 
-bool PersonalLibrary::addBookToShelf(const QString &shelfName, int bookId) {   ///new added for easier use in ui
+bool PersonalLibrary::addBookToShelf(const QString &shelfName, int bookId) {
     if (!hasPurchased(bookId)) {
         return false;
     }
@@ -130,7 +148,7 @@ void PersonalLibrary::setUserId(int newId) {
 
 // Copy Constructor
 PersonalLibrary::PersonalLibrary(const PersonalLibrary &other)
-    : userId(other.userId), purchasedBooks(other.purchasedBooks), wishlist(other.wishlist) {
+    : userId(other.userId), purchasedBooks(other.purchasedBooks), wishlist(other.wishlist), faveBooks(other.faveBooks) {
     for (const Shelf* shelf : other.customShelves) {
         if (shelf) {
             Shelf* newShelf = new Shelf(shelf->getShelfName());
@@ -184,6 +202,7 @@ PersonalLibrary& PersonalLibrary::operator=(PersonalLibrary &&other) noexcept {
         userId = other.userId;
         purchasedBooks = std::move(other.purchasedBooks);
         wishlist = std::move(other.wishlist);
+        faveBooks = std::move(other.faveBooks);
         customShelves = std::move(other.customShelves);
 
         other.userId = 0;
@@ -191,4 +210,5 @@ PersonalLibrary& PersonalLibrary::operator=(PersonalLibrary &&other) noexcept {
     }
     return *this;
 }
+
 

@@ -91,6 +91,14 @@ bool UserService::resetPasswordWithSecurityAnswer(const QString& username,
     return false;
 }
 
+std::optional<User> UserService::getUserById(int userId) const {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !userRepo) {
+        return std::nullopt;
+    }
+    return userRepo->findById(userId);
+}
+
 bool UserService::changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword) {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !userRepo) {
@@ -138,6 +146,24 @@ bool UserService::changeUserUsername(int userId, const QString& newUsername, con
     }
     return false;
 }
+
+bool UserService::changeSecurityAnswer(int userId, const QString& newAnswer) {
+    if (userId <= 0 || newAnswer.trimmed().isEmpty()) {
+        return false;
+    }
+    auto userOpt = userRepo->findById(userId);
+    if (!userOpt.has_value()) {
+        return false;
+    }
+    User user = userOpt.value();
+    user.setSecurityAnswer(newAnswer.trimmed());
+    if (userRepo->save(user)) {
+        emit userCredentialsChanged(userId);
+        return true;
+    }
+    return false;
+}
+
 
 bool UserService::deleteUser(int userId) {
     Q_ASSERT(userId > 0);

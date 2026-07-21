@@ -1,7 +1,7 @@
 #include "bookclubserver.h"
 #include <QJsonArray>
 #include <QDebug>
-
+#include "modelserializer.h"
 // Services
 #include "Services/userservice.h"
 #include "Services/bookservice.h"
@@ -54,14 +54,44 @@ void BookClubServer::initializeServices() {
     bookService            = new BookService(bookRepo, discountRepo, this);
     commentService         = new CommentService(commentRepo, bookRepo, this);
     shoppingCartService    = new ShoppingCartService(cartRepo, bookService, this);
-    orderService           = new OrderService(orderRepo, shoppingCartService, userService, libraryRepo, this);
     publisherService       = new PublisherService(pubRepo, bookRepo, discountRepo, this);
+    orderService           = new OrderService(orderRepo, shoppingCartService,
+                                    userService, libraryRepo, bookRepo, publisherService, this);
     adminService           = new AdminService(adminRepo, userRepo, pubRepo, bookRepo, commentRepo, this);
     personalLibraryService = new PersonalLibraryService(libraryRepo, bookRepo, this);
     notificationService    = new NotificationService(notificationRepo, this);
 
+    //Creating default admin
+    Admin defaultAdmin("admin", "admin123", "system");
+    if (!adminRepo->findByUsername("admin").has_value()) {
+        adminRepo->save(defaultAdmin);
+        qDebug() << "Default admin created: admin / admin123";
+    }
+
     connect(notificationService, &NotificationService::notificationReceived,
             this, &BookClubServer::onNotificationReceived);
+
+    QList<Book> checkBooks = bookService->getAllAvailableBooks();
+    if (checkBooks.isEmpty()) {
+        qDebug() << "Database is empty. Injecting test data...";
+
+        Publisher testPub("nasher1", "1234", "Ghoghnoos Pub", "Tehran");
+        pubRepo->save(testPub);
+        int pubId = testPub.getId();
+        if(pubId == -1) pubId = 1;
+
+        Book b1("Modern C++", "Bjarne Stroustrup", 150000, Genre::History, pubId);
+        Book b2("The Little Prince", "Antoine de Saint-Exupéry", 85000, Genre::Biography, pubId);
+
+        bookRepo->save(b1);
+        bookRepo->save(b2);
+
+        qDebug() << "Test data injected! 1 Publisher and 2 Books added.";
+    } else {
+        qDebug() << "Database already has" << checkBooks.size() << "books.";
+    }
+
+
 }
 
 bool BookClubServer::startServer(quint16 port) {
@@ -100,42 +130,53 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     QString action = request.value("action").toString();
     QJsonObject data = request.value("data").toObject();
 
-    // Auth
+    // 1. Auth & Profile
     if (action == "login" || action == "register" ||
         action == "loginPublisher" || action == "registerPublisher" ||
         action == "loginAdmin" || action == "registerAdmin" ||
-        action == "resetPassword") {
+        action == "resetPassword" || action == "updateProfile" ||
+        action == "changePassword" || action == "changeUsername" ||
+        action == "updateSecurityAnswer") {
         handleAuth(handler, action, data);
     }
-    // Books
+    // 2. Books
     else if (action == "getAllBooks" || action == "addBook" ||
              action == "updateBookPrice" || action == "removeBook" ||
              action == "getBookDetails" || action == "searchBooks") {
         handleBooks(handler, action, data);
     }
-    // Comments
-    else if (action == "addComment" || action == "getComments" || action == "removeComment") {
+    // 3. Comments & Ratings
+    else if (action == "addComment" || action == "editComment" ||
+             action == "getComments" || action == "removeComment") {
         handleComments(handler, action, data);
     }
-    // Cart & Orders
+    // 4. Cart & Orders
     else if (action == "addToCart" || action == "removeFromCart" ||
              action == "getCart" || action == "checkout" || action == "getOrderHistory") {
         handleCartAndOrder(handler, action, data);
     }
-    // Personal Library
+    // 5. Personal Library & Shelves
     else if (action == "getWishlist" || action == "addToWishlist" ||
              action == "removeFromWishlist" || action == "getPurchasedBooks" ||
-             // Shelves
-             action == "createShelf" || action == "deleteShelf" ||
+             action == "getFavorites" || action == "addToFavorites" ||
+             action == "removeFromFavorites" || action == "isInFavorites" ||
+             action == "createShelf" || action == "deleteShelf" || action == "renameShelf" ||
              action == "addBookToShelf" || action == "removeBookFromShelf" ||
-             action == "getBooksInShelf" || action == "getShelfNames") {
+             action == "moveBookBetweenShelves" || action == "getBooksInShelf" ||
+             action == "getShelfNames") {
         handlePersonalLibrary(handler, action, data);
     }
-    // Admin Actions
+    // 6. Admin Actions
     else if (action == "getAllUsers" || action == "getAllPublishers" ||
-             action == "blockUser" || action == "unblockUser" ||
-             action == "deleteUserByAdmin" || action == "adminRemoveComment") {
+             action == "searchUsers" || action == "searchPublishers" ||
+             action == "unblockUser" || action == "deleteUserByAdmin" ||
+             action == "adminRemoveComment" || action == "blockUser") {
         handleAdminActions(handler, action, data);
+    }
+    // 7. Notifications
+    else if (action == "getNotifications" || action == "markNotificationAsRead" ||
+             action == "markAllNotificationsAsRead" || action == "deleteNotification") {
+        handleNotifications(handler, action, data);
     }
     else {
         QJsonObject response;
@@ -146,36 +187,42 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     }
 }
 
+
 void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
 
     if (action == "login") {
-        QString u = data.value("username").toString();
+        QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
         auto result = userService->loginUser(u, p);
         if (result.has_value()) {
-            handler->setUserId(result->getId());
-            response["status"] = "success";
-            QJsonObject userDetails;
-            userDetails["userId"] = result->getId();
-            userDetails["username"] = result->getUsername();
-            userDetails["role"] = result->getRole();
-            userDetails["balance"] = result->getWalletBalance();
-            response["data"] = userDetails;
+            if (!result->getIsActive()) {
+                response["status"] = "error";
+                response["message"] = "Your account has been blocked by the admin";
+            } else {
+                handler->setUserId(result->getId());
+                response["status"] = "success";
+                QJsonObject userDetails;
+                userDetails["userId"] = result->getId();
+                userDetails["username"] = result->getUsername();
+                userDetails["role"] = result->getRole();
+                userDetails["balance"] = result->getWalletBalance();
+                response["data"] = userDetails;
+            }
         } else {
             response["status"] = "error";
             response["message"] = "Invalid username or password";
         }
     }
     else if (action == "register") {
-        QString u = data.value("username").toString();
+        QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
-        QString sa = data.value("securityAnswer").toString();
+        QString sa = data.value("securityAnswer").toString().trimmed();
         double balance = data.value("initialBalance").toDouble(0.0);
 
         QString resMsg = userService->registerUser(u, p, sa, balance);
-        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty()) {
+        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty() || resMsg == "SUCCESS") {
             response["status"] = "success";
             response["message"] = "Registration completed successfully";
         } else {
@@ -184,39 +231,45 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
         }
     }
     else if (action == "loginPublisher") {
-        QString u = data.value("username").toString();
+        QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
         auto result = publisherService->login(u, p);
         if (result.has_value()) {
-            handler->setUserId(result->getId());
-            response["status"] = "success";
-            QJsonObject pubDetails;
-            pubDetails["publisherId"] = result->getId();
-            pubDetails["username"] = result->getUsername();
-            pubDetails["companyName"] = result->getCompanyName();
-            pubDetails["role"] = result->getRole();
-            response["data"] = pubDetails;
+            if (!result->getIsActive()) {
+                response["status"] = "error";
+                response["message"] = "Your publisher account has been blocked by the admin";
+            } else {
+                handler->setUserId(result->getId());
+                response["status"] = "success";
+                QJsonObject pubDetails;
+                pubDetails["publisherId"] = result->getId();
+                pubDetails["username"] = result->getUsername();
+                pubDetails["companyName"] = result->getCompanyName();
+                pubDetails["role"] = result->getRole();
+                response["data"] = pubDetails;
+            }
         } else {
             response["status"] = "error";
             response["message"] = "Invalid credentials";
         }
     }
     else if (action == "registerPublisher") {
-        QString u = data.value("username").toString();
+        QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
-        QString comp = data.value("companyName").toString();
-        QString sa = data.value("securityAnswer").toString("1");
+        QString comp = data.value("companyName").toString().trimmed();
+        QString sa = data.value("securityAnswer").toString().trimmed();
 
         QString resMsg = publisherService->registerPublisher(u, p, comp, sa);
-        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty()) {
+        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty() || resMsg == "SUCCESS") {
             response["status"] = "success";
+            response["message"] = "Publisher registration completed successfully";
         } else {
             response["status"] = "error";
             response["message"] = resMsg;
         }
     }
     else if (action == "loginAdmin") {
-        QString u = data.value("username").toString();
+        QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
         auto result = adminService->loginAdmin(u, p);
         if (result.has_value()) {
@@ -233,15 +286,117 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
         }
     }
     else if (action == "resetPassword") {
-        QString u = data.value("username").toString();
-        QString sa = data.value("securityAnswer").toString();
+        QString u = data.value("username").toString().trimmed();
+        QString sa = data.value("securityAnswer").toString().trimmed();
         QString newP = data.value("newPassword").toString();
-        bool success = userService->resetPasswordWithSecurityAnswer(u, sa, newP);
-        response["status"] = success ? "success" : "error";
-    }
+        QString role = data.value("role").toString().toLower();
 
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->resetPasswordWithSecurityAnswer(u, sa, newP);
+        } else {
+            success = userService->resetPasswordWithSecurityAnswer(u, sa, newP);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Password has been reset successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Security answer verification failed or account not found";
+        }
+    }
+    else if (action == "changePassword") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString oldPassword = data.value("oldPassword").toString();
+        QString newPassword = data.value("newPassword").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changePublisherPassword(id, oldPassword, newPassword);
+        } else {
+            success = userService->changeUserPassword(id, oldPassword, newPassword);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Password changed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Incorrect current password";
+        }
+    }
+    else if (action == "changeUsername") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString newUsername = data.value("username").toString().trimmed();
+        QString password = data.value("password").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changePublisherUsername(id, newUsername, password);
+        } else {
+            success = userService->changeUserUsername(id, newUsername, password);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Username updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Invalid password or username already exists";
+        }
+    }
+    else if (action == "updateProfile") {
+        int userId = data.value("userId").toInt();
+        QJsonArray genresArray = data.value("favoriteGenres").toArray();
+        QList<Genre> favoriteGenres;
+        for (const auto& val : std::as_const(genresArray)) {
+            favoriteGenres.append(static_cast<Genre>(val.toInt()));
+        }
+
+        bool success = userService->updateUserFavoriteGenres(userId, favoriteGenres);
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Profile favorite genres updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to update favorite genres";
+        }
+    }
+    else if (action == "updateSecurityQuestion") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString newAnswer = data.value("securityAnswer").toString().trimmed();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changeSecurityAnswer(id, newAnswer);
+        } else {
+            success = userService->changeSecurityAnswer(id, newAnswer);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Security answer updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to update security answer";
+        }
+    }
     handler->sendResponse(response);
 }
+
 
 void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
@@ -249,188 +404,244 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
 
     if (action == "getAllBooks") {
         QList<Book> books = bookService->getAllAvailableBooks();
-        QJsonArray booksArr;
-        for (const Book& b : std::as_const(books)) {
-            QJsonObject bo;
-            bo["id"] = b.getId();
-            bo["title"] = b.getTitle();
-            bo["author"] = b.getAuthor();
-            bo["price"] = b.getPrice();
-            bo["publisherId"] = b.getPublisherId();
-            bo["averageRating"] = b.getAverageRating();
-            booksArr.append(bo);
-        }
+        qDebug() << "Server: Found" << books.size() << "books in database.";
+
         response["status"] = "success";
-        response["data"] = booksArr;
+        response["data"] = ModelSerializer::serializeBookList(books);
     }
     else if (action == "addBook") {
         int pubId = data.value("publisherId").toInt();
-        QString title = data.value("title").toString();
-        QString author = data.value("author").toString();
-        double price = data.value("price").toDouble();
-        Genre genre = static_cast<Genre>(data.value("genre").toInt(0));
+        Book book = ModelSerializer::deserializeBook(data);
+        book.setPublisherId(pubId);
 
-        Book book(title, author, price, genre, pubId);
         bool success = publisherService->addNewBook(pubId, book);
         if (success) {
             response["status"] = "success";
             response["bookId"] = book.getId();
+            response["message"] = "Book added successfully";
         } else {
             response["status"] = "error";
-            response["message"] = "Failed to add book";
+            response["message"] = "Failed to add book. Ensure all fields are valid.";
         }
     }
     else if (action == "updateBookPrice") {
         int pubId = data.value("publisherId").toInt();
         int bookId = data.value("bookId").toInt();
         double price = data.value("price").toDouble();
+
         bool success = publisherService->updateBookPrice(pubId, bookId, price);
-        response["status"] = success ? "success" : "error";
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Book price updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to update book price. Owner verification failed or invalid price.";
+        }
     }
     else if (action == "removeBook") {
         int pubId = data.value("publisherId").toInt();
         int bookId = data.value("bookId").toInt();
+
         bool success = publisherService->removeBook(pubId, bookId);
-        response["status"] = success ? "success" : "error";
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Book removed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to remove book. Owner verification failed.";
+        }
     }
     else if (action == "getBookDetails") {
         int bookId = data.value("bookId").toInt();
         auto bookOpt = bookService->getBookById(bookId);
         if (bookOpt.has_value()) {
             response["status"] = "success";
-            QJsonObject bo;
-            bo["id"] = bookOpt->getId();
-            bo["title"] = bookOpt->getTitle();
-            bo["author"] = bookOpt->getAuthor();
-            bo["price"] = bookOpt->getPrice();
-            bo["publisherId"] = bookOpt->getPublisherId();
-            bo["averageRating"] = bookOpt->getAverageRating();
-            bo["genre"] = static_cast<int>(bookOpt->getGenre());
-            response["data"] = bo;
+            response["data"] = ModelSerializer::serializeBook(*bookOpt);
         } else {
             response["status"] = "error";
             response["message"] = "Book not found";
         }
     }
     else if (action == "searchBooks") {
-        QString query = data.value("query").toString();
+        QString query = data.value("query").toString().trimmed();
         QList<Book> found = bookService->search(query);
-        QJsonArray booksArr;
-        for (const Book& b : std::as_const(found)) {
-            QJsonObject bo;
-            bo["id"] = b.getId();
-            bo["title"] = b.getTitle();
-            bo["author"] = b.getAuthor();
-            bo["price"] = b.getPrice();
-            booksArr.append(bo);
-        }
+
         response["status"] = "success";
-        response["data"] = booksArr;
+        response["data"] = ModelSerializer::serializeBookList(found);
+    }
+    else {
+        response["status"] = "error";
+        response["message"] = "Unknown book action";
     }
 
     handler->sendResponse(response);
 }
+
 
 void BookClubServer::handleComments(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
 
     if (action == "addComment") {
-        int userId = data.value("userId").toInt();
-        int bookId = data.value("bookId").toInt();
-        QString text = data.value("text").toString();
-        double rating = data.value("rating").toDouble();
+        Comment comment = ModelSerializer::deserializeComment(data);
+        comment.setId(-1);
 
-        Comment comment(userId, bookId, text, rating);
         bool success = commentService->addComment(comment);
         if (success) {
             response["status"] = "success";
+            response["commentId"] = comment.getId();
+            response["message"] = "Comment added successfully";
         } else {
             response["status"] = "error";
+            response["message"] = "Failed to add comment. Validation failed.";
+        }
+    }
+    else if (action == "editComment") {
+        int commentId = data.value("id").toInt();
+        if (commentId <= 0) {
+            commentId = data.value("commentId").toInt();
+        }
+
+        auto existingOpt = commentService->getCommentById(commentId);
+        if (!existingOpt.has_value()) {
+            response["status"] = "error";
+            response["message"] = "Comment not found";
+        } else {
+            Comment comment = ModelSerializer::deserializeComment(data);
+            comment.setId(commentId);
+            comment.setBookId(existingOpt->getBookId());
+
+            bool success = commentService->addComment(comment);
+            if (success) {
+                response["status"] = "success";
+                response["message"] = "Comment updated successfully";
+            } else {
+                response["status"] = "error";
+                response["message"] = "Failed to update comment. Validation failed.";
+            }
         }
     }
     else if (action == "getComments") {
         int bookId = data.value("bookId").toInt();
         QList<Comment> list = commentService->getCommentsByBook(bookId);
-        QJsonArray arr;
-        for (const Comment& c : std::as_const(list)) {
-            QJsonObject co;
-            co["id"] = c.getId();
-            co["userId"] = c.getUserId();
-            co["text"] = c.getText();
-            co["rating"] = c.getRating();
-            arr.append(co);
-        }
+
         response["status"] = "success";
-        response["data"] = arr;
+        response["data"] = ModelSerializer::serializeCommentList(list);
     }
     else if (action == "removeComment") {
         int commentId = data.value("commentId").toInt();
+
         bool success = commentService->removeComment(commentId);
-        response["status"] = success ? "success" : "error";
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Comment removed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to remove comment. Comment not found or invalid ID.";
+        }
+    }
+    else {
+        response["status"] = "error";
+        response["message"] = "Unknown comment action";
     }
 
     handler->sendResponse(response);
 }
 
+
 void BookClubServer::handleCartAndOrder(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
 
+    int userId = data.value("userId").toInt();
+    if (userId <= 0) {
+        response["status"] = "error";
+        response["message"] = "Invalid user ID";
+        handler->sendResponse(response);
+        return;
+    }
+
     if (action == "addToCart") {
-        int userId = data.value("userId").toInt();
         int bookId = data.value("bookId").toInt();
-        bool success = shoppingCartService->addBookToCart(userId, bookId);
-        response["status"] = success ? "success" : "error";
+        if (bookId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid book ID";
+        } else {
+            bool success = shoppingCartService->addBookToCart(userId, bookId);
+            if (success) {
+                response["status"] = "success";
+                response["message"] = "Book added to cart successfully";
+            } else {
+                response["status"] = "error";
+                response["message"] = "Failed to add book to cart";
+            }
+        }
     }
     else if (action == "removeFromCart") {
-        int userId = data.value("userId").toInt();
         int bookId = data.value("bookId").toInt();
-        bool success = shoppingCartService->removeBookFromCart(userId, bookId);
-        response["status"] = success ? "success" : "error";
+        if (bookId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid book ID";
+        } else {
+            bool success = shoppingCartService->removeBookFromCart(userId, bookId);
+            if (success) {
+                response["status"] = "success";
+                response["message"] = "Book removed from cart successfully";
+            } else {
+                response["status"] = "error";
+                response["message"] = "Failed to remove book from cart";
+            }
+        }
     }
     else if (action == "getCart") {
-        int userId = data.value("userId").toInt();
         CartDetails details = shoppingCartService->getCartDetails(userId);
 
-        QJsonObject detailsJson;
-        detailsJson["itemsCount"] = details.itemsCount;
-        detailsJson["rawTotalPrice"] = details.rawTotalPrice;
-        detailsJson["totalDiscountAmount"] = details.totalDiscountAmount;
-        detailsJson["finalPriceToPay"] = details.finalPriceToPay;
-
-        QJsonArray itemsArr;
-        for (int bookId : std::as_const(details.bookIds)) {
-            itemsArr.append(bookId);
+        QJsonObject cartObj;
+        QJsonArray booksArr;
+        for (int id : std::as_const(details.bookIds)) {
+            booksArr.append(id);
         }
-        detailsJson["bookIds"] = itemsArr;
+        cartObj["bookIds"] = booksArr;
+        cartObj["itemsCount"] = details.itemsCount;
+        cartObj["rawTotalPrice"] = details.rawTotalPrice;
+        cartObj["totalDiscountAmount"] = details.totalDiscountAmount;
+        cartObj["finalPriceToPay"] = details.finalPriceToPay;
 
         response["status"] = "success";
-        response["data"] = detailsJson;
+        response["data"] = cartObj;
     }
     else if (action == "checkout") {
-        int userId = data.value("userId").toInt();
         bool success = orderService->checkout(userId);
-        response["status"] = success ? "success" : "error";
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Checkout completed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Checkout failed (insufficient balance or empty cart)";
+        }
     }
     else if (action == "getOrderHistory") {
-        int userId = data.value("userId").toInt();
         QList<Order> orders = orderService->getOrderHistory(userId);
         QJsonArray ordersArr;
-        for (const Order& o : std::as_const(orders)) {
-            QJsonObject oo;
-            oo["orderId"] = o.getId();
-            oo["userId"] = o.getUserId();
-            oo["totalPrice"] = o.getFinalPrice();
-            oo["orderDate"] = o.getOrderDate().toString(Qt::ISODate);
 
-            QJsonArray booksInOrder;
-            for (int bid : o.getBookIds()) {
-                booksInOrder.append(bid);
+        for (const auto& order : std::as_const(orders)) {
+            QJsonObject orderObj;
+            orderObj["orderId"] = order.getId();
+            orderObj["userId"] = order.getUserId();
+            orderObj["rawTotalPrice"] = order.getRawPrice();
+            orderObj["totalDiscountAmount"] = order.getDiscountAmount();
+            orderObj["finalPriceToPay"] = order.getFinalPrice();
+            orderObj["orderDate"] = order.getOrderDate().toString(Qt::ISODate);
+
+            QJsonArray bookIdsArr;
+            for (int bId : order.getBookIds()) {
+                bookIdsArr.append(bId);
             }
-            oo["bookIds"] = booksInOrder;
-            ordersArr.append(oo);
+            orderObj["bookIds"] = bookIdsArr;
+
+            ordersArr.append(orderObj);
         }
+
         response["status"] = "success";
         response["data"] = ordersArr;
     }
@@ -438,16 +649,25 @@ void BookClubServer::handleCartAndOrder(ClientHandler* handler, const QString& a
     handler->sendResponse(response);
 }
 
+
 void BookClubServer::handlePersonalLibrary(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
 
     int userId = data.value("userId").toInt();
+    if (userId <= 0) {
+        response["status"] = "error";
+        response["message"] = "Invalid user ID";
+        handler->sendResponse(response);
+        return;
+    }
 
     if (action == "getWishlist") {
         QList<int> wishlist = personalLibraryService->getWishlist(userId);
         QJsonArray arr;
-        for (int bid : std::as_const(wishlist)) arr.append(bid);
+        for (int id : std::as_const(wishlist)) {
+            arr.append(id);
+        }
         response["status"] = "success";
         response["data"] = arr;
     }
@@ -455,59 +675,125 @@ void BookClubServer::handlePersonalLibrary(ClientHandler* handler, const QString
         int bookId = data.value("bookId").toInt();
         bool success = personalLibraryService->addToWishlist(userId, bookId);
         response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to add book to wishlist";
     }
     else if (action == "removeFromWishlist") {
         int bookId = data.value("bookId").toInt();
         bool success = personalLibraryService->removeFromWishlist(userId, bookId);
         response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to remove book from wishlist";
+    }
+    else if (action == "getFavorites") {
+        QList<int> favorites = personalLibraryService->getFaveBooks(userId);
+        QJsonArray arr;
+        for (int id : std::as_const(favorites)) {
+            arr.append(id);
+        }
+        response["status"] = "success";
+        response["data"] = arr;
+    }
+    else if (action == "addToFavorites") {
+        int bookId = data.value("bookId").toInt();
+        bool success = personalLibraryService->addToFaveBooks(userId, bookId);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to add book to favorites (ensure you purchased this book)";
+    }
+    else if (action == "removeFromFavorites") {
+        int bookId = data.value("bookId").toInt();
+        bool success = personalLibraryService->removeFromFaveBooks(userId, bookId);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to remove book from favorites";
+    }
+    else if (action == "isInFavorites") {
+        int bookId = data.value("bookId").toInt();
+        bool isFave = personalLibraryService->isInFaveBooks(userId, bookId);
+        response["status"] = "success";
+        response["isInFavorites"] = isFave;
     }
     else if (action == "getPurchasedBooks") {
         QList<int> purchased = personalLibraryService->getPurchasedBooks(userId);
         QJsonArray arr;
-        for (int bid : std::as_const(purchased)) arr.append(bid);
+        for (int id : std::as_const(purchased)) {
+            arr.append(id);
+        }
         response["status"] = "success";
         response["data"] = arr;
     }
     else if (action == "createShelf") {
-        QString name = data.value("shelfName").toString();
-        bool success = personalLibraryService->createShelf(userId, name);
-        response["status"] = success ? "success" : "error";
+        QString name = data.value("shelfName").toString().trimmed();
+        if (name.isEmpty()) {
+            response["status"] = "error";
+            response["message"] = "Shelf name cannot be empty";
+        } else {
+            bool success = personalLibraryService->createShelf(userId, name);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to create shelf (it might already exist)";
+        }
     }
     else if (action == "deleteShelf") {
-        QString name = data.value("shelfName").toString();
+        QString name = data.value("shelfName").toString().trimmed();
         bool success = personalLibraryService->deleteShelf(userId, name);
         response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to delete shelf";
     }
     else if (action == "addBookToShelf") {
-        QString name = data.value("shelfName").toString();
+        QString name = data.value("shelfName").toString().trimmed();
         int bookId = data.value("bookId").toInt();
         bool success = personalLibraryService->addBookToShelf(userId, name, bookId);
         response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to add book to shelf";
     }
     else if (action == "removeBookFromShelf") {
-        QString name = data.value("shelfName").toString();
+        QString name = data.value("shelfName").toString().trimmed();
         int bookId = data.value("bookId").toInt();
         bool success = personalLibraryService->removeBookFromShelf(userId, name, bookId);
         response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to remove book from shelf";
     }
     else if (action == "getBooksInShelf") {
-        QString name = data.value("shelfName").toString();
+        QString name = data.value("shelfName").toString().trimmed();
         QList<int> books = personalLibraryService->getBooksInShelf(userId, name);
         QJsonArray arr;
-        for (int bid : std::as_const(books)) arr.append(bid);
+        for (int id : std::as_const(books)) {
+            arr.append(id);
+        }
         response["status"] = "success";
         response["data"] = arr;
     }
     else if (action == "getShelfNames") {
         QList<QString> shelves = personalLibraryService->getShelfNames(userId);
         QJsonArray arr;
-        for (const QString& s : std::as_const(shelves)) arr.append(s);
+        for (const QString& name : std::as_const(shelves)) {
+            arr.append(name);
+        }
         response["status"] = "success";
         response["data"] = arr;
+    }
+    else if (action == "renameShelf") {
+        QString oldName = data.value("oldName").toString().trimmed();
+        QString newName = data.value("newName").toString().trimmed();
+        if (oldName.isEmpty() || newName.isEmpty()) {
+            response["status"] = "error";
+            response["message"] = "Old and new shelf names cannot be empty";
+        } else {
+            bool success = personalLibraryService->renameShelf(userId, oldName, newName);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to rename shelf (ensure old shelf exists and new name is unique)";
+        }
+    }
+    else if (action == "moveBookBetweenShelves") {
+        int bookId = data.value("bookId").toInt();
+        QString fromShelf = data.value("fromShelf").toString().trimmed();
+        QString toShelf = data.value("toShelf").toString().trimmed();
+
+        bool success = personalLibraryService->moveBookBetweenShelves(userId, bookId, fromShelf, toShelf);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to move book between shelves";
     }
 
     handler->sendResponse(response);
 }
+
 
 void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
@@ -540,25 +826,78 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
         response["status"] = "success";
         response["data"] = arr;
     }
+    else if (action == "searchUsers") {
+        QString query = data.value("query").toString().trimmed();
+        QList<User> list = adminService->searchUsers(query);
+        QJsonArray arr;
+        for (const User& u : std::as_const(list)) {
+            QJsonObject uo;
+            uo["id"] = u.getId();
+            uo["username"] = u.getUsername();
+            uo["role"] = u.getRole();
+            uo["isBlocked"] = !u.getIsActive();
+            arr.append(uo);
+        }
+        response["status"] = "success";
+        response["data"] = arr;
+    }
+    else if (action == "searchPublishers") {
+        QString query = data.value("query").toString().trimmed();
+        QList<Publisher> list = adminService->searchPublishers(query);
+        QJsonArray arr;
+        for (const Publisher& p : std::as_const(list)) {
+            QJsonObject po;
+            po["id"] = p.getId();
+            po["username"] = p.getUsername();
+            po["companyName"] = p.getCompanyName();
+            arr.append(po);
+        }
+        response["status"] = "success";
+        response["data"] = arr;
+    }
     else if (action == "blockUser") {
         int targetId = data.value("targetId").toInt();
-        bool success = adminService->blockUser(targetId);
-        response["status"] = success ? "success" : "error";
+        if (targetId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid target ID";
+        } else {
+            bool success = adminService->blockUser(targetId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to block user or user not found.";
+        }
     }
     else if (action == "unblockUser") {
         int targetId = data.value("targetId").toInt();
-        bool success = adminService->unblockUser(targetId);
-        response["status"] = success ? "success" : "error";
+        if (targetId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid target ID";
+        } else {
+            bool success = adminService->unblockUser(targetId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to unblock user.";
+        }
     }
     else if (action == "deleteUserByAdmin") {
         int targetId = data.value("targetId").toInt();
-        bool success = adminService->deleteUserAccount(targetId);
-        response["status"] = success ? "success" : "error";
+        if (targetId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid target ID";
+        } else {
+            bool success = adminService->deleteUserAccount(targetId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to delete user account.";
+        }
     }
     else if (action == "adminRemoveComment") {
         int commentId = data.value("commentId").toInt();
-        bool success = adminService->removeCommentByAdmin(commentId);
-        response["status"] = success ? "success" : "error";
+        if (commentId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid comment ID";
+        } else {
+            bool success = adminService->removeCommentByAdmin(commentId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Comment not found or could not be deleted.";
+        }
     }
 
     handler->sendResponse(response);
@@ -567,15 +906,7 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
 void BookClubServer::onNotificationReceived(int recipientId, const Notification& notification) {
     QJsonObject response;
     response["action"] = "newNotification";
-
-    QJsonObject notificationDetails;
-    notificationDetails["id"] = notification.getId();
-    notificationDetails["message"] = notification.getMessage();
-    notificationDetails["type"] = static_cast<int>(notification.getType());
-    notificationDetails["relatedBookId"] = notification.getRelatedBookId();
-    notificationDetails["createdAt"] = notification.getCreatedAt().toString(Qt::ISODate);
-
-    response["data"] = notificationDetails;
+    response["data"] = ModelSerializer::serializeNotification(notification);
 
     for (ClientHandler* client : std::as_const(clients)) {
         if (client->getUserId() == recipientId) {

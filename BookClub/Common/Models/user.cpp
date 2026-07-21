@@ -36,7 +36,7 @@ User::User(const User& other)
 
 // Copy Assignment Operator
 User& User::operator=(const User& other) {
-    if (this != &other) { \
+    if (this != &other) {
         Person::operator=(other);
 
         this->walletBalance = other.walletBalance;
@@ -45,12 +45,45 @@ User& User::operator=(const User& other) {
         delete this->cart;
         delete this->library;
 
-        this->cart = new ShoppingCart(*(other.cart));
-        this->library = new PersonalLibrary(*(other.library));
+        this->cart = other.cart ? new ShoppingCart(*(other.cart)) : nullptr;
+        this->library = other.library ? new PersonalLibrary(*(other.library)) : nullptr;
     }
     return *this;
 }
 
+// Move Constructor
+User::User(User&& other) noexcept
+    : Person(std::move(other)),
+    walletBalance(other.walletBalance),
+    favoriteGenres(std::move(other.favoriteGenres)),
+    cart(other.cart),
+    library(other.library)
+{
+    other.walletBalance = 0.0;
+    other.cart = nullptr;
+    other.library = nullptr;
+}
+
+// Move Assignment Operator
+User& User::operator=(User&& other) noexcept {
+    if (this != &other) {
+        Person::operator=(std::move(other));
+
+        this->walletBalance = other.walletBalance;
+        this->favoriteGenres = std::move(other.favoriteGenres);
+
+        delete this->cart;
+        delete this->library;
+
+        this->cart = other.cart;
+        this->library = other.library;
+
+        other.walletBalance = 0.0;
+        other.cart = nullptr;
+        other.library = nullptr;
+    }
+    return *this;
+}
 
 //getters
 QString User::getRole() const {

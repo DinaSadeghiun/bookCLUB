@@ -1,8 +1,12 @@
-INCLUDEPATH += $$PWD/Models
+INCLUDEPATH += $$PWD \
+               $$PWD/Models
 
-DEPENDPATH += $$PWD/Models
+DEPENDPATH += $$PWD \
+              $$PWD/Models
+
 
 HEADERS += \
+    $$PWD/Models/modelserializer.h \
     $$PWD/Models/personallibrary.h \
     $$PWD/Models/person.h \
     $$PWD/Models/user.h \
@@ -19,6 +23,7 @@ HEADERS += \
 
 
 SOURCES += \
+    $$PWD/Models/modelserializer.cpp \
     $$PWD/Models/personallibrary.cpp \
     $$PWD/Models/person.cpp \
     $$PWD/Models/user.cpp \

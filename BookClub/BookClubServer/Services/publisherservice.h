@@ -46,6 +46,7 @@ public:
     // Profile Settings
     bool changePublisherPassword(int publisherId, const QString& oldPassword, const QString& newPassword);
     bool changePublisherUsername(int publisherId, const QString& newUsername, const QString& password);
+    bool changeSecurityAnswer(int publisherId, const QString& newAnswer);
 
     // Book Management
     bool addNewBook(int publisherId, Book& book);

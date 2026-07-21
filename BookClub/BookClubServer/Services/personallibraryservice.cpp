@@ -37,6 +37,7 @@ bool PersonalLibraryService::hasPurchased(int userId, int bookId) {
     return libOpt->hasPurchased(bookId);
 }
 
+// wish list
 QList<int> PersonalLibraryService::getWishlist(int userId) {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !personalLibRepo) {
@@ -78,7 +79,6 @@ bool PersonalLibraryService::removeFromWishlist(int userId, int bookId) {
     return false;
 }
 
-
 bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
     Q_ASSERT(userId > 0);
     Q_ASSERT(bookId > 0);
@@ -92,6 +92,60 @@ bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
     return libOpt->isInWishlist(bookId);
 }
 
+// favorite books
+QList<int> PersonalLibraryService::getFaveBooks(int userId) {
+    Q_ASSERT(userId > 0);
+    if (userId <= 0 || !personalLibRepo) {
+        return QList<int>();
+    }
+    auto libOpt = personalLibRepo->findByUserId(userId);
+    if (!libOpt.has_value()) {
+        return QList<int>();
+    }
+    return libOpt->getFaveBooks();
+}
+
+bool PersonalLibraryService::addToFaveBooks(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
+    if (personalLibRepo->addToFaveBooks(userId, bookId)) {
+        emit favoritesUpdated(userId);
+        return true;
+    }
+    return false;
+}
+
+bool PersonalLibraryService::removeFromFaveBooks(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
+    if (personalLibRepo->removeFromFaveBooks(userId, bookId)) {
+        emit favoritesUpdated(userId);
+        return true;
+    }
+    return false;
+}
+
+bool PersonalLibraryService::isInFaveBooks(int userId, int bookId) {
+    Q_ASSERT(userId > 0);
+    Q_ASSERT(bookId > 0);
+    if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        return false;
+    }
+    auto libOpt = personalLibRepo->findByUserId(userId);
+    if (!libOpt.has_value()) {
+        return false;
+    }
+    return libOpt->isInFaveBooks(bookId);
+}
+
+
+// shelfs
 bool PersonalLibraryService::createShelf(int userId, const QString& shelfName) {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !personalLibRepo) {

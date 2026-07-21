@@ -45,6 +45,13 @@ public:
     bool removeFromWishlist(int bookId);
     bool isInWishlist(int bookId) const;
 
+    //favorite books
+    const QList<int>& getFaveBooks() const;
+    void addToFaveBooks(int bookId);
+    bool removeFromFaveBooks(int bookId);
+    bool isInFaveBooks(int bookId) const;
+
+
     //custom shelves
     const QList<Shelf*>& getCustomShelves() const;
     Shelf* createShelf(const QString &name);
@@ -62,6 +69,7 @@ private:
     int userId;
     QList<int> purchasedBooks;
     QList<int> wishlist;
+    QList<int> faveBooks;
     QList<Shelf*> customShelves;
 
 

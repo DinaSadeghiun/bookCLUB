@@ -32,6 +32,24 @@ QList<int> PersonalLibraryRepository::loadWishlist(int userId) const {
     return books;
 }
 
+QList<int> PersonalLibraryRepository::loadFaveBooks(int userId) const {
+    QList<int> faveList;
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("SELECT book_id FROM Favorites WHERE user_id = :userId");
+    query.bindValue(":userId", userId);
+
+    if (query.exec()) {
+        while (query.next()) {
+            faveList.append(query.value(0).toInt());
+        }
+    } else {
+        qWarning() << "Failed to load favorites for user" << userId << ":" << query.lastError().text();
+    }
+    return faveList;
+}
+
+
 QList<QPair<QString, QList<int>>> PersonalLibraryRepository::loadShelves(int userId) const {
     QList<QPair<QString, QList<int>>> result;
     QSqlDatabase db = dbManager->getDatabase();
@@ -67,13 +85,16 @@ std::optional<PersonalLibrary> PersonalLibraryRepository::findByUserId(int userI
 
     PersonalLibrary lib(userId);
     for (int id : loadPurchasedBooks(userId)) lib.addPurchasedBook(id);
-    for (int id : loadWishlist(userId)) lib.addToWishlist(id);
+    for (int id : loadWishlist(userId))       lib.addToWishlist(id);
+    for (int id : loadFaveBooks(userId))      lib.addToFaveBooks(id);
+
     for (const auto& [name, bookIds] : loadShelves(userId)) {
         auto* shelf = lib.createShelf(name);
         if (shelf) for (int bid : bookIds) shelf->addBook(bid);
     }
     return lib;
 }
+
 
 int PersonalLibraryRepository::resolveShelfId(int userId, const QString& name) const {
     QSqlDatabase db = dbManager->getDatabase();
@@ -91,7 +112,7 @@ bool PersonalLibraryRepository::save(const PersonalLibrary& lib) {
 
     int userId = lib.getUserId();
 
-    // 1. Sync Wishlist (Diff logic)
+    // Sync Wishlist
     QSet<int> dbWish, memWish;
     QSqlQuery gwq(db);
     gwq.prepare("SELECT book_id FROM Wishlist WHERE user_id = ?");
@@ -110,6 +131,29 @@ bool PersonalLibraryRepository::save(const PersonalLibrary& lib) {
         if (memWish.contains(bid)) continue;
         QSqlQuery q(db);
         q.prepare("DELETE FROM Wishlist WHERE user_id = ? AND book_id = ?");
+        q.addBindValue(userId); q.addBindValue(bid);
+        if (!q.exec()) { db.rollback(); return false; }
+    }
+
+    // Sync Favorites
+    QSet<int> dbFave, memFave;
+    QSqlQuery gfq(db);
+    gfq.prepare("SELECT book_id FROM Favorites WHERE user_id = ?");
+    gfq.addBindValue(userId);
+    if (gfq.exec()) while (gfq.next()) dbFave.insert(gfq.value(0).toInt());
+    for (int id : lib.getFaveBooks()) memFave.insert(id);
+
+    for (int bid : memFave) {
+        if (dbFave.contains(bid)) continue;
+        QSqlQuery q(db);
+        q.prepare("INSERT INTO Favorites (user_id, book_id, added_at) VALUES (?, ?, ?)");
+        q.addBindValue(userId); q.addBindValue(bid); q.addBindValue(QDateTime::currentSecsSinceEpoch());
+        if (!q.exec()) { db.rollback(); return false; }
+    }
+    for (int bid : dbFave) {
+        if (memFave.contains(bid)) continue;
+        QSqlQuery q(db);
+        q.prepare("DELETE FROM Favorites WHERE user_id = ? AND book_id = ?");
         q.addBindValue(userId); q.addBindValue(bid);
         if (!q.exec()) { db.rollback(); return false; }
     }
@@ -186,6 +230,35 @@ bool PersonalLibraryRepository::removeFromWishlist(int userId, int bookId) {
 
     if (!query.exec()) {
         qWarning() << "Failed to remove book from wishlist:" << query.lastError().text();
+        return false;
+    }
+    return query.numRowsAffected() > 0;
+}
+
+bool PersonalLibraryRepository::addToFaveBooks(int userId, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("INSERT OR IGNORE INTO Favorites (user_id, book_id, added_at) VALUES (:userId, :bookId, :addedAt)");
+    query.bindValue(":userId", userId);
+    query.bindValue(":bookId", bookId);
+    query.bindValue(":addedAt", QDateTime::currentSecsSinceEpoch());
+
+    if (!query.exec()) {
+        qWarning() << "Failed to add book to Favorites:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool PersonalLibraryRepository::removeFromFaveBooks(int userId, int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM Favorites WHERE user_id = :userId AND book_id = :bookId");
+    query.bindValue(":userId", userId);
+    query.bindValue(":bookId", bookId);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to remove book from Favorites:" << query.lastError().text();
         return false;
     }
     return query.numRowsAffected() > 0;

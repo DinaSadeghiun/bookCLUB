@@ -47,3 +47,12 @@ bool Discount::isValid() const {
     QDateTime now = QDateTime::currentDateTime();
     return (now >= startDate && now <= endDate);
 }
+
+QString Discount::typeToString(DiscountType t) {
+    return t == FixedAmount ? "FixedAmount" : "Percentage";
+}
+
+Discount::DiscountType Discount::stringToType(const QString& str) {
+    return str == "FixedAmount" ? FixedAmount : Percentage;
+}
+

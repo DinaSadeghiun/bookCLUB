@@ -40,3 +40,22 @@ void Notification::setId(int newId) {
         id = newId;
     }
 }
+
+QString notificationTypeToString(NotificationType type) {
+    switch (type) {
+    case NotificationType::NewBookInFavoriteGenre: return "NewBookInFavoriteGenre";
+    case NotificationType::DiscountOnWishlistBook: return "DiscountOnWishlistBook";
+    case NotificationType::NewSaleForBook: return "NewSaleForBook";
+    case NotificationType::NewReviewForBook: return "NewReviewForBook";
+    default: return "Unknown";
+    }
+}
+
+NotificationType stringToNotificationType(const QString& str) {
+    if (str == "NewBookInFavoriteGenre") return NotificationType::NewBookInFavoriteGenre;
+    if (str == "DiscountOnWishlistBook") return NotificationType::DiscountOnWishlistBook;
+    if (str == "NewSaleForBook") return NotificationType::NewSaleForBook;
+    if (str == "NewReviewForBook") return NotificationType::NewReviewForBook;
+    return NotificationType::NewBookInFavoriteGenre; // fallback
+}
+

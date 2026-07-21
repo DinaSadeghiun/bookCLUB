@@ -17,12 +17,25 @@ QSqlDatabase& DatabaseManager::getDatabase() {
 
 
 bool DatabaseManager::initDatabase(const QString& dbName) {
-    db = QSqlDatabase::addDatabase("QSQLITE", "bookclub_db");
-    db.setDatabaseName(dbName);
+    if (QSqlDatabase::contains("bookclub.db")) {
+        db = QSqlDatabase::database("bookclub.db");
+    } else {
+        db = QSqlDatabase::addDatabase("QSQLITE", "bookclub.db");
+    }
+
+    QString path = QCoreApplication::applicationDirPath() + "/" + dbName;
+    db.setDatabaseName(path);
+
+    qDebug() << "--- Database Connection ---";
+    qDebug() << "Database Path:" << path;
+
     if (!db.open()) {
         qCritical() << "DB open failed:" << db.lastError().text();
         return false;
     }
+
+    qDebug() << "Database successfully opened and ready.";
+
     enableForeignKeys();
     return createTables();
 }
@@ -177,6 +190,21 @@ bool DatabaseManager::createTables() {
         qCritical() << "Wishlist:" << q.lastError().text(); return false;
     }
 
+    //favorite books
+    if (!q.exec(R"(
+        CREATE TABLE IF NOT EXISTS Favorites (
+            user_id  INTEGER NOT NULL,
+            book_id  INTEGER NOT NULL,
+            added_at INTEGER NOT NULL,
+            PRIMARY KEY(user_id, book_id),
+            FOREIGN KEY(user_id) REFERENCES Users(person_id) ON DELETE CASCADE,
+            FOREIGN KEY(book_id) REFERENCES Books(id) ON DELETE CASCADE
+        )
+    )")) {
+        qCritical() << "Favorites Table Error:" << q.lastError().text(); return false;
+    }
+
+
     // personal shelves
     if (!q.exec(R"(
         CREATE TABLE IF NOT EXISTS CustomShelves (
@@ -262,6 +290,22 @@ bool DatabaseManager::createTables() {
         qCritical() << "OrderBooks:" << q.lastError().text(); return false;
     }
 
+
+    if (!q.exec(R"(
+        CREATE TABLE IF NOT EXISTS OrderBooks (
+            order_id INTEGER NOT NULL,
+            book_id  INTEGER NOT NULL,
+            price    REAL    NOT NULL,
+            PRIMARY KEY(order_id, book_id),
+            FOREIGN KEY(order_id) REFERENCES Orders(id) ON DELETE CASCADE,
+            FOREIGN KEY(book_id)  REFERENCES Books(id)
+        )
+    )")) {
+        qCritical() << "OrderBooks:" << q.lastError().text(); return false;
+    }
+
+
     qDebug() << "All tables created successfully.";
     return true;
 }
+

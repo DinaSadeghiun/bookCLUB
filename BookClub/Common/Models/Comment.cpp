@@ -58,6 +58,14 @@ void Comment::setId(int id) {
     }
 }
 
+void Comment::setUserId(int id) {
+    this->userId = id;
+}
+
+void Comment::setBookId(int id) {
+    this->bookId = id;
+}
+
 //edit comment
 void Comment::edit(const QString &newText, int newRating) {
     setText(newText);

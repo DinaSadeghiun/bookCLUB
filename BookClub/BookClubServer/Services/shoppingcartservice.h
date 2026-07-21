@@ -9,15 +9,6 @@
 class ShoppingCartRepository;
 class BookService;
 
-//for UI
-struct CartDetails {
-    QList<int> bookIds;
-    int itemsCount = 0;
-    double rawTotalPrice = 0.0;
-    double totalDiscountAmount = 0.0;
-    double finalPriceToPay = 0.0;
-};
-
 class ShoppingCartService : public QObject {
     Q_OBJECT
 private:

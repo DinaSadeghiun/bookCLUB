@@ -30,6 +30,8 @@ public:
 
     // Setters
     void setText(const QString &text);
+    void setUserId(int id);
+    void setBookId(int id);
     void setRating(int rating);
     void setId(int id);
 

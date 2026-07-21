@@ -1,8 +1,20 @@
-QT += core sql network testlib
+QT += core sql network
 QT -= gui
 
+CONFIG += c++17
 CONFIG += console
 CONFIG -= app_bundle
+
+win64-msvc* {
+    QMAKE_CXXFLAGS -= -permissive-
+    QMAKE_CXXFLAGS -= /permissive-
+
+    QMAKE_CXXFLAGS += /permissive
+}
+
+
+
+
 
 SOURCES += \
     DB/adminrepository.cpp \

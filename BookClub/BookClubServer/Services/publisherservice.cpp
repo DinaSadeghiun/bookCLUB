@@ -142,6 +142,20 @@ bool PublisherService::changePublisherUsername(int publisherId, const QString& n
 
 }
 
+bool PublisherService::changeSecurityAnswer(int publisherId, const QString& newAnswer) {
+    if (publisherId <= 0 || newAnswer.trimmed().isEmpty()) {
+        return false;
+    }
+    auto pubOpt = pubRepo->findById(publisherId);
+    if (!pubOpt.has_value()) {
+        return false;
+    }
+    Publisher publisher = pubOpt.value();
+    publisher.setSecurityAnswer(newAnswer.trimmed());
+    return pubRepo->save(publisher);
+}
+
+
 // add book
 bool PublisherService::addNewBook(int publisherId, Book& book) {
     Q_ASSERT(publisherId > 0);
