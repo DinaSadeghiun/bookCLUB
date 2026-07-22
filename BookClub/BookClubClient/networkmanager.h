@@ -23,7 +23,8 @@ public slots:
 
     // Auth
     void login(const QString& username, const QString& password);
-    void registerUser(const QString& username, const QString& password, const QString& securityAnswer, double initialBalance);
+    void registerUser(const QString& username, const QString& password, const QString& securityAnswer,
+                      const QList<int>& favoriteGenres, double initialBalance);
     void loginPublisher(const QString& username, const QString& password);
     void registerPublisher(const QString& username, const QString& password, const QString& companyName, const QString& securityAnswer);
     void loginAdmin(const QString& username, const QString& password);

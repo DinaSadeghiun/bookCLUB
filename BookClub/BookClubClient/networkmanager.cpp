@@ -47,13 +47,22 @@ void NetworkManager::login(const QString& username, const QString& password)
     sendRequest("login", data);
 }
 
-void NetworkManager::registerUser(const QString& username, const QString& password, const QString& securityAnswer, double initialBalance)
+void NetworkManager::registerUser(const QString& username, const QString& password,
+                                  const QString& securityAnswer,
+                                  const QList<int>& favoriteGenres, double initialBalance)
 {
     QJsonObject data;
     data["username"] = username;
     data["password"] = password;
     data["securityAnswer"] = securityAnswer;
     data["initialBalance"] = initialBalance;
+
+    QJsonArray genresArray;
+    for (int genre : favoriteGenres) {
+        genresArray.append(genre);
+    }
+    data["favoriteGenres"] = genresArray;
+
     sendRequest("register", data);
 }
 
