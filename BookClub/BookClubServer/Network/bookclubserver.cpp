@@ -903,6 +903,63 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
     handler->sendResponse(response);
 }
 
+void BookClubServer::handleNotifications(ClientHandler* handler, const QString& action, const QJsonObject& data) {
+    QJsonObject response;
+    response["action"] = action;
+
+    int recipientId = data.value("recipientId").toInt();
+    if (recipientId <= 0) {
+        recipientId = handler->getUserId();
+    }
+
+    if (recipientId <= 0) {
+        response["status"] = "error";
+        response["message"] = "Invalid recipient ID";
+        handler->sendResponse(response);
+        return;
+    }
+
+    if (action == "getNotifications") {
+        QList<Notification> list = notificationService->getNotificationsForeRecipient(recipientId);
+        response["status"] = "success";
+        response["data"] = ModelSerializer::serializeNotificationList(list);
+    }
+    else if (action == "markNotificationAsRead") {
+        int notificationId = data.value("notificationId").toInt();
+        if (notificationId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid notification ID";
+        } else {
+            bool success = notificationService->markAsRead(notificationId, recipientId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to mark notification as read";
+        }
+    }
+    else if (action == "markAllNotificationsAsRead") {
+        bool success = notificationService->markAllAsRead(recipientId);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to mark all notifications as read";
+    }
+    else if (action == "deleteNotification") {
+        int notificationId = data.value("notificationId").toInt();
+        if (notificationId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid notification ID";
+        } else {
+            bool success = notificationService->deleteNotification(notificationId, recipientId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to delete notification";
+        }
+    }
+    else {
+        response["status"] = "error";
+        response["message"] = "Unknown notification action";
+    }
+
+    handler->sendResponse(response);
+}
+
+
 void BookClubServer::onNotificationReceived(int recipientId, const Notification& notification) {
     QJsonObject response;
     response["action"] = "newNotification";

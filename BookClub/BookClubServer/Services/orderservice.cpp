@@ -57,7 +57,7 @@ bool OrderService::checkout(int userId) {
         return false;
     }
 
-    QSqlDatabase db = QSqlDatabase::database("bookclub_db");
+    QSqlDatabase db = QSqlDatabase::database("bookclub.db");
 
     // Start a nested transaction using SQLite SAVEPOINT
     QSqlQuery query(db);
