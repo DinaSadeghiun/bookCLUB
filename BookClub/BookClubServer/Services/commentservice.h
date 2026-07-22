@@ -26,6 +26,7 @@ public:
 
     bool addComment(Comment& comment);
     bool removeComment(int commentId);
+    bool editComment(int commentId, const QString& newText, int newRating);
 
     std::optional<Comment> getCommentById(int id) const;
     QList<Comment> getCommentsByBook(int bookId) const;

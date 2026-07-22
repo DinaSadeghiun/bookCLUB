@@ -54,6 +54,18 @@ bool CommentService::removeComment(int commentId) {
     return false;
 }
 
+bool CommentService::editComment(int commentId, const QString& newText, int newRating) {
+    auto commentOpt = commentRepo->findById(commentId);
+    if (!commentOpt) return false;
+
+    commentOpt->edit(newText, newRating);
+    if (commentRepo->save(*commentOpt)) {
+        updateBookStatistics(commentOpt->getBookId());
+        return true;
+    }
+    return false;
+}
+
 std::optional<Comment> CommentService::getCommentById(int id) const {
     Q_ASSERT(id > 0);
     if (id <= 0 || !commentRepo) return std::nullopt;
