@@ -102,6 +102,13 @@ std::optional<User> UserService::getUserById(int userId) const {
     return userRepo->findById(userId);
 }
 
+std::optional<User> UserService::getUserByUsername(const QString& username) const {
+    if (!userRepo) {
+        return std::nullopt;
+    }
+    return userRepo->findByUsername(username.trimmed());
+}
+
 bool UserService::changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword) {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !userRepo) {

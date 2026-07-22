@@ -6,7 +6,7 @@
 #include "DB/publisherrepository.h"
 #include "Services/bookservice.h"
 #include "Book.h"
-#include "publisher.h"
+#include "Publisher.h"
 
 int main(int argc, char *argv[])
 {
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     // ۵. اجرای سرور
     BookClubServer* server = new BookClubServer(&a);
-    if (!server->startServer(12345)) {
+    if (!server->startServer(8080)) {
         return -1;
     }
 

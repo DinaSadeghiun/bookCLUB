@@ -193,210 +193,103 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
     response["action"] = action;
 
     if (action == "login") {
-        QString u = data.value("username").toString().trimmed();
-        QString p = data.value("password").toString();
-        auto result = userService->loginUser(u, p);
-        if (result.has_value()) {
-            if (!result->getIsActive()) {
+        QString username = data["username"].toString().trimmed();
+        QString password = data["password"].toString().trimmed();
+
+        // Admin
+        auto optAdmin = adminService->loginAdmin(username, password);
+        if (optAdmin.has_value()) {
+            response["status"] = "success";
+            response["role"] = "Admin";
+            QJsonObject adminData;
+            adminData["userId"] = optAdmin->getId();
+            adminData["username"] = optAdmin->getUsername();
+            adminData["role"] = "Admin";
+            response["data"] = adminData;
+            handler->setUserId(optAdmin->getId());
+            handler->sendResponse(response);
+            return;
+        }
+
+        // Publisher
+        auto optPub = publisherService->login(username, password);
+        if (optPub.has_value()) {
+            if (!optPub->getIsActive()) {
+                response["status"] = "error";
+                response["message"] = "Your publisher account has been blocked by the admin";
+            } else {
+                response["status"] = "success";
+                response["role"] = "Publisher";
+                QJsonObject pubData;
+                pubData["userId"] = optPub->getId();
+                pubData["username"] = optPub->getUsername();
+                pubData["companyName"] = optPub->getCompanyName();
+                pubData["role"] = "Publisher";
+                response["data"] = pubData;
+                handler->setUserId(optPub->getId());
+            }
+            handler->sendResponse(response);
+            return;
+        }
+
+        // User
+        auto optUser = userService->loginUser(username, password);
+        if (optUser.has_value()) {
+            User user = optUser.value();
+            if (!user.getIsActive()) {
                 response["status"] = "error";
                 response["message"] = "Your account has been blocked by the admin";
             } else {
-                handler->setUserId(result->getId());
                 response["status"] = "success";
-                QJsonObject userDetails;
-                userDetails["userId"] = result->getId();
-                userDetails["username"] = result->getUsername();
-                userDetails["role"] = result->getRole();
-                userDetails["balance"] = result->getWalletBalance();
-                response["data"] = userDetails;
+                response["role"] = "User";
+                QJsonObject userData;
+                userData["userId"] = user.getId();
+                userData["username"] = user.getUsername();
+                userData["role"] = "User";
+                userData["balance"] = user.getWalletBalance();
+                response["data"] = userData;
+                handler->setUserId(user.getId());
             }
-        } else {
-            response["status"] = "error";
-            response["message"] = "Invalid username or password";
+            handler->sendResponse(response);
+            return;
         }
+
+        response["status"] = "error";
+        response["message"] = "Invalid username or password";
+        handler->sendResponse(response);
+        return;
     }
+
     else if (action == "register") {
         QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
         QString sa = data.value("securityAnswer").toString().trimmed();
         double balance = data.value("initialBalance").toDouble(0.0);
 
-        QString resMsg = userService->registerUser(u, p, sa, balance);
-        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty() || resMsg == "SUCCESS") {
-            response["status"] = "success";
-            response["message"] = "Registration completed successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = resMsg;
-        }
-    }
-    else if (action == "loginPublisher") {
-        QString u = data.value("username").toString().trimmed();
-        QString p = data.value("password").toString();
-        auto result = publisherService->login(u, p);
-        if (result.has_value()) {
-            if (!result->getIsActive()) {
-                response["status"] = "error";
-                response["message"] = "Your publisher account has been blocked by the admin";
-            } else {
-                handler->setUserId(result->getId());
-                response["status"] = "success";
-                QJsonObject pubDetails;
-                pubDetails["publisherId"] = result->getId();
-                pubDetails["username"] = result->getUsername();
-                pubDetails["companyName"] = result->getCompanyName();
-                pubDetails["role"] = result->getRole();
-                response["data"] = pubDetails;
-            }
-        } else {
-            response["status"] = "error";
-            response["message"] = "Invalid credentials";
-        }
-    }
-    else if (action == "registerPublisher") {
-        QString u = data.value("username").toString().trimmed();
-        QString p = data.value("password").toString();
-        QString comp = data.value("companyName").toString().trimmed();
-        QString sa = data.value("securityAnswer").toString().trimmed();
-
-        QString resMsg = publisherService->registerPublisher(u, p, comp, sa);
-        if (resMsg.contains("success", Qt::CaseInsensitive) || resMsg.isEmpty() || resMsg == "SUCCESS") {
-            response["status"] = "success";
-            response["message"] = "Publisher registration completed successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = resMsg;
-        }
-    }
-    else if (action == "loginAdmin") {
-        QString u = data.value("username").toString().trimmed();
-        QString p = data.value("password").toString();
-        auto result = adminService->loginAdmin(u, p);
-        if (result.has_value()) {
-            handler->setUserId(result->getId());
-            response["status"] = "success";
-            QJsonObject adminDetails;
-            adminDetails["adminId"] = result->getId();
-            adminDetails["username"] = result->getUsername();
-            adminDetails["role"] = result->getRole();
-            response["data"] = adminDetails;
-        } else {
-            response["status"] = "error";
-            response["message"] = "Invalid admin credentials";
-        }
-    }
-    else if (action == "resetPassword") {
-        QString u = data.value("username").toString().trimmed();
-        QString sa = data.value("securityAnswer").toString().trimmed();
-        QString newP = data.value("newPassword").toString();
-        QString role = data.value("role").toString().toLower();
-
-        bool success = false;
-        if (role == "publisher") {
-            success = publisherService->resetPasswordWithSecurityAnswer(u, sa, newP);
-        } else {
-            success = userService->resetPasswordWithSecurityAnswer(u, sa, newP);
-        }
-
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Password has been reset successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = "Security answer verification failed or account not found";
-        }
-    }
-    else if (action == "changePassword") {
-        int id = data.value("id").toInt();
-        if (id <= 0) id = data.value("userId").toInt();
-        if (id <= 0) id = data.value("publisherId").toInt();
-
-        QString oldPassword = data.value("oldPassword").toString();
-        QString newPassword = data.value("newPassword").toString();
-        QString role = data.value("role").toString().toLower();
-
-        bool success = false;
-        if (role == "publisher") {
-            success = publisherService->changePublisherPassword(id, oldPassword, newPassword);
-        } else {
-            success = userService->changeUserPassword(id, oldPassword, newPassword);
-        }
-
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Password changed successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = "Incorrect current password";
-        }
-    }
-    else if (action == "changeUsername") {
-        int id = data.value("id").toInt();
-        if (id <= 0) id = data.value("userId").toInt();
-        if (id <= 0) id = data.value("publisherId").toInt();
-
-        QString newUsername = data.value("username").toString().trimmed();
-        QString password = data.value("password").toString();
-        QString role = data.value("role").toString().toLower();
-
-        bool success = false;
-        if (role == "publisher") {
-            success = publisherService->changePublisherUsername(id, newUsername, password);
-        } else {
-            success = userService->changeUserUsername(id, newUsername, password);
-        }
-
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Username updated successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = "Invalid password or username already exists";
-        }
-    }
-    else if (action == "updateProfile") {
-        int userId = data.value("userId").toInt();
-        QJsonArray genresArray = data.value("favoriteGenres").toArray();
         QList<Genre> favoriteGenres;
+        QJsonArray genresArray = data.value("favoriteGenres").toArray();
         for (const auto& val : std::as_const(genresArray)) {
             favoriteGenres.append(static_cast<Genre>(val.toInt()));
         }
 
-        bool success = userService->updateUserFavoriteGenres(userId, favoriteGenres);
-        if (success) {
+        QString resMsg = userService->registerUser(u, p, sa, balance, favoriteGenres);
+
+        if (resMsg == "SUCCESS") {
             response["status"] = "success";
-            response["message"] = "Profile favorite genres updated successfully";
-        } else {
+            response["message"] = "Registration completed successfully";
+
+            auto userOpt = userService->getUserByUsername(u);
+            if (userOpt.has_value()) {
+                response["userId"] = userOpt->getId();
+            }
+        }  else {
             response["status"] = "error";
-            response["message"] = "Failed to update favorite genres";
+            response["message"] = resMsg;
         }
+        handler->sendResponse(response);
+        return;
     }
-    else if (action == "updateSecurityQuestion") {
-        int id = data.value("id").toInt();
-        if (id <= 0) id = data.value("userId").toInt();
-        if (id <= 0) id = data.value("publisherId").toInt();
-
-        QString newAnswer = data.value("securityAnswer").toString().trimmed();
-        QString role = data.value("role").toString().toLower();
-
-        bool success = false;
-        if (role == "publisher") {
-            success = publisherService->changeSecurityAnswer(id, newAnswer);
-        } else {
-            success = userService->changeSecurityAnswer(id, newAnswer);
-        }
-
-        if (success) {
-            response["status"] = "success";
-            response["message"] = "Security answer updated successfully";
-        } else {
-            response["status"] = "error";
-            response["message"] = "Failed to update security answer";
-        }
-    }
-    handler->sendResponse(response);
 }
-
 
 void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;

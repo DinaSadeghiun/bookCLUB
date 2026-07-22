@@ -31,6 +31,7 @@ public:
                                          const QString& newPassword);
 
     std::optional<User> getUserById(int userId) const;
+    std::optional<User> getUserByUsername(const QString& username) const;
 
     // Account Management
     bool changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword);

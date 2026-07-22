@@ -50,12 +50,14 @@ void ClientHandler::onReadyRead() {
         if (line.isEmpty()) {
             continue;
         }
+        qDebug() << "[Network IN] Received line from client:" << QString::fromUtf8(line);
 
         QJsonParseError parseError;
         QJsonDocument doc = QJsonDocument::fromJson(line, &parseError);
 
         if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
             QJsonObject request = doc.object();
+            qDebug() << "[Network IN] Parsed Action:" << request.value("action").toString();
             emit requestReceived(this, request);
         } else {
             qWarning() << "Invalid JSON received from client:" << parseError.errorString();
