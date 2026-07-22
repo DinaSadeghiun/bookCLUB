@@ -9,10 +9,9 @@ UserService::UserService(UserRepository* repository, QObject* parent)
 
 
 //auth management
-QString UserService::registerUser(const QString& username,
-                                  const QString& password,
-                                  const QString& securityAnswer,
-                                  double initialBalance)
+QString UserService::registerUser(const QString& username, const QString& password,
+                                  const QString& securityAnswer, double initialBalance,
+                                  const QList<Genre>& favoriteGenres)
 {
     if (!userRepo) {
         return "DATABASE_ERROR";
@@ -33,7 +32,11 @@ QString UserService::registerUser(const QString& username,
         return "USERNAME_TAKEN";
     }
 
-    User newUser(trimmedUser, password, trimmedAns, initialBalance);
+    User newUser(trimmedUser, password, trimmedAns, initialBalance, favoriteGenres);
+
+    if (!favoriteGenres.isEmpty() && (favoriteGenres.size() < 1 || favoriteGenres.size() > 3)) {
+        return "INVALID_GENRE_COUNT";
+    }
 
     if (userRepo->save(newUser)) {
         emit userRegistered(newUser.getId());

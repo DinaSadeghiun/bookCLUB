@@ -20,10 +20,9 @@ public:
     explicit UserService(UserRepository* repository, QObject* parent = nullptr);
 
     // Authentication & Registration
-    QString registerUser(const QString& username,
-                         const QString& password,
-                         const QString& securityAnswer,
-                         double initialBalance = 0.0);
+    QString registerUser(const QString& username, const QString& password,
+                         const QString& securityAnswer, double initialBalance = 0.0,
+                         const QList<Genre>& favoriteGenres = {});
 
     std::optional<User> loginUser(const QString& username, const QString& password);
 
