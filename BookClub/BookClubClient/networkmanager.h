@@ -27,7 +27,10 @@ public slots:
     void loginPublisher(const QString& username, const QString& password);
     void registerPublisher(const QString& username, const QString& password, const QString& companyName, const QString& securityAnswer);
     void loginAdmin(const QString& username, const QString& password);
+    void changeUsername(int id, const QString& newUsername, const QString& password, const QString& role);
     void resetPassword(const QString& username, const QString& securityAnswer, const QString& newPassword);
+    void updateProfile(int userId, const QList<int>& favoriteGenres);
+    void updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& role);
 
     //Books
     void getAllBooks();
@@ -41,6 +44,7 @@ public slots:
     void addComment(int userId, int bookId, const QString& text, double rating);
     void getComments(int bookId);
     void removeComment(int commentId);
+    void editComment(int commentId, int userId, int bookId, const QString& text, double rating);
 
     // Cart & Orders
     void addToCart(int userId, int bookId);
@@ -64,6 +68,7 @@ public slots:
     void removeBookFromShelf(int userId, const QString& shelfName, int bookId);
     void getBooksInShelf(int userId, const QString& shelfName);
     void getShelfNames(int userId);
+    void moveBookBetweenShelves(int userId, int bookId, const QString& fromShelf, const QString& toShelf);
 
     //Admin Actions
     void getAllUsers();
@@ -72,6 +77,14 @@ public slots:
     void unblockUser(int targetId);
     void deleteUserByAdmin(int targetId);
     void adminRemoveComment(int commentId);
+    void searchUsers(const QString& query);
+    void searchPublishers(const QString& query);
+
+    //Notification Actions
+    void getNotifications(int recipientId);
+    void markNotificationAsRead(int notificationId, int recipientId);
+    void markAllNotificationsAsRead(int recipientId);
+    void deleteNotification(int notificationId, int recipientId);
 
 signals:
     void connectionChanged(bool connected);

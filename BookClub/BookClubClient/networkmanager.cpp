@@ -83,6 +83,16 @@ void NetworkManager::loginAdmin(const QString& username, const QString& password
     sendRequest("loginAdmin", data);
 }
 
+void NetworkManager::changeUsername(int id, const QString& newUsername, const QString& password, const QString& role)
+{
+    QJsonObject data;
+    data["id"] = id;
+    data["username"] = newUsername;
+    data["password"] = password;
+    data["role"] = role;
+    sendRequest("changeUsername", data);
+}
+
 void NetworkManager::resetPassword(const QString& username, const QString& securityAnswer, const QString& newPassword)
 {
     QJsonObject data;
@@ -92,6 +102,26 @@ void NetworkManager::resetPassword(const QString& username, const QString& secur
     sendRequest("resetPassword", data);
 }
 
+void NetworkManager::updateProfile(int userId, const QList<int>& favoriteGenres)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    QJsonArray genresArray;
+    for (int genre : favoriteGenres) {
+        genresArray.append(genre);
+    }
+    data["favoriteGenres"] = genresArray;
+    sendRequest("updateProfile", data);
+}
+
+void NetworkManager::updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& role)
+{
+    QJsonObject data;
+    data["id"] = userId;
+    data["securityAnswer"] = securityAnswer;
+    data["role"] = role;
+    sendRequest("updateSecurityAnswer", data);
+}
 
 // Books Operations
 void NetworkManager::getAllBooks()
@@ -166,6 +196,17 @@ void NetworkManager::removeComment(int commentId)
     QJsonObject data;
     data["commentId"] = commentId;
     sendRequest("removeComment", data);
+}
+
+void NetworkManager::editComment(int commentId, int userId, int bookId, const QString& text, double rating)
+{
+    QJsonObject data;
+    data["id"] = commentId;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    data["text"] = text;
+    data["rating"] = rating;
+    sendRequest("editComment", data);
 }
 
 
@@ -319,6 +360,15 @@ void NetworkManager::getShelfNames(int userId)
     sendRequest("getShelfNames", data);
 }
 
+void NetworkManager::moveBookBetweenShelves(int userId, int bookId, const QString& fromShelf, const QString& toShelf)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    data["fromShelf"] = fromShelf;
+    data["toShelf"] = toShelf;
+    sendRequest("moveBookBetweenShelves", data);
+}
 
 // Admin Actions
 void NetworkManager::getAllUsers()
@@ -357,6 +407,48 @@ void NetworkManager::adminRemoveComment(int commentId)
     QJsonObject data;
     data["commentId"] = commentId;
     sendRequest("adminRemoveComment", data);
+}
+
+void NetworkManager::searchUsers(const QString& query)
+{
+    QJsonObject data;
+    data["query"] = query;
+    sendRequest("searchUsers", data);
+}
+
+void NetworkManager::searchPublishers(const QString& query)
+{
+    QJsonObject data;
+    data["query"] = query;
+    sendRequest("searchPublishers", data);
+}
+
+//Notification Actions
+void NetworkManager::getNotifications(int recipientId)
+{
+    QJsonObject data;
+    data["recipientId"] = recipientId;
+    sendRequest("getNotifications", data);
+}
+void NetworkManager::markNotificationAsRead(int notificationId, int recipientId)
+{
+    QJsonObject data;
+    data["notificationId"] = notificationId;
+    data["recipientId"] = recipientId;
+    sendRequest("markNotificationAsRead", data);
+}
+void NetworkManager::markAllNotificationsAsRead(int recipientId)
+{
+    QJsonObject data;
+    data["recipientId"] = recipientId;
+    sendRequest("markAllNotificationsAsRead", data);
+}
+void NetworkManager::deleteNotification(int notificationId, int recipientId)
+{
+    QJsonObject data;
+    data["notificationId"] = notificationId;
+    data["recipientId"] = recipientId;
+    sendRequest("deleteNotification", data);
 }
 
 // Core Socket Communication & Handling
@@ -403,8 +495,7 @@ void NetworkManager::onReadyRead()
             QString action = response.value("action").toString();
             QString status = response.value("status").toString();
             QJsonObject data = response.value("data").toObject();
-
-            if (action == "NOTIFICATION") {
+            if (action == "newNotification") {
                 emit notificationReceived(data);
             } else {
                 emit responseReceived(action, status, data);
