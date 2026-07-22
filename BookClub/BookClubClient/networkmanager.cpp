@@ -111,15 +111,17 @@ void NetworkManager::resetPassword(const QString& username, const QString& secur
     sendRequest("resetPassword", data);
 }
 
-void NetworkManager::updateProfile(int userId, const QList<int>& favoriteGenres)
+void NetworkManager::updateProfile(int userId, const QVariantList& favoriteGenres)
 {
     QJsonObject data;
     data["userId"] = userId;
+
     QJsonArray genresArray;
-    for (int genre : favoriteGenres) {
-        genresArray.append(genre);
+    for (const QVariant& genre : favoriteGenres) {
+        genresArray.append(genre.toInt());
     }
     data["favoriteGenres"] = genresArray;
+
     sendRequest("updateProfile", data);
 }
 

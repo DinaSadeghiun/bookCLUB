@@ -30,7 +30,7 @@ public slots:
     void loginAdmin(const QString& username, const QString& password);
     void changeUsername(int id, const QString& newUsername, const QString& password, const QString& role);
     void resetPassword(const QString& username, const QString& securityAnswer, const QString& newPassword);
-    void updateProfile(int userId, const QList<int>& favoriteGenres);
+    void updateProfile(int userId, const QVariantList& favoriteGenres);
     void updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& role);
 
     //Books
