@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
     // ۱. مقداردهی اولیه دیتابیس
     DatabaseManager db = DatabaseManager::instance();
-    if (!db.initDatabase("bookclub-final.db")) {
+    if (!db.initDatabase("bookclub.db")) {
         qDebug() << "Failed to open database!";
         return -1;
     }
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     // ۵. اجرای سرور
     BookClubServer* server = new BookClubServer(&a);
-    if (!server->startServer(8080)) {
+    if (!server->startServer(12345)) {
         return -1;
     }
 

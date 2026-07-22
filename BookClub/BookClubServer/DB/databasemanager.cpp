@@ -69,7 +69,6 @@ bool DatabaseManager::createTables() {
     if (!q.exec(R"(
         CREATE TABLE IF NOT EXISTS Users (
             person_id       INTEGER PRIMARY KEY,
-            wallet_balance  REAL    DEFAULT 1000000.0,
             FOREIGN KEY(person_id) REFERENCES Persons(id) ON DELETE CASCADE
         )
     )")) {

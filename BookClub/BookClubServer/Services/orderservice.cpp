@@ -42,18 +42,10 @@ bool OrderService::checkout(int userId) {
     }
 
 
-    // 1. Fetch cart details and calculate prices
+    // Fetch cart details and calculate prices
     CartDetails details = cartService->getCartDetails(userId);
     if (details.bookIds.isEmpty()) {
         qDebug() << "Checkout Failed: Shopping cart is empty for user:" << userId;
-        return false;
-    }
-
-    // 2. Check wallet balance before transaction
-    double userWallet = userService->getWalletBalance(userId);
-    if (userWallet < details.finalPriceToPay) {
-        qDebug() << "Checkout Failed: Insufficient wallet balance. Wallet:"
-                 << userWallet << ", Required:" << details.finalPriceToPay;
         return false;
     }
 
@@ -66,14 +58,7 @@ bool OrderService::checkout(int userId) {
         return false;
     }
 
-    // 3. Withdraw price from user wallet (runs inner transaction inside UserRepository)
-    if (!userService->withdrawBalance(userId, details.finalPriceToPay)) {
-        qDebug() << "Checkout Failed: Wallet withdrawal failed.";
-        query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
-        return false;
-    }
-
-    // 4. Save new order (runs inner transaction inside OrderRepository)
+    // Save new order (runs inner transaction inside OrderRepository)
     Order newOrder(userId, details.rawTotalPrice, details.totalDiscountAmount,
                    details.finalPriceToPay, details.bookIds);
     if (!orderRepo->save(newOrder)) {
@@ -82,7 +67,7 @@ bool OrderService::checkout(int userId) {
         return false;
     }
 
-    // 5. Transfer purchased books to user's personal library (runs inner transaction inside PersonalLibraryRepository)
+    // Transfer purchased books to user's personal library (runs inner transaction inside PersonalLibraryRepository)
     for (int bookId : std::as_const(details.bookIds)) {
         auto bookOpt = bookRepo->findById(bookId);
         if (!bookOpt.has_value()) {
@@ -101,7 +86,7 @@ bool OrderService::checkout(int userId) {
         }
     }
 
-    // 6. Release (Commit) the savepoint to persist all changes
+    // Release (Commit) the savepoint to persist all changes
     if (!query.exec("RELEASE SAVEPOINT checkout_sp")) {
         qDebug() << "Checkout Failed: Release savepoint failed:" << query.lastError().text();
         query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
@@ -110,7 +95,7 @@ bool OrderService::checkout(int userId) {
 
     emit checkoutCompleted(userId, newOrder.getId(), details.finalPriceToPay);
 
-    // 7. Clear the cart (Non-critical operation, performed post-release)
+    // Clear the cart (Non-critical operation, performed post-release)
     if (!cartService->clearCart(userId)) {
         qDebug() << "Warning: Could not clear shopping cart after successful purchase.";
     }

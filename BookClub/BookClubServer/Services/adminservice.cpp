@@ -16,6 +16,7 @@ AdminService::AdminService(AdminRepository* aRepo,
     Q_ASSERT(commentRepo != nullptr);
 }
 
+// Auth
 QString AdminService::registerAdmin(const QString& username, const QString& password, const QString& securityAnswer) {
     if (!adminRepo) {
         return "DATABASE_ERROR";
@@ -79,6 +80,31 @@ bool AdminService::resetPasswordWithSecurityAnswer(const QString& username,
         }
     }
     return false;
+}
+
+// Profile
+bool AdminService::changeAdminPassword(int adminId, const QString& oldPassword, const QString& newPassword) {
+    auto adminOpt = adminRepo->findById(adminId);
+    if (!adminOpt) return false;
+
+    if (!adminOpt->changePassword(oldPassword, newPassword)) return false;
+    return adminRepo->save(*adminOpt);
+}
+
+bool AdminService::changeAdminUsername(int adminId, const QString& newUsername, const QString& password) {
+    auto adminOpt = adminRepo->findById(adminId);
+    if (!adminOpt) return false;
+
+    if (!adminOpt->changeUsername(newUsername, password)) return false;
+    return adminRepo->save(*adminOpt);
+}
+
+bool AdminService::changeSecurityAnswer(int adminId, const QString& newAnswer) {
+    auto adminOpt = adminRepo->findById(adminId);
+    if (!adminOpt) return false;
+
+    adminOpt->setSecurityAnswer(newAnswer);
+    return adminRepo->save(*adminOpt);
 }
 
 QList<User> AdminService::getAllUsers() const {
@@ -211,25 +237,21 @@ bool AdminService::removeBookByAdmin(int bookId) {
     return false;
 }
 
-bool AdminService::updateBookDetailsByAdmin(int bookId, const QString& title, double price) {
-    Q_ASSERT(bookId > 0);
-    if (bookId <= 0 || !bookRepo) return false;
+bool AdminService::updateBookDetailsByAdmin(const Book& book) {
+    if (book.getId() <= 0 || !bookRepo) return false;
 
-    if (title.trimmed().isEmpty() || price < 0) {
-        return false;
-    }
-
-    auto bookOpt = bookRepo->findById(bookId);
+    auto bookOpt = bookRepo->findById(book.getId());
     if (!bookOpt) return false;
 
-    bookOpt->setTitle(title.trimmed());
-    bookOpt->setPrice(price);
+    bookOpt->setTitle(book.getTitle());
+    bookOpt->setAuthor(book.getAuthor());
+    bookOpt->setPrice(book.getPrice());
+    bookOpt->setGenre(book.getGenre());
+    bookOpt->setDescription(book.getDescription());
+    bookOpt->setCoverImagePath(book.getCoverImagePath());
+    bookOpt->setPdfFilePath(book.getPdfFilePath());
 
-    if (bookRepo->save(*bookOpt)) {
-        emit bookUpdatedByAdmin(bookId);
-        return true;
-    }
-    return false;
+    return bookRepo->save(*bookOpt);
 }
 
 QList<Comment> AdminService::getAllComments() const {

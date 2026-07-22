@@ -10,7 +10,7 @@ UserService::UserService(UserRepository* repository, QObject* parent)
 
 //auth management
 QString UserService::registerUser(const QString& username, const QString& password,
-                                  const QString& securityAnswer, double initialBalance,
+                                  const QString& securityAnswer,
                                   const QList<Genre>& favoriteGenres)
 {
     if (!userRepo) {
@@ -23,16 +23,12 @@ QString UserService::registerUser(const QString& username, const QString& passwo
         return "EMPTY_FIELDS";
     }
 
-    if (initialBalance < 0.0) {
-        return "INVALID_BALANCE";
-    }
-
     auto existingUser = userRepo->findByUsername(trimmedUser);
     if (existingUser.has_value()) {
         return "USERNAME_TAKEN";
     }
 
-    User newUser(trimmedUser, password, trimmedAns, initialBalance, favoriteGenres);
+    User newUser(trimmedUser, password, trimmedAns, favoriteGenres);
 
     if (!favoriteGenres.isEmpty() && (favoriteGenres.size() < 1 || favoriteGenres.size() > 3)) {
         return "INVALID_GENRE_COUNT";
@@ -184,54 +180,6 @@ bool UserService::deleteUser(int userId) {
 }
 
 
-//balance mng
-bool UserService::depositBalance(int userId, double amount) {
-    Q_ASSERT(userId > 0);
-    if (userId <= 0 || amount <= 0.0 || !userRepo) {
-        return false;
-    }
-    auto userOpt = userRepo->findById(userId);
-    if (!userOpt) {
-        return false;
-    }
-
-    if (userOpt->deposit(amount)) {
-        if (userRepo->save(*userOpt)) {
-            emit walletBalanceChanged(userId, userOpt->getWalletBalance());
-            return true;
-        }
-    }
-    return false;
-}
-
-bool UserService::withdrawBalance(int userId, double amount) {
-    Q_ASSERT(userId > 0);
-    if (userId <= 0 || amount <= 0.0 || !userRepo) {
-        return false;
-    }
-
-    auto userOpt = userRepo->findById(userId);
-    if (!userOpt) {
-        return false;
-    }
-
-    if (userOpt->withdraw(amount)) {
-        if (userRepo->save(*userOpt)) {
-            emit walletBalanceChanged(userId, userOpt->getWalletBalance());
-            return true;
-        }
-    }
-    return false;
-}
-
-double UserService::getWalletBalance(int userId) const {
-    Q_ASSERT(userId > 0);
-    if (userId <= 0 || !userRepo) {
-        return 0.0;
-    }
-    auto userOpt = userRepo->findById(userId);
-    return userOpt ? userOpt->getWalletBalance() : 0.0;
-}
 
 //genres
 bool UserService::updateUserFavoriteGenres(int userId, const QList<Genre>& genres) {

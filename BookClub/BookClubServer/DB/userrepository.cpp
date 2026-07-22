@@ -18,11 +18,10 @@ User UserRepository::fromQuery(QSqlQuery& q) const {
     QDateTime created = QDateTime::fromSecsSinceEpoch(q.value("created_at").toLongLong());
     bool active = q.value("is_active").toBool();
     QString secA = Person::decryptData(q.value("security_answer").toString());
-    double balance = q.value("wallet_balance").toDouble();
 
     QList<Genre> genres = loadUserGenres(id);
 
-    return User(id, username, password, created, active, secA, balance, genres);
+    return User(id, username, password, created, active, secA, genres);
 }
 
 QList<Genre> UserRepository::loadUserGenres(int userId) const {
@@ -65,9 +64,8 @@ bool UserRepository::save(User& u) {
         u.setId(q.lastInsertId().toInt());
 
         // Users
-        q.prepare("INSERT INTO Users (person_id, wallet_balance) VALUES (:pid, :wallet)");
+        q.prepare("INSERT INTO Users (person_id) VALUES (:pid)");
         q.bindValue(":pid", u.getId());
-        q.bindValue(":wallet", u.getWalletBalance());
         if (!q.exec()) {
             db.rollback();
             return false;
@@ -82,15 +80,6 @@ bool UserRepository::save(User& u) {
         q.bindValue(":active", u.getIsActive() ? 1 : 0);
         q.bindValue(":id", u.getId());
         q.bindValue(":role", ROLE_USER);
-        if (!q.exec()) {
-            db.rollback();
-            return false;
-        }
-
-        // Users
-        q.prepare("UPDATE Users SET wallet_balance=:wallet WHERE person_id=:pid");
-        q.bindValue(":wallet", u.getWalletBalance());
-        q.bindValue(":pid", u.getId());
         if (!q.exec()) {
             db.rollback();
             return false;
@@ -120,7 +109,7 @@ QList<User> UserRepository::findAll() const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
-    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+    q.prepare("SELECT p.* FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
               "WHERE p.role = :role");
 
@@ -139,7 +128,7 @@ QList<User> UserRepository::searchUsers(const QString& query) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
-    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+    q.prepare("SELECT p.* FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
               "WHERE p.username = :uname AND p.role = :role");
 
@@ -159,7 +148,7 @@ QList<User> UserRepository::searchUsers(const QString& query) {
 std::optional<User> UserRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+    q.prepare("SELECT p.* FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
               "WHERE p.id = :id AND p.role = :role");
     q.bindValue(":id", id);
@@ -174,7 +163,7 @@ std::optional<User> UserRepository::findById(int id) {
 std::optional<User> UserRepository::findByUsername(const QString& username) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT p.*, u.wallet_balance FROM Persons p "
+    q.prepare("SELECT p.* FROM Persons p "
               "JOIN Users u ON p.id = u.person_id "
               "WHERE p.username = :uname AND p.role = :role");
     q.bindValue(":uname", Person::encryptData(username));

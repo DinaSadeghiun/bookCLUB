@@ -21,7 +21,7 @@ public:
 
     // Authentication & Registration
     QString registerUser(const QString& username, const QString& password,
-                         const QString& securityAnswer, double initialBalance = 0.0,
+                         const QString& securityAnswer,
                          const QList<Genre>& favoriteGenres = {});
 
     std::optional<User> loginUser(const QString& username, const QString& password);
@@ -39,11 +39,6 @@ public:
     bool changeSecurityAnswer(int userId, const QString& newAnswer);
     bool deleteUser(int userId);
 
-    // Wallet Operations
-    bool depositBalance(int userId, double amount);
-    bool withdrawBalance(int userId, double amount);
-    double getWalletBalance(int userId) const;
-
     // Genres Preference Management
     bool updateUserFavoriteGenres(int userId, const QList<Genre>& genres);
     QList<Genre> getUserFavoriteGenres(int userId) const;
@@ -51,7 +46,6 @@ public:
 signals:
     void userRegistered(int userId);
     void userCredentialsChanged(int userId);
-    void walletBalanceChanged(int userId, double newBalance);
     void favoriteGenresChanged(int userId);
 
 };

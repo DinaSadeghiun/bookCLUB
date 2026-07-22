@@ -41,6 +41,11 @@ public:
     std::optional<Admin> loginAdmin(const QString& username, const QString& password);
     bool resetPasswordWithSecurityAnswer(const QString& username, const QString& answer, const QString& newPassword);
 
+    //Profile
+    bool changeAdminPassword(int adminId, const QString& oldPassword, const QString& newPassword);
+    bool changeAdminUsername(int adminId, const QString& newUsername, const QString& password);
+    bool changeSecurityAnswer(int adminId, const QString& newAnswer);
+
     //Users and Publisher
     QList<User> getAllUsers() const;
     QList<Publisher> getAllPublishers() const;
@@ -59,7 +64,7 @@ public:
     //Books
     QList<Book> getAllBooks() const;
     bool removeBookByAdmin(int bookId);
-    bool updateBookDetailsByAdmin(int bookId, const QString& title, double price);
+    bool updateBookDetailsByAdmin(const Book& book);
 
     //Comments
     QList<Comment> getAllComments() const;

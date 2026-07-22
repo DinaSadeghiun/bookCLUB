@@ -142,7 +142,8 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     // 2. Books
     else if (action == "getAllBooks" || action == "addBook" ||
              action == "updateBookPrice" || action == "removeBook" ||
-             action == "getBookDetails" || action == "searchBooks") {
+             action == "getBookDetails" || action == "searchBooks" ||
+             action == "applyDiscountToBook" || action == "removeDiscountFromBook") {
         handleBooks(handler, action, data);
     }
     // 3. Comments & Ratings
@@ -169,8 +170,9 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     // 6. Admin Actions
     else if (action == "getAllUsers" || action == "getAllPublishers" ||
              action == "searchUsers" || action == "searchPublishers" ||
-             action == "unblockUser" || action == "deleteUserByAdmin" ||
-             action == "adminRemoveComment" || action == "blockUser") {
+             action == "unblockUser" || action == "deleteUserByAdmin"||
+             action == "adminRemoveComment" || action == "blockUser" ||
+             action == "adminRemoveBook" || action == "adminUpdateBook") {
         handleAdminActions(handler, action, data);
     }
     // 7. Notifications
@@ -187,7 +189,6 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     }
 }
 
-
 void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
@@ -196,22 +197,16 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
         QString username = data["username"].toString().trimmed();
         QString password = data["password"].toString().trimmed();
 
-        // Admin
         auto optAdmin = adminService->loginAdmin(username, password);
         if (optAdmin.has_value()) {
             response["status"] = "success";
             response["role"] = "Admin";
-            QJsonObject adminData;
-            adminData["userId"] = optAdmin->getId();
-            adminData["username"] = optAdmin->getUsername();
-            adminData["role"] = "Admin";
-            response["data"] = adminData;
+            response["data"] = ModelSerializer::serializeAdmin(optAdmin.value());
             handler->setUserId(optAdmin->getId());
             handler->sendResponse(response);
             return;
         }
 
-        // Publisher
         auto optPub = publisherService->login(username, password);
         if (optPub.has_value()) {
             if (!optPub->getIsActive()) {
@@ -220,19 +215,13 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
             } else {
                 response["status"] = "success";
                 response["role"] = "Publisher";
-                QJsonObject pubData;
-                pubData["userId"] = optPub->getId();
-                pubData["username"] = optPub->getUsername();
-                pubData["companyName"] = optPub->getCompanyName();
-                pubData["role"] = "Publisher";
-                response["data"] = pubData;
+                response["data"] = ModelSerializer::serializePublisher(optPub.value());
                 handler->setUserId(optPub->getId());
             }
             handler->sendResponse(response);
             return;
         }
 
-        // User
         auto optUser = userService->loginUser(username, password);
         if (optUser.has_value()) {
             User user = optUser.value();
@@ -242,12 +231,7 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
             } else {
                 response["status"] = "success";
                 response["role"] = "User";
-                QJsonObject userData;
-                userData["userId"] = user.getId();
-                userData["username"] = user.getUsername();
-                userData["role"] = "User";
-                userData["balance"] = user.getWalletBalance();
-                response["data"] = userData;
+                response["data"] = ModelSerializer::serializeUser(user);
                 handler->setUserId(user.getId());
             }
             handler->sendResponse(response);
@@ -264,7 +248,6 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
         QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
         QString sa = data.value("securityAnswer").toString().trimmed();
-        double balance = data.value("initialBalance").toDouble(0.0);
 
         QList<Genre> favoriteGenres;
         QJsonArray genresArray = data.value("favoriteGenres").toArray();
@@ -272,7 +255,7 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
             favoriteGenres.append(static_cast<Genre>(val.toInt()));
         }
 
-        QString resMsg = userService->registerUser(u, p, sa, balance, favoriteGenres);
+        QString resMsg = userService->registerUser(u, p, sa, favoriteGenres);
 
         if (resMsg == "SUCCESS") {
             response["status"] = "success";
@@ -281,16 +264,222 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
             auto userOpt = userService->getUserByUsername(u);
             if (userOpt.has_value()) {
                 response["userId"] = userOpt->getId();
+                response["data"] = ModelSerializer::serializeUser(userOpt.value());
             }
-        }  else {
+        } else {
             response["status"] = "error";
             response["message"] = resMsg;
         }
         handler->sendResponse(response);
         return;
     }
-}
 
+    else if (action == "loginPublisher") {
+        QString u = data.value("username").toString().trimmed();
+        QString p = data.value("password").toString();
+        auto result = publisherService->login(u, p);
+        if (result.has_value()) {
+            if (!result->getIsActive()) {
+                response["status"] = "error";
+                response["message"] = "Your publisher account has been blocked by the admin";
+            } else {
+                response["status"] = "success";
+                response["role"] = "Publisher";
+                response["data"] = ModelSerializer::serializePublisher(result.value());
+                handler->setUserId(result->getId());
+            }
+        } else {
+            response["status"] = "error";
+            response["message"] = "Invalid credentials";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "registerPublisher") {
+        QString u = data.value("username").toString().trimmed();
+        QString p = data.value("password").toString();
+        QString comp = data.value("companyName").toString().trimmed();
+        QString sa = data.value("securityAnswer").toString().trimmed();
+
+        QString resMsg = publisherService->registerPublisher(u, p, comp, sa);
+        if (resMsg == "SUCCESS") {
+            response["status"] = "success";
+            response["message"] = "Publisher registration completed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = resMsg;
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "loginAdmin") {
+        QString u = data.value("username").toString().trimmed();
+        QString p = data.value("password").toString();
+        auto result = adminService->loginAdmin(u, p);
+        if (result.has_value()) {
+            response["status"] = "success";
+            response["role"] = "Admin";
+            response["data"] = ModelSerializer::serializeAdmin(result.value());
+            handler->setUserId(result->getId());
+        } else {
+            response["status"] = "error";
+            response["message"] = "Invalid admin credentials";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "registerAdmin") {
+        QString u = data.value("username").toString().trimmed();
+        QString p = data.value("password").toString();
+        QString sa = data.value("securityAnswer").toString().trimmed();
+
+        QString resMsg = adminService->registerAdmin(u, p, sa);
+        if (resMsg == "SUCCESS") {
+            response["status"] = "success";
+            response["message"] = "Admin registration completed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = resMsg;
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "resetPassword") {
+        QString u = data.value("username").toString().trimmed();
+        QString sa = data.value("securityAnswer").toString().trimmed();
+        QString newP = data.value("newPassword").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->resetPasswordWithSecurityAnswer(u, sa, newP);
+        } else if (role == "admin") {
+            success = adminService->resetPasswordWithSecurityAnswer(u, sa, newP);
+        } else {
+            success = userService->resetPasswordWithSecurityAnswer(u, sa, newP);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Password has been reset successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Security answer verification failed or account not found";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "changePassword") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString oldPassword = data.value("oldPassword").toString();
+        QString newPassword = data.value("newPassword").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changePublisherPassword(id, oldPassword, newPassword);
+        } else if (role == "admin") {
+            success = adminService->changeAdminPassword(id, oldPassword, newPassword);
+        } else {
+            success = userService->changeUserPassword(id, oldPassword, newPassword);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Password changed successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Incorrect current password";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "changeUsername") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString newUsername = data.value("username").toString().trimmed();
+        QString password = data.value("password").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changePublisherUsername(id, newUsername, password);
+        } else if (role == "admin") {
+            success = adminService->changeAdminUsername(id, newUsername, password);
+        } else {
+            success = userService->changeUserUsername(id, newUsername, password);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Username updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Invalid password or username already exists";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "updateProfile") {
+        int userId = data.value("userId").toInt();
+        QJsonArray genresArray = data.value("favoriteGenres").toArray();
+        QList<Genre> favoriteGenres;
+        for (const auto& val : std::as_const(genresArray)) {
+            favoriteGenres.append(static_cast<Genre>(val.toInt()));
+        }
+
+        bool success = userService->updateUserFavoriteGenres(userId, favoriteGenres);
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Profile favorite genres updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to update favorite genres";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "updateSecurityAnswer") {
+        int id = data.value("id").toInt();
+        if (id <= 0) id = data.value("userId").toInt();
+        if (id <= 0) id = data.value("publisherId").toInt();
+
+        QString newAnswer = data.value("securityAnswer").toString().trimmed();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->changeSecurityAnswer(id, newAnswer);
+        } else if (role == "admin") {
+            success = adminService->changeSecurityAnswer(id, newAnswer);
+        } else {
+            success = userService->changeSecurityAnswer(id, newAnswer);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Security answer updated successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Failed to update security answer";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+}
 void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
@@ -361,6 +550,60 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
 
         response["status"] = "success";
         response["data"] = ModelSerializer::serializeBookList(found);
+    }
+    else if (action == "applyDiscountToBook") {
+        int pubId = data.value("publisherId").toInt();
+        int bookId = data.value("bookId").toInt();
+        double value = data.value("value").toDouble();
+        int type = data.value("type").toInt();
+        qint64 startDate = data.value("startDate").toVariant().toLongLong();
+        qint64 endDate = data.value("endDate").toVariant().toLongLong();
+
+        if (pubId <= 0 || bookId <= 0 || value <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid parameters";
+        } else {
+            Discount discount(
+                value,
+                static_cast<Discount::DiscountType>(type),
+                QDateTime::fromSecsSinceEpoch(startDate),
+                QDateTime::fromSecsSinceEpoch(endDate)
+                );
+
+            DiscountRepository discountRepo(&DatabaseManager::instance());
+            if (discountRepo.save(discount)) {
+                bool success = publisherService->applyDiscountToBook(pubId, bookId, discount.getId());
+                if (success) {
+                    response["status"] = "success";
+                    response["message"] = "Discount applied successfully";
+                    response["discountId"] = discount.getId();
+                } else {
+                    response["status"] = "error";
+                    response["message"] = "Failed to apply discount to book";
+                }
+            } else {
+                response["status"] = "error";
+                response["message"] = "Failed to save discount";
+            }
+        }
+    }
+    else if (action == "removeDiscountFromBook") {
+        int pubId = data.value("publisherId").toInt();
+        int bookId = data.value("bookId").toInt();
+
+        if (pubId <= 0 || bookId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid parameters";
+        } else {
+            bool success = publisherService->removeDiscountFromBook(pubId, bookId);
+            if (success) {
+                response["status"] = "success";
+                response["message"] = "Discount removed successfully";
+            } else {
+                response["status"] = "error";
+                response["message"] = "Failed to remove discount";
+            }
+        }
     }
     else {
         response["status"] = "error";
@@ -488,21 +731,10 @@ void BookClubServer::handleCartAndOrder(ClientHandler* handler, const QString& a
     }
     else if (action == "getCart") {
         CartDetails details = shoppingCartService->getCartDetails(userId);
-
-        QJsonObject cartObj;
-        QJsonArray booksArr;
-        for (int id : std::as_const(details.bookIds)) {
-            booksArr.append(id);
-        }
-        cartObj["bookIds"] = booksArr;
-        cartObj["itemsCount"] = details.itemsCount;
-        cartObj["rawTotalPrice"] = details.rawTotalPrice;
-        cartObj["totalDiscountAmount"] = details.totalDiscountAmount;
-        cartObj["finalPriceToPay"] = details.finalPriceToPay;
-
         response["status"] = "success";
-        response["data"] = cartObj;
+        response["data"]   = ModelSerializer::serializeCartDetails(details);
     }
+
     else if (action == "checkout") {
         bool success = orderService->checkout(userId);
         if (success) {
@@ -510,34 +742,15 @@ void BookClubServer::handleCartAndOrder(ClientHandler* handler, const QString& a
             response["message"] = "Checkout completed successfully";
         } else {
             response["status"] = "error";
-            response["message"] = "Checkout failed (insufficient balance or empty cart)";
+            response["message"] = "Checkout failed (empty cart or invalid items)";
         }
     }
     else if (action == "getOrderHistory") {
         QList<Order> orders = orderService->getOrderHistory(userId);
-        QJsonArray ordersArr;
-
-        for (const auto& order : std::as_const(orders)) {
-            QJsonObject orderObj;
-            orderObj["orderId"] = order.getId();
-            orderObj["userId"] = order.getUserId();
-            orderObj["rawTotalPrice"] = order.getRawPrice();
-            orderObj["totalDiscountAmount"] = order.getDiscountAmount();
-            orderObj["finalPriceToPay"] = order.getFinalPrice();
-            orderObj["orderDate"] = order.getOrderDate().toString(Qt::ISODate);
-
-            QJsonArray bookIdsArr;
-            for (int bId : order.getBookIds()) {
-                bookIdsArr.append(bId);
-            }
-            orderObj["bookIds"] = bookIdsArr;
-
-            ordersArr.append(orderObj);
-        }
-
         response["status"] = "success";
-        response["data"] = ordersArr;
+        response["data"]   = ModelSerializer::serializeOrderList(orders);
     }
+
 
     handler->sendResponse(response);
 }
@@ -790,6 +1003,28 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
             bool success = adminService->removeCommentByAdmin(commentId);
             response["status"] = success ? "success" : "error";
             if (!success) response["message"] = "Comment not found or could not be deleted.";
+        }
+    }
+    else if (action == "adminRemoveBook") {
+        int bookId = data.value("bookId").toInt();
+        if (bookId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid book ID";
+        } else {
+            bool success = adminService->removeBookByAdmin(bookId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to remove book";
+        }
+    }
+    else if (action == "adminUpdateBook") {
+        Book book = ModelSerializer::deserializeBook(data);
+        if (book.getId() <= 0 || book.getTitle().isEmpty()) {
+            response["status"] = "error";
+            response["message"] = "Invalid book data";
+        } else {
+            bool success = adminService->updateBookDetailsByAdmin(book);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to update book";
         }
     }
 
