@@ -92,6 +92,19 @@ bool PublisherService::resetPasswordWithSecurityAnswer(const QString& username,
     return false;
 }
 
+std::optional<Publisher> PublisherService::getPublisherById(int publisherId) const {
+    if (publisherId <= 0 || !pubRepo) {
+        return std::nullopt;
+    }
+    return pubRepo->findById(publisherId);
+}
+
+std::optional<Publisher> PublisherService::getPublisherByPublishername(const QString& username) const {
+    if (username.trimmed().isEmpty() || !pubRepo) {
+        return std::nullopt;
+    }
+    return pubRepo->findByUsername(username.trimmed());
+}
 
 bool PublisherService::changePublisherPassword(int publisherId, const QString& oldPassword, const QString& newPassword) {
     Q_ASSERT(publisherId > 0);

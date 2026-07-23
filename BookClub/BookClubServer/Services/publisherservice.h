@@ -42,6 +42,8 @@ public:
                                          const QString& answer,
                                          const QString& newPassword);
 
+    std::optional<Publisher> getPublisherById(int publisherId) const;
+    std::optional<Publisher> getPublisherByPublishername(const QString& publisherUsername) const;
 
     // Profile Settings
     bool changePublisherPassword(int publisherId, const QString& oldPassword, const QString& newPassword);
