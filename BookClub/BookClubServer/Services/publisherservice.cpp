@@ -209,25 +209,6 @@ bool PublisherService::removeBook(int publisherId, int bookId) {
     return false;
 }
 
-//add revenue
-bool PublisherService::addRevenue(int publisherId, double amount) {
-    Q_ASSERT(publisherId > 0);
-    Q_ASSERT(amount > 0);
-        if (publisherId <= 0 || amount <= 0 || !pubRepo) {
-        return false;
-    }
-    auto optPub = pubRepo->findById(publisherId);
-    if (!optPub.has_value()) {
-        qDebug() << "Publisher not found for ID:" << publisherId;
-        return false;
-    }
-
-    Publisher pub = optPub.value();
-
-    pub.addRevenue(amount);
-
-    return pubRepo->save(pub);
-}
 
 bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPrice) {
     Q_ASSERT(publisherId > 0);
@@ -252,6 +233,45 @@ bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPr
     }
     return false;
 }
+
+//Update book
+bool PublisherService::updateBookDetailsByPublisher(const Book& book) {
+    if (book.getId() <= 0 || !bookRepo) return false;
+
+    auto bookOpt = bookRepo->findById(book.getId());
+    if (!bookOpt) return false;
+
+    bookOpt->setTitle(book.getTitle());
+    bookOpt->setAuthor(book.getAuthor());
+    bookOpt->setPrice(book.getPrice());
+    bookOpt->setGenre(book.getGenre());
+    bookOpt->setDescription(book.getDescription());
+    bookOpt->setCoverImagePath(book.getCoverImagePath());
+    bookOpt->setPdfFilePath(book.getPdfFilePath());
+
+    return bookRepo->save(*bookOpt);
+}
+
+//add revenue
+bool PublisherService::addRevenue(int publisherId, double amount) {
+    Q_ASSERT(publisherId > 0);
+    Q_ASSERT(amount > 0);
+        if (publisherId <= 0 || amount <= 0 || !pubRepo) {
+        return false;
+    }
+    auto optPub = pubRepo->findById(publisherId);
+    if (!optPub.has_value()) {
+        qDebug() << "Publisher not found for ID:" << publisherId;
+        return false;
+    }
+
+    Publisher pub = optPub.value();
+
+    pub.addRevenue(amount);
+
+    return pubRepo->save(pub);
+}
+
 
 QList<Book> PublisherService::getPublisherBooks(int publisherId) {
     Q_ASSERT(publisherId > 0);

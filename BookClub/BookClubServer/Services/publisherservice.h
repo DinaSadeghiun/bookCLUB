@@ -53,6 +53,7 @@ public:
     // Book Management
     bool addNewBook(int publisherId, Book& book);
     bool updateBookPrice(int publisherId, int bookId, double newPrice);
+    bool updateBookDetailsByPublisher(const Book& book);
     bool removeBook(int publisherId, int bookId);
     bool addRevenue(int publisherId, double amount);
     QList<Book> getPublisherBooks(int publisherId);
