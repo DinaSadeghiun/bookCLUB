@@ -170,17 +170,6 @@ bool UserService::changeSecurityAnswer(int userId, const QString& newAnswer) {
     return false;
 }
 
-
-bool UserService::deleteUser(int userId) {
-    Q_ASSERT(userId > 0);
-    if (userId <= 0 || !userRepo) {
-        return false;
-    }
-    return userRepo->remove(userId);
-}
-
-
-
 //genres
 bool UserService::updateUserFavoriteGenres(int userId, const QList<Genre>& genres) {
     Q_ASSERT(userId > 0);

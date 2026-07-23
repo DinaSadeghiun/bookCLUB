@@ -37,7 +37,6 @@ public:
     bool changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword);
     bool changeUserUsername(int userId, const QString& newUsername, const QString& password);
     bool changeSecurityAnswer(int userId, const QString& newAnswer);
-    bool deleteUser(int userId);
 
     // Genres Preference Management
     bool updateUserFavoriteGenres(int userId, const QList<Genre>& genres);
