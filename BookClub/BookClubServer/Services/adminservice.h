@@ -57,6 +57,8 @@ public:
 
     bool blockUser(int userId);
     bool unblockUser(int userId);
+    bool blockPublisher(int publisherId);
+    bool unblockPublisher(int publisherId);
     bool deleteUserAccount(int userId);
     bool deletePublisherAccount(int publisherId);
     bool setAccountStatus(int personId, bool active);

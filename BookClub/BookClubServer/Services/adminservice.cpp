@@ -176,6 +176,36 @@ bool AdminService::unblockUser(int userId) {
     return false;
 }
 
+bool AdminService::blockPublisher(int publisherId) {
+    Q_ASSERT(publisherId > 0);
+    if (publisherId <= 0 || !pubRepo) return false;
+
+    auto pubOpt = pubRepo->findById(publisherId);
+    if (!pubOpt) return false;
+
+    pubOpt->setIsActive(false);
+    if (pubRepo->save(*pubOpt)) {
+        emit publisherStatusChanged(publisherId, false);
+        return true;
+    }
+    return false;
+}
+
+bool AdminService::unblockPublisher(int publisherId) {
+    Q_ASSERT(publisherId > 0);
+    if (publisherId <= 0 || !pubRepo) return false;
+
+    auto pubOpt = pubRepo->findById(publisherId);
+    if (!pubOpt) return false;
+
+    pubOpt->setIsActive(true);
+    if (pubRepo->save(*pubOpt)) {
+        emit publisherStatusChanged(publisherId, true);
+        return true;
+    }
+    return false;
+}
+
 bool AdminService::deleteUserAccount(int userId) {
     Q_ASSERT(userId > 0);
     if (userId <= 0 || !userRepo) return false;
