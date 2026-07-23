@@ -1,6 +1,9 @@
 #include "bookclubserver.h"
 #include <QJsonArray>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QUuid>
 #include "modelserializer.h"
 // Services
 #include "Services/userservice.h"
@@ -143,7 +146,8 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     else if (action == "getAllBooks" || action == "addBook" ||
              action == "updateBookPrice" || action == "removeBook" ||
              action == "getBookDetails" || action == "searchBooks" ||
-             action == "applyDiscountToBook" || action == "removeDiscountFromBook") {
+             action == "applyDiscountToBook" || action == "removeDiscountFromBook" ||
+             action == "updateBookDetails") {
         handleBooks(handler, action, data);
     }
     // 3. Comments & Ratings
@@ -172,6 +176,7 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
              action == "searchUsers" || action == "searchPublishers" ||
              action == "unblockUser" || action == "deleteUserByAdmin"||
              action == "adminRemoveComment" || action == "blockUser" ||
+             action == "blockPublisher" || action == "unblockPublisher" ||
              action == "adminRemoveBook" || action == "adminUpdateBook") {
         handleAdminActions(handler, action, data);
     }
@@ -496,16 +501,43 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
         Book book = ModelSerializer::deserializeBook(data);
         book.setPublisherId(pubId);
 
+        QString coverB64 = data["coverImage"].toString();
+        QString pdfB64 = data["pdfFile"].toString();
+
+        if (!coverB64.isEmpty()) {
+            QDir().mkpath("uploads/covers");
+            QString coverFileName = QUuid::createUuid().toString(QUuid::WithoutBraces) + ".jpg";
+            QFile coverFile("uploads/covers/" + coverFileName);
+            if (coverFile.open(QIODevice::WriteOnly)) {
+                coverFile.write(QByteArray::fromBase64(coverB64.toUtf8()));
+                coverFile.close();
+                book.setCoverImagePath("uploads/covers/" + coverFileName);
+            }
+        }
+
+        if (!pdfB64.isEmpty()) {
+            QDir().mkpath("uploads/pdfs");
+            QString pdfFileName = QUuid::createUuid().toString(QUuid::WithoutBraces) + ".pdf";
+            QFile pdfFile("uploads/pdfs/" + pdfFileName);
+            if (pdfFile.open(QIODevice::WriteOnly)) {
+                pdfFile.write(QByteArray::fromBase64(pdfB64.toUtf8()));
+                pdfFile.close();
+                book.setPdfFilePath("uploads/pdfs/" + pdfFileName);
+            }
+        }
+
         bool success = publisherService->addNewBook(pubId, book);
         if (success) {
             response["status"] = "success";
             response["bookId"] = book.getId();
             response["message"] = "Book added successfully";
+            response["data"] = ModelSerializer::serializeBook(book);
         } else {
             response["status"] = "error";
             response["message"] = "Failed to add book. Ensure all fields are valid.";
         }
     }
+
     else if (action == "updateBookPrice") {
         int pubId = data.value("publisherId").toInt();
         int bookId = data.value("bookId").toInt();
@@ -602,6 +634,40 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
             } else {
                 response["status"] = "error";
                 response["message"] = "Failed to remove discount";
+            }
+        }
+    }
+    else if (action == "updateBookDetails") {
+        Book book = ModelSerializer::deserializeBook(data);
+        QString role = data.value("role").toString().toLower();
+        int publisherId = data.value("publisherId").toInt();
+
+        if (book.getId() <= 0 || book.getTitle().isEmpty()) {
+            response["status"] = "error";
+            response["message"] = "Invalid book data";
+        } else {
+            bool success = false;
+            if (role == "admin") {
+                success = adminService->updateBookDetailsByAdmin(book);
+            } else if (role == "publisher") {
+                if (publisherId <= 0) {
+                    response["status"] = "error";
+                    response["message"] = "Invalid publisher ID";
+                    handler->sendResponse(response);
+                    return;
+                }
+                success = publisherService->updateBookDetailsByPublisher(publisherId, book.getId(), book);
+            } else {
+                response["status"] = "error";
+                response["message"] = "Invalid role for book update";
+                handler->sendResponse(response);
+                return;
+            }
+
+            response["status"] = success ? "success" : "error";
+            response["message"] = success ? "Book updated successfully" : "Failed to update book";
+            if (success) {
+                response["data"] = ModelSerializer::serializeBook(book);
             }
         }
     }
@@ -981,6 +1047,28 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
             bool success = adminService->unblockUser(targetId);
             response["status"] = success ? "success" : "error";
             if (!success) response["message"] = "Failed to unblock user.";
+        }
+    }
+    else if (action == "blockPublisher") {
+        int targetId = data.value("targetId").toInt();
+        if (targetId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid target ID";
+        } else {
+            bool success = adminService->blockPublisher(targetId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to block publisher or user not found.";
+        }
+    }
+    else if (action == "unblockPublisher") {
+        int targetId = data.value("targetId").toInt();
+        if (targetId <= 0) {
+            response["status"] = "error";
+            response["message"] = "Invalid target ID";
+        } else {
+            bool success = adminService->unblockPublisher(targetId);
+            response["status"] = success ? "success" : "error";
+            if (!success) response["message"] = "Failed to unblock publisher.";
         }
     }
     else if (action == "deleteUserByAdmin") {
