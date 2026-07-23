@@ -7,6 +7,7 @@ Item {
 
     required property string username
     required property string userRole
+    property int userId: 0 // شناسه کاربر برای درخواست‌های شبکه
     property var userGenres: []
     property int cartItemCount: 0
     property int currentTab: 0
@@ -24,8 +25,10 @@ Item {
         var props = {
             "username": username,
             "userRole": userRole,
+            "userId": userId,
             "userGenres": userGenres,
-            "cartItemCount": cartItemCount
+            "cartItemCount": cartItemCount,
+            "networkManager": networkManager // ارسال مستقیم NetworkManager به تب‌ها
         }
         switch (currentTab) {
         case 0: contentLoader.setSource("HomeView.qml", props); break
@@ -145,7 +148,7 @@ Item {
 
                 Item { Layout.fillHeight: true } // spacer
 
-                // Logout Button (Optional but fits the theme)
+                // Logout Button
                 Button {
                     Layout.fillWidth: true
                     text: "Logout"
@@ -207,7 +210,6 @@ Item {
                     }
                 }
             }
-
         }
     }
 }

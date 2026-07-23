@@ -1,5 +1,5 @@
 # Include necessary Qt modules (including widgets and QML/Quick)
-QT += core gui quick qml widgets
+QT += core gui quick qml widgets network pdf pdfwidgets quickcontrols2
 #QT += pdf pdfwidgets
 
 CONFIG += c++17
@@ -9,9 +9,11 @@ TEMPLATE = app
 
 SOURCES += \
     main.cpp \
+    networkmanager.cpp \
     usermanager.cpp
 
 HEADERS += \
+    networkmanager.h \
     usermanager.h
 
 RESOURCES += \
@@ -26,6 +28,7 @@ DISTFILES += \
     GenreSelection.qml \
     HomeView.qml \
     LibraryView.qml \
+    PdfReader.qml \
     PublisherDashboard.qml \
     SearchView.qml \
     SettingsView.qml \

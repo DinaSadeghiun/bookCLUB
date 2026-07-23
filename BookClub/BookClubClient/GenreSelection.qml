@@ -8,6 +8,7 @@ Rectangle {
     color: "#1A0F1F"
     required property string username
     required property string userRole
+    property int userId: 0 // اضافه شده برای ارسال شناسه کاربر به سرور در صورت نیاز
     property var selectedGenres: []
     property bool isEditMode: false
     property var initialGenres: []
@@ -156,6 +157,29 @@ Rectangle {
             }
 
             onClicked: {
+                if (selectedGenres.length === 0) return;
+
+                // 1. Convert genre names to indices matching the ListModel order
+                var genreIndices = [];
+                var modelElements = [
+                    "Fiction", "NonFiction", "Mystery", "Romance",
+                    "SciFi", "Fantasy", "Biography", "History",
+                    "SelfHelp", "Poetry", "Children", "Other"
+                ];
+
+                for (var i = 0; i < selectedGenres.length; i++) {
+                    var idx = modelElements.indexOf(selectedGenres[i]);
+                    if (idx !== -1) {
+                        genreIndices.push(idx);
+                    }
+                }
+
+                // 2. Send data to server via NetworkManager
+                // If updating profile or sending initial favorites:
+                networkManager.updateProfile(userId, genreIndices);
+                console.log("Sent favorite genres to server for user ID:", userId, "Indices:", genreIndices);
+
+                // 3. Navigation
                 if (isEditMode) {
                     genresSaved(selectedGenres)
                     rootStackView.pop()
@@ -168,10 +192,5 @@ Rectangle {
                 }
             }
         }
-
-
-
-
-
     }
 }

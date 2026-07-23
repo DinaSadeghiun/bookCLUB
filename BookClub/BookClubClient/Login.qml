@@ -9,6 +9,56 @@ Item {
     property string username: ""
     property string userRole: ""
 
+    Connections {
+        target: networkManager
+
+        function onResponseReceived(action, status, data) {
+            if (action === "login" || action === "loginPublisher" || action === "loginAdmin" || action === "signin") {
+                loginButton.enabled = true
+                loginButton.text = "LOGIN"
+
+                var statusUpper = status ? status.toUpperCase() : ""
+
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    loginPage.username = usernameInput.text
+
+                    var role = data.role ? data.role.toLowerCase() : "user"
+                    loginPage.userRole = role
+
+                    var userId = data.userId || data.id || 0
+                    var targetDashboard = "qrc:/Dashboard.qml"
+
+                    if (role === "admin") {
+                        targetDashboard = "qrc:/AdminDashboard.qml"
+                    } else if (role === "publisher") {
+                        targetDashboard = "qrc:/PublisherDashboard.qml"
+                    } else {
+                        targetDashboard = "qrc:/Dashboard.qml"
+                    }
+
+                    if (typeof rootStackView !== "undefined" && rootStackView !== null) {
+                        rootStackView.replace(targetDashboard, {
+                            "username": usernameInput.text,
+                            "userRole": role,
+                            "userId": userId,
+                            "networkManager": networkManager
+                        })
+                    }
+                } else {
+                    errorMessageText.text = data.message || "Invalid credentials or account does not exist."
+                    errorMessageText.visible = true
+                }
+            }
+        }
+
+        function onErrorOccurred(message) {
+            loginButton.enabled = true
+            loginButton.text = "LOGIN"
+            errorMessageText.text = "Network Error: " + message
+            errorMessageText.visible = true
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
@@ -19,12 +69,12 @@ Item {
 
     ColumnLayout {
         anchors.centerIn: parent
-        spacing: 20
+        spacing: 15
         width: parent.width * 0.8
 
         Image {
             id: mascotIcon
-            source: "qrc:/assets/images/giraffe.png"
+            source: "qrc:/images/giraffe.png"
             Layout.preferredWidth: 100
             Layout.preferredHeight: 100
             Layout.alignment: Qt.AlignHCenter
@@ -52,7 +102,18 @@ Item {
             }
         }
 
-        Item { Layout.preferredHeight: 10 }
+        Item { Layout.preferredHeight: 5 }
+
+        Text {
+            id: errorMessageText
+            visible: false
+            color: "#FF5252"
+            font.pixelSize: 13
+            font.bold: true
+            Layout.alignment: Qt.AlignHCenter
+            wrapMode: Text.WordWrap
+            Layout.maximumWidth: parent.width
+        }
 
         TextField {
             id: usernameInput
@@ -112,7 +173,18 @@ Item {
             }
 
             onClicked: {
-                console.log("Login clicked. Username:", usernameInput.text)
+                errorMessageText.visible = false
+
+                if (usernameInput.text.trim() === "" || passwordInput.text.trim() === "") {
+                    errorMessageText.text = "Please fill in all fields."
+                    errorMessageText.visible = true
+                    return
+                }
+
+                loginButton.enabled = false
+                loginButton.text = "CONNECTING..."
+
+                networkManager.login(usernameInput.text.trim(), passwordInput.text.trim())
             }
         }
 
@@ -126,18 +198,14 @@ Item {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    stackView.push("ForgotPassword.qml")
+                    if (typeof rootStackView !== "undefined" && rootStackView !== null) {
+                        rootStackView.push("qrc:/ForgotPassword.qml")
+                    }
                 }
             }
         }
 
-        Item { Layout.preferredHeight: 10 }
-        // Place this inside the root element of Login.qml
-
-
-
-
-
+        Item { Layout.preferredHeight: 5 }
 
         Row {
             spacing: 5

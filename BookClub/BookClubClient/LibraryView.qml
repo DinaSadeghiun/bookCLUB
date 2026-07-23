@@ -7,15 +7,70 @@ ScrollView {
     contentWidth: availableWidth
     clip: true
 
+    // Required properties received from Dashboard
+    required property string username
+    required property string userRole
+    required property var networkManager
+    property int userId: 0
+
     // Internal state properties to handle Add/Edit action and the target index
     property string activeAction: "Add"
     property int selectedShelfIndex: -1
 
-    // Dynamic model for shelves
-    ListModel {
-        id: shelvesModel
-        ListElement { name: "Science" }
-        ListElement { name: "History" }
+    // Dynamic models for real data from server (No Mock Data)
+    ListModel { id: allBooksModel }
+    ListModel { id: favoritesModel }
+    ListModel { id: wishlistModel }
+    ListModel { id: shelvesModel }
+
+    Component.onCompleted: {
+        // Request user library data from server upon loading
+        if (networkManager && userId > 0) {
+            networkManager.requestUserLibrary(userId);
+            networkManager.requestUserShelves(userId);
+        }
+    }
+
+    // Connections to handle server responses
+    Connections {
+        target: networkManager
+        ignoreUnknownSignals: true
+
+        function onUserLibraryReceived(libraryData) {
+            allBooksModel.clear();
+            favoritesModel.clear();
+            wishlistModel.clear();
+
+            for (var i = 0; i < libraryData.length; i++) {
+                var book = libraryData[i];
+                var bookData = {
+                    "bookId": book.id,
+                    "title": book.title,
+                    "author": book.author,
+                    "year": book.year || "N/A",
+                    "image": book.image || "qrc:/assets/books/default_cover.png"
+                };
+
+                allBooksModel.append(bookData);
+
+                if (book.isFavorite) {
+                    favoritesModel.append(bookData);
+                }
+                if (book.isWishlist) {
+                    wishlistModel.append(bookData);
+                }
+            }
+        }
+
+        function onUserShelvesReceived(shelvesData) {
+            shelvesModel.clear();
+            for (var i = 0; i < shelvesData.length; i++) {
+                shelvesModel.append({
+                    "shelfId": shelvesData[i].id,
+                    "name": shelvesData[i].name
+                });
+            }
+        }
     }
 
     Rectangle {
@@ -67,7 +122,7 @@ ScrollView {
 
             // 1. All Books List
             ListView {
-                model: 5
+                model: allBooksModel
                 spacing: 10
                 delegate: Rectangle {
                     width: parent.width
@@ -89,13 +144,19 @@ ScrollView {
                             radius: 4
                             border.color: "#A08EAD"
                             border.width: 1
+
+                            Image {
+                                anchors.fill: parent
+                                source: model.image
+                                fillMode: Image.PreserveAspectFit
+                            }
                         }
 
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 5
-                            Text { text: "Book Title"; color: "white"; font.bold: true; font.pixelSize: 16 }
-                            Text { text: "Author: John Doe | Year: 2024"; color: "#A08EAD"; font.pixelSize: 12 }
+                            Text { text: model.title; color: "white"; font.bold: true; font.pixelSize: 16 }
+                            Text { text: "Author: " + model.author + " | Year: " + model.year; color: "#A08EAD"; font.pixelSize: 12 }
                         }
 
                         Button {
@@ -103,6 +164,9 @@ ScrollView {
                             font.pixelSize: 12
                             contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
                             background: Rectangle { color: "#D4AF37"; radius: 5 }
+                            onClicked: {
+                                console.log("View details for book:", model.bookId)
+                            }
                         }
                     }
                 }
@@ -112,7 +176,7 @@ ScrollView {
             GridView {
                 cellWidth: 160
                 cellHeight: 230
-                model: 4
+                model: favoritesModel
                 clip: true
                 delegate: Item {
                     width: 150
@@ -127,13 +191,21 @@ ScrollView {
                             border.color: "#FF5555"
                             border.width: 2
                             radius: 8
+                            clip: true
+
+                            Image {
+                                anchors.fill: parent
+                                source: model.image
+                                fillMode: Image.PreserveAspectFit
+                            }
                         }
                         Text {
-                            text: "Favorite Title"
+                            text: model.title
                             color: "white"
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
                             font.pixelSize: 14
+                            elide: Text.ElideRight
                         }
                     }
                 }
@@ -141,7 +213,7 @@ ScrollView {
 
             // 3. Wishlist List
             ListView {
-                model: 3
+                model: wishlistModel
                 spacing: 10
                 delegate: Rectangle {
                     width: parent.width
@@ -156,10 +228,17 @@ ScrollView {
                         anchors.margins: 10
                         spacing: 15
 
-                        Rectangle { width: 40; height: 60; color: "#1A0F1F"; radius: 4 }
+                        Rectangle {
+                            width: 40; height: 60; color: "#1A0F1F"; radius: 4
+                            Image {
+                                anchors.fill: parent
+                                source: model.image
+                                fillMode: Image.PreserveAspectFit
+                            }
+                        }
 
                         Text {
-                            text: "Future Read Title"
+                            text: model.title
                             color: "white"
                             Layout.fillWidth: true
                             font.bold: true
@@ -169,7 +248,12 @@ ScrollView {
                             text: "Remove"
                             contentItem: Text { text: parent.text; color: "white" }
                             background: Rectangle { color: "#FF5555"; radius: 5 }
-                            onClicked: console.log("Removed from wishlist")
+                            onClicked: {
+                                if (networkManager) {
+                                    networkManager.removeFromWishlist(userId, model.bookId);
+                                    wishlistModel.remove(index);
+                                }
+                            }
                         }
                     }
                 }
@@ -235,7 +319,10 @@ ScrollView {
                                 contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
                                 background: Rectangle { color: "#FF5555"; radius: 4 }
                                 onClicked: {
-                                    shelvesModel.remove(index)
+                                    if (networkManager) {
+                                        networkManager.deleteShelf(userId, model.shelfId);
+                                        shelvesModel.remove(index);
+                                    }
                                 }
                             }
                         }
@@ -261,7 +348,6 @@ ScrollView {
             radius: 8
         }
 
-        // Custom styled headers for matching UI colors
         header: Rectangle {
             color: "#1A0F1F"
             implicitHeight: 40
@@ -303,8 +389,14 @@ ScrollView {
             var trimmedText = shelfInputField.text.trim()
             if (trimmedText !== "") {
                 if (libraryView.activeAction === "Add") {
-                    shelvesModel.append({ "name": trimmedText })
+                    if (networkManager) {
+                        networkManager.createShelf(userId, trimmedText);
+                    }
                 } else if (libraryView.activeAction === "Edit" && libraryView.selectedShelfIndex !== -1) {
+                    var shelfId = shelvesModel.get(libraryView.selectedShelfIndex).shelfId;
+                    if (networkManager) {
+                        networkManager.updateShelf(userId, shelfId, trimmedText);
+                    }
                     shelvesModel.setProperty(libraryView.selectedShelfIndex, "name", trimmedText)
                 }
             }

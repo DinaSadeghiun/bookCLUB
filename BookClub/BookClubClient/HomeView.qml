@@ -8,18 +8,65 @@ Item {
     // Properties received from Dashboard
     required property string username
     required property string userRole
+    required property var networkManager
+    property int userId: 0
     property var userGenres: []
     property int cartItemCount: 0
 
-    // Sample book model for populating sections dynamically
-    ListModel {
-        id: booksModel
-        ListElement { title: "1984"; author: "George Orwell"; genre: "Fiction"; price: "Free"; rating: "4.8"; image: "qrc:/assets/books/1984.png" }
-        ListElement { title: "Animal Farm"; author: "George Orwell"; genre: "Fiction"; price: "$8.99"; rating: "4.7"; image: "qrc:/assets/books/animal_farm.png" }
-        ListElement { title: "The Hobbit"; author: "J.R.R. Tolkien"; genre: "Fantasy"; price: "$12.50"; rating: "4.9"; image: "qrc:/assets/books/hobbit.png" }
-        ListElement { title: "Dune"; author: "Frank Herbert"; genre: "Sci-Fi"; price: "Free"; rating: "4.6"; image: "qrc:/assets/books/dune.png" }
-        ListElement { title: "Sherlock Holmes"; author: "Arthur Conan Doyle"; genre: "Mystery"; price: "$5.99"; rating: "4.8"; image: "qrc:/assets/books/sherlock.png" }
-        ListElement { title: "The Great Gatsby"; author: "F. Scott Fitzgerald"; rating: "4.4"; genre: "Classic"; price: "$9.99"; image: "qrc:/assets/books/gatsby.png" }
+    // Dynamic models for real data from server (No Mock Data)
+    ListModel { id: recommendedModel }
+    ListModel { id: trendingModel }
+    ListModel { id: popularModel }
+    ListModel { id: freeBooksModel }
+
+    Component.onCompleted: {
+        // Request books data from server upon loading
+        if (networkManager) {
+            networkManager.requestAllBooks();
+        }
+    }
+
+    // Connections to handle server responses
+    Connections {
+        target: networkManager
+        ignoreUnknownSignals: true
+
+        function onBooksReceived(booksList) {
+            // Clear previous models
+            recommendedModel.clear();
+            trendingModel.clear();
+            popularModel.clear();
+            freeBooksModel.clear();
+
+            // Populate models with real data received from server
+            for (var i = 0; i < booksList.length; i++) {
+                var book = booksList[i];
+                var bookData = {
+                    "title": book.title,
+                    "author": book.author,
+                    "genre": book.genre,
+                    "price": book.price === 0 ? "Free" : ("$" + book.price),
+                    "rating": book.rating ? book.rating.toString() : "4.0",
+                    "image": book.image || "qrc:/assets/books/default_cover.png"
+                };
+
+                // Append to general sections
+                trendingModel.append(bookData);
+                popularModel.append(bookData);
+
+                if (book.price === 0) {
+                    freeBooksModel.append(bookData);
+                }
+
+                // Match with user favorite genres for Recommended section
+                for (var j = 0; j < userGenres.length; j++) {
+                    if (book.genre === userGenres[j]) {
+                        recommendedModel.append(bookData);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     // Main background styling with dark purple theme
@@ -34,14 +81,13 @@ Item {
         clip: true
         ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-        // Pane is used here because it correctly supports individual padding properties
         Pane {
             width: homeScroll.availableWidth
             topPadding: 15
             bottomPadding: 30
             leftPadding: 20
             rightPadding: 20
-            background: null // Make the background transparent
+            background: null
 
             contentItem: ColumnLayout {
                 spacing: 25
@@ -70,7 +116,6 @@ Item {
 
                     Item { Layout.fillWidth: true }
 
-                    // User Role Badge
                     Rectangle {
                         color: "#2D1B33"
                         border.color: "#D4AF37"
@@ -89,11 +134,11 @@ Item {
                     }
                 }
 
-                // 2. Recommended Books Section (based on user genres)
+                // 2. Recommended Books Section
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
-                    visible: homeRoot.userGenres.length > 0
+                    visible: recommendedModel.count > 0
 
                     Text {
                         text: "Recommended For You"
@@ -103,12 +148,11 @@ Item {
                     }
 
                     ListView {
-                        id: recommendedList
                         Layout.fillWidth: true
                         implicitHeight: 240
                         orientation: ListView.Horizontal
                         spacing: 15
-                        model: booksModel
+                        model: recommendedModel
                         clip: true
                         delegate: bookDelegate
                     }
@@ -166,39 +210,17 @@ Item {
                         implicitHeight: 240
                         orientation: ListView.Horizontal
                         spacing: 15
-                        model: booksModel
+                        model: trendingModel
                         clip: true
                         delegate: bookDelegate
                     }
                 }
 
-                // 5. Popular & New Releases Section
+                // 5. Free Books Section
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
-
-                    Text {
-                        text: "Popular & New Releases"
-                        color: "#D4AF37"
-                        font.pixelSize: 18
-                        font.bold: true
-                    }
-
-                    ListView {
-                        Layout.fillWidth: true
-                        implicitHeight: 240
-                        orientation: ListView.Horizontal
-                        spacing: 15
-                        model: booksModel
-                        clip: true
-                        delegate: bookDelegate
-                    }
-                }
-
-                // 6. Free Books Section
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
+                    visible: freeBooksModel.count > 0
 
                     Text {
                         text: "Free Books"
@@ -212,7 +234,7 @@ Item {
                         implicitHeight: 240
                         orientation: ListView.Horizontal
                         spacing: 15
-                        model: booksModel
+                        model: freeBooksModel
                         clip: true
                         delegate: bookDelegate
                     }
@@ -237,7 +259,6 @@ Item {
                 anchors.margins: 10
                 spacing: 6
 
-                // Book Cover Container
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -257,7 +278,6 @@ Item {
                     }
                 }
 
-                // Title
                 Text {
                     text: model.title
                     color: "#D4AF37"
@@ -267,7 +287,6 @@ Item {
                     Layout.fillWidth: true
                 }
 
-                // Author
                 Text {
                     text: model.author
                     color: "#D4AF37"
@@ -277,7 +296,6 @@ Item {
                     Layout.fillWidth: true
                 }
 
-                // Footer layout for price and rating
                 RowLayout {
                     Layout.fillWidth: true
 
@@ -305,7 +323,6 @@ Item {
                 }
             }
 
-            // Hover and interaction effects
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true

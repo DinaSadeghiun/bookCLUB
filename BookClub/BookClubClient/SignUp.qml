@@ -11,23 +11,44 @@ Rectangle {
         GradientStop { position: 1.0; color: "#2C003E" }
     }
 
+    // Listen to network responses to catch the assigned userId upon successful registration
+    Connections {
+        target: networkManager
+        function onResponseReceived(action, status, data) {
+            if (action === "register" && status === "success") {
+                var newUserId = data.userId || data.id || 0;
+
+                // Navigate to GenreSelection with the valid userId received from server
+                signUpPage.StackView.view.push("GenreSelection.qml", {
+                    "username": usernameField.text,
+                    "userRole": "User",
+                    "userId": newUserId,
+                    "networkManager": networkManager
+                });
+            } else if (action === "register" && status === "error") {
+                errorText.text = data.message || "Registration failed!";
+                errorText.visible = true;
+            }
+        }
+    }
+
     ColumnLayout {
         anchors.centerIn: parent
-        spacing: 15
+        spacing: 12
         width: parent.width * 0.85
 
         Image {
             id: mascotIcon
             source: "qrc:/images/giraffe.png"
-            Layout.preferredWidth: 80
-            Layout.preferredHeight: 80
+            Layout.preferredWidth: 70
+            Layout.preferredHeight: 70
             Layout.alignment: Qt.AlignHCenter
             fillMode: Image.PreserveAspectFit
         }
 
         Text {
             text: "Create Account"
-            font.pixelSize: 28
+            font.pixelSize: 26
             font.bold: true
             color: "#FFD700"
             Layout.alignment: Qt.AlignHCenter
@@ -37,18 +58,17 @@ Rectangle {
             id: usernameField
             placeholderText: "Username"
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
+            Layout.preferredHeight: 40
             color: "#2C003E"
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
-
 
         TextField {
             id: passwordField
             placeholderText: "Password"
             echoMode: TextInput.Password
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
+            Layout.preferredHeight: 40
             color: "#2C003E"
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
@@ -58,7 +78,17 @@ Rectangle {
             placeholderText: "Confirm Password"
             echoMode: TextInput.Password
             Layout.fillWidth: true
-            Layout.preferredHeight: 45
+            Layout.preferredHeight: 40
+            color: "#2C003E"
+            background: Rectangle { radius: 10; color: "#F5F5F5" }
+        }
+
+        // --- Security Answer / Favorite Author Field ---
+        TextField {
+            id: favoriteAuthorField
+            placeholderText: "Favorite Author (Security Answer)"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
             color: "#2C003E"
             background: Rectangle { radius: 10; color: "#F5F5F5" }
         }
@@ -96,27 +126,23 @@ Rectangle {
                     verticalAlignment: Text.AlignVCenter
                 }
             }
+        }
 
-            RadioButton {
-                id: radioAdmin
-                text: "Admin"
-                ButtonGroup.group: roleGroup
-                contentItem: Text {
-                    text: radioAdmin.text
-                    font.pixelSize: 14
-                    color: "white"
-                    leftPadding: radioAdmin.indicator.width + radioAdmin.spacing
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
+        // Error message text for UI feedback
+        Text {
+            id: errorText
+            color: "#FF6B6B"
+            font.pixelSize: 13
+            visible: false
+            Layout.alignment: Qt.AlignHCenter
         }
 
         Button {
             id: registerButton
             text: "REGISTER"
             Layout.fillWidth: true
-            Layout.preferredHeight: 50
-            Layout.topMargin: 10
+            Layout.preferredHeight: 45
+            Layout.topMargin: 5
 
             contentItem: Text {
                 text: registerButton.text
@@ -134,41 +160,48 @@ Rectangle {
             }
 
             onClicked: {
-                           if (usernameField.text === "" || passwordField.text === "" ) {
-                               console.log("Error: Fields cannot be empty!")
-                           } else if (passwordField.text !== confirmPasswordField.text) {
-                               console.log("Error: Passwords do not match!")
-                           } else {
-                               // 1. Determine selected role
-                               var selectedRole = "User"
-                               if (radioPublisher.checked) {
-                                   selectedRole = "Publisher"
-                               } else if (radioAdmin.checked) {
-                                   selectedRole = "Admin"
-                               }
-                               console.log("Success! Registering as:", selectedRole)
+                errorText.visible = false
 
-                               // 2. Perform conditional navigation based on role
-                               if (selectedRole === "Admin") {
-                                   // Admin bypasses GenreSelection and goes straight to AdminDashboard
-                                   signUpPage.StackView.view.replace("AdminDashboard.qml", {
-                                                                         "username": usernameField.text
-                                                                     })
-                               } else if (selectedRole === "Publisher") {
-                                   // Publisher goes to PublisherDashboard (or a appropriate view)
-                                   signUpPage.StackView.view.replace("PublisherDashboard.qml", {
-                                                                         "username": usernameField.text
-                                                                     })
-                               } else {
-                                   // Regular user goes to GenreSelection page first
-                                   signUpPage.StackView.view.push("GenreSelection.qml", {
-                                                                      "username": usernameField.text,
-                                                                      "userRole": selectedRole
-                                                                  })
-                               }
-                           }
-                       }
+                // 1. Validation
+                if (usernameField.text.trim() === "" || passwordField.text === "") {
+                    errorText.text = "Error: Fields cannot be empty!"
+                    errorText.visible = true
+                    return
+                }
+                if (passwordField.text !== confirmPasswordField.text) {
+                    errorText.text = "Error: Passwords do not match!"
+                    errorText.visible = true
+                    return
+                }
 
+                // 2. Determine selected role
+                var selectedRole = radioPublisher.checked ? "Publisher" : "User"
+                var secAnswer = favoriteAuthorField.text.trim() !== "" ? favoriteAuthorField.text : "default"
 
+                // 3. Send Request to Server via NetworkManager
+                if (selectedRole === "Publisher") {
+                    networkManager.registerPublisher(
+                        usernameField.text,
+                        passwordField.text,
+                       companyName ,
+                        secAnswer
+                    )
+
+                    signUpPage.StackView.view.replace("PublisherDashboard.qml", {
+                        "username": usernameField.text
+                    })
+                } else {
+                    // Send registration request for regular user and wait for network response to get userId
+                    networkManager.registerUser(
+                        usernameField.text,
+                        passwordField.text,
+                        secAnswer,
+                        []
+                    )
+                }
+
+                console.log("Sent registration request for:", usernameField.text, "as", selectedRole)
+            }
+        }
     }
-}}
+}

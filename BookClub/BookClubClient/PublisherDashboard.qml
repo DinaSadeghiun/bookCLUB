@@ -1,464 +1,1038 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import Qt.labs.platform 1.1
 
 Rectangle {
-   id: publisherRoot
-   width: parent ? parent.width : 1280
-   height: parent ? parent.height : 720
-   color: "#2D1B33"
+    id: publisherRoot
+    width: parent ? parent.width : 1280
+    height: parent ? parent.height : 720
+    color: "#2D1B33"
 
-   // --- State Properties ---
-   property string publisherUsername: "publisher_user"
-   property string publisherPassword: "password123"
-   property string favoriteAuthor: "Stephen King" // For password recovery
+    // ========== PROPERTIES ==========
+    property int userId: 0
+    property string username: ""
+    property string userRole: ""
+    property string publisherPassword: ""
+    property string favoriteAuthor: ""
 
-   property real totalRevenue: 3450.75
-   property int totalBooksPublished: 18 // Total books (active + inactive)
+    property real totalRevenue: 0.0
+    property int totalBooksPublished: 0
+    property int totalActiveBooks: 0
 
-   // Editing State Variables
-   property bool isEditing: false
-   property int editingBookId: -1
+    property bool isEditing: false
+    property int editingBookId: -1
 
-   // --- Signals for Backend ---
-   signal publishBook(string title, string author, string genre, string desc, real price, real discount, string coverPath, string pdfPath)
-   signal updateBook(int bookId, string title, string author, string genre, string desc, real price, real discount, string coverPath, string pdfPath)
-   signal toggleBookStatus(int bookId, bool active)
-   signal updateProfile(string username, string password, string favAuthor)
+    property string coverImagePath: ""
+    property string pdfFilePath: ""
+    property double pendingDiscount: 0.0
 
-   // --- Mock Data Models for UI ---
-   ListModel {
-       id: booksModel
-       ListElement { bookId: 1; title: "The Dark Tower"; author: "Stephen King"; genre: "Fantasy"; desc: "A great epic journey."; price: 19.99; discount: 10.0; rating: 4.8; active: true; sales: 120 }
-       ListElement { bookId: 2; title: "It"; author: "Stephen King"; genre: "Mystery"; desc: "A horror masterpiece."; price: 24.99; discount: 0.0; rating: 4.9; active: true; sales: 310 }
-       ListElement { bookId: 3; title: "Pet Sematary"; author: "Stephen King"; genre: "Fiction"; desc: "Sometimes dead is better."; price: 14.99; discount: 15.0; rating: 4.2; active: false; sales: 45 }
-       ListElement { bookId: 4; title: "Misery"; author: "Stephen King"; genre: "Fiction"; desc: "A novel about obsessed fan."; price: 12.99; discount: 5.0; rating: 4.6; active: true; sales: 15 }
-       ListElement { bookId: 5; title: "The Stand"; author: "Stephen King"; genre: "Sci-Fi"; desc: "A post-apocalyptic vision."; price: 29.99; discount: 20.0; rating: 4.7; active: true; sales: 5 }
-   }
+    property string successMessageText: ""
+    property bool showSuccess: false
+    property bool showError: false
 
-   RowLayout {
-       anchors.fill: parent
-       spacing: 0
+    // ===== فلگ‌های جدید برای تشخیص تغییر فایل =====
+    property bool isCoverChanged: false
+    property bool isPdfChanged: false
 
-       // --- Left Sidebar (Navigation) ---
-       Rectangle {
-           Layout.fillHeight: true
-           Layout.preferredWidth: 250
-           color: "#1A0F1F"
+    // ========== MODELS ==========
+    ListModel {
+        id: booksModel
+    }
 
-           ColumnLayout {
-               anchors.fill: parent
-               anchors.margins: 20
-               spacing: 20
+    // ========== FILE DIALOGS ==========
+    FileDialog {
+        id: coverFileDialog
+        title: "Select Book Cover Image"
+        nameFilters: ["Image files (*.jpg *.png *.jpeg)"]
+        onAccepted: {
+            coverImagePath = coverFileDialog.file
+            coverLabel.text = coverFileDialog.file.toString().split('/').pop()
+            isCoverChanged = true  // ← فلگ تغییر
+        }
+    }
 
-               Image {
-                   source: "qrc:/assets/images/giraffe.png"
-                   Layout.preferredWidth: 80
-                   Layout.preferredHeight: 80
-                   Layout.alignment: Qt.AlignHCenter
-               }
+    FileDialog {
+        id: pdfFileDialog
+        title: "Select Book PDF File"
+        nameFilters: ["PDF files (*.pdf)"]
+        onAccepted: {
+            pdfFilePath = pdfFileDialog.file
+            pdfLabel.text = pdfFileDialog.file.toString().split('/').pop()
+            isPdfChanged = true  // ← فلگ تغییر
+        }
+    }
 
-               Text {
-                   text: publisherUsername
-                   color: "#D4AF37" // Gold
-                   font.bold: true
-                   font.pixelSize: 18
-                   Layout.alignment: Qt.AlignHCenter
-               }
+    // ========== NETWORK CONNECTIONS ==========
+    Connections {
+        target: networkManager
 
-               Rectangle { Layout.preferredHeight: 2; Layout.fillWidth: true; color: "#3D2B43" }
+        function onResponseReceived(action, status, data) {
+            var statusUpper = status ? status.toUpperCase() : ""
 
-               // Sidebar Navigation
-               Repeater {
-                   model: ["Statistics", "My Books", "Add New Book", "Account Settings"]
-                   delegate: Button {
-                       required property int index
-                       required property string modelData
-                       text: modelData
-                       Layout.fillWidth: true
-                       flat: true
-                       onClicked: {
-                           if (index === 2) {
-                               isEditing = false;
-                               clearForm();
-                           }
-                           mainStack.currentIndex = index;
-                       }
-                       contentItem: Text {
-                           text: parent.text
-                           color: (mainStack.currentIndex === parent.index) ? "#D4AF37" : "#FFFFFF"
-                           horizontalAlignment: Text.AlignLeft
-                           font.pixelSize: 16
-                       }
-                   }
-               }
+            if (action === "getAllBooks" || action === "getPublisherBooks") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    booksModel.clear()
 
-               Item { Layout.fillHeight: true } // Spacer
+                    var booksArray = []
+                    if (Array.isArray(data)) {
+                        booksArray = data
+                    } else if (data.books) {
+                        booksArray = data.books
+                    } else if (data.data) {
+                        booksArray = data.data
+                    }
 
-               Button {
-                   text: "Logout"
-                   Layout.fillWidth: true
-                   onClicked: {
-                       // Insert logout navigation logic here
-                       console.log("Logged out");
-                   }
-               }
-           }
-       }
+                    totalBooksPublished = booksArray.length || 0
+                    totalActiveBooks = 0
+                    var rev = 0.0
 
-       // --- Main Content Area ---
-       StackLayout {
-           id: mainStack
-           Layout.fillWidth: true
-           Layout.fillHeight: true
-           currentIndex: 0
+                    for (var i = 0; i < booksArray.length; i++) {
+                        var book = booksArray[i]
+                        var isActive = book.isAvailable !== undefined ? book.isAvailable : true
 
-           // 1. STATISTICS VIEW (Section 3-3)
-           ScrollView {
-               ColumnLayout {
-                   width: parent.width - 40
-                   spacing: 30
-                   anchors.margins: 20
+                        if (isActive) totalActiveBooks++
 
-                   Text { text: "Publisher Dashboard Statistics"; color: "#D4AF37"; font.pixelSize: 28; font.bold: true }
+                        booksModel.append({
+                            bookId: book.id || book.bookId || 0,
+                            title: book.title || "",
+                            author: book.author || "",
+                            genre: book.genre || "Unknown",
+                            desc: book.description || "",
+                            price: book.price || 0.0,
+                            discount: book.discountValue || 0.0,
+                            rating: book.rating || 0.0,
+                            active: isActive,
+                            sales: book.sales || book.salesCount || 0,
+                            coverData: book.coverImageData || book.coverData || "",
+                            coverImagePath: book.coverImagePath || book.coverPath || "",
+                            pdfFilePath: book.pdfFilePath || book.pdfPath || ""
+                        })
+                        rev += (book.price * (book.sales || book.salesCount || 0))
+                    }
+                    totalRevenue = rev
 
-                   RowLayout {
-                       spacing: 20
-                       StatCard { title: "Total Revenue"; value: "$" + totalRevenue.toFixed(2); icon: "💰" }
-                       StatCard { title: "Total Published Books"; value: totalBooksPublished.toString(); icon: "📚" }
-                   }
+                    showSuccessMessage("✅ " + totalBooksPublished + " books loaded")
+                } else {
+                    showErrorMessage("❌ Failed to load books: " + status)
+                }
+            }
 
-                   // Top 5 Best Sellers Chart
-                   Text { text: "Top 5 Best Selling Books (Sales Count)"; color: "#FFF"; font.pixelSize: 20 }
-                   RowLayout {
-                       height: 200
-                       spacing: 40
-                       Layout.leftMargin: 20
-                       // Visual representation using simulated bars from Mock data
-                       Repeater {
-                           model: booksModel
-                           Rectangle {
-                               width: 50
-                               height: Math.max(20, (model.sales / 350) * 150) // Scale dynamically
-                               color: "#D4AF37"
-                               Layout.alignment: Qt.AlignBottom
-                               Text {
-                                   text: model.sales + " sales"
-                                   color: "#FFF"
-                                   font.pixelSize: 11
-                                   anchors.bottom: parent.top
-                                   anchors.horizontalCenter: parent.horizontalCenter
-                               }
-                               Text {
-                                   text: model.title
-                                   color: "#FFF"
-                                   font.pixelSize: 10
-                                   anchors.top: parent.bottom
-                                   anchors.horizontalCenter: parent.horizontalCenter
-                                   wrapMode: Text.Wrap
-                                   width: 80
-                                   horizontalAlignment: Text.AlignHCenter
-                               }
-                           }
-                       }
-                   }
+            else if (action === "addBook") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    var newBookId = data.id || data.bookId || 0
 
-                   Item { Layout.preferredHeight: 30 } // Space between charts
+                    if (pendingDiscount > 0 && newBookId > 0) {
+                        var now = Math.floor(Date.now() / 1000)
+                        var oneYearLater = now + 365 * 24 * 60 * 60
+                        networkManager.applyDiscountToBook(userId, newBookId, pendingDiscount, 0, now, oneYearLater)
+                    }
 
-                   // Bottom 5 Low Sellers Chart
-                   Text { text: "Bottom 5 Low Selling Books (Sales Count)"; color: "#FFF"; font.pixelSize: 20 }
-                   RowLayout {
-                       height: 200
-                       spacing: 40
-                       Layout.leftMargin: 20
-                       Repeater {
-                           model: booksModel
-                           Rectangle {
-                               width: 50
-                               height: Math.max(20, ((350 - model.sales) / 350) * 150) // Inverted mock sales representation
-                               color: "#7B1FA2" // Purple indicator for low sellers
-                               Layout.alignment: Qt.AlignBottom
-                               Text {
-                                   text: Math.round(model.sales) + " sales"
-                                   color: "#FFF"
-                                   font.pixelSize: 11
-                                   anchors.bottom: parent.top
-                                   anchors.horizontalCenter: parent.horizontalCenter
-                               }
-                               Text {
-                                   text: model.title
-                                   color: "#FFF"
-                                   font.pixelSize: 10
-                                   anchors.top: parent.bottom
-                                   anchors.horizontalCenter: parent.horizontalCenter
-                                   wrapMode: Text.Wrap
-                                   width: 80
-                                   horizontalAlignment: Text.AlignHCenter
-                               }
-                           }
-                       }
-                   }
-               }
-           }
+                    pendingDiscount = 0
+                    networkManager.getPublisherBooks(userId)
+                    clearForm()
+                    isEditing = false
+                    mainStack.currentIndex = 1
+                    showSuccessMessage("✅ Book published successfully!")
+                } else {
+                    showErrorMessage("❌ Failed to add book: " + status)
+                }
+            }
 
-           // 2. MY BOOKS LIST VIEW (Section 3-2 b, c, d)
-           ListView {
-               model: booksModel
-               clip: true
-               header: Text { text: "Manage My Published Books"; color: "#D4AF37"; font.pixelSize: 24; padding: 20 }
-               delegate: Rectangle {
-                   width: parent.width - 40; height: 110; color: "#3D2B43"; radius: 10
-                   anchors.horizontalCenter: parent.horizontalCenter
-                   anchors.margins: 10
+            else if (action === "updateBookDetails" || action === "updateBook") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getPublisherBooks(userId)
+                    clearForm()
+                    isEditing = false
+                    isCoverChanged = false
+                    isPdfChanged = false
+                    mainStack.currentIndex = 1
+                    showSuccessMessage("✅ Book details updated successfully!")
+                } else {
+                    showErrorMessage("❌ Failed to update book: " + status)
+                }
+            }
 
-                   RowLayout {
-                       anchors.fill: parent; anchors.margins: 15
-                       Rectangle { width: 60; height: 80; color: "#555"; radius: 5 } // Simulated Cover
+            else if (action === "deactivateBook") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getPublisherBooks(userId)
+                    showSuccessMessage("✅ Book deactivated")
+                } else {
+                    showErrorMessage("❌ Failed to deactivate book: " + status)
+                }
+            }
 
-                       ColumnLayout {
-                           Text { text: model.title; color: "#FFF"; font.bold: true; font.pixelSize: 16 }
-                           Text { text: "Author: " + model.author + " | Genre: " + model.genre; color: "#BBB"; font.pixelSize: 12 }
-                           RowLayout {
-                               Text { text: "Price: $" + model.price; color: "#D4AF37" }
-                               Text { text: "Discount: " + model.discount + "%"; color: "#FF5252"; visible: model.discount > 0 }
-                               Text { text: "Avg Rating: ⭐ " + model.rating; color: "#FFD700" } // Individual book rating
-                           }
-                       }
-                       Item { Layout.fillWidth: true }
+            else if (action === "activateBook") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getPublisherBooks(userId)
+                    showSuccessMessage("✅ Book activated")
+                } else {
+                    showErrorMessage("❌ Failed to activate book: " + status)
+                }
+            }
 
-                       RowLayout {
-                           spacing: 10
-                           // Edit Button - Transitions to Add New Book view with data
-                           Button {
-                               text: "Edit"
-                               onClicked: {
-                                   isEditing = true;
-                                   editingBookId = model.bookId;
-                                   titleIn.text = model.title;
-                                   authorIn.text = model.author;
-                                   genreIn.currentIndex = genreIn.find(model.genre);
-                                   descIn.text = model.desc;
-                                   priceIn.text = model.price.toString();
-                                   discountIn.text = model.discount.toString();
-                                   coverLabel.text = "Existing Cover Loaded";
-                                   pdfLabel.text = "Existing PDF Loaded";
-                                   mainStack.currentIndex = 2; // Move to Add New Book screen (index 2)
-                               }
-                           }
-                           Button {
-                               text: model.active ? "Deactivate" : "Activate"
-                               onClicked: {
-                                   model.active = !model.active;
-                                   toggleBookStatus(model.bookId, model.active);
-                               }
-                           }
-                       }
-                   }
-               }
-           }
+            else if (action === "deleteBookPermanent") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getPublisherBooks(userId)
+                    showSuccessMessage("✅ Book permanently deleted")
+                } else {
+                    showErrorMessage("❌ Failed to delete book: " + status)
+                }
+            }
 
-           // 3. ADD / EDIT NEW BOOK FORM (Section 3-2 a, b)
-           ScrollView {
-               ColumnLayout {
-                   width: parent.width - 100
-                   anchors.horizontalCenter: parent.horizontalCenter
-                   spacing: 15
+            else if (action === "updateBookPrice" || action === "applyDiscountToBook" || action === "removeDiscountFromBook") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getPublisherBooks(userId)
+                } else {
+                    console.log(action, "FAILED. Server status:", status)
+                }
+            }
 
-                   Text {
-                       text: isEditing ? "Edit Book Details" : "Publish a New Book"
-                       color: "#D4AF37"
-                       font.pixelSize: 24
-                       Layout.topMargin: 20
-                   }
+            else if (action === "updateProfile") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    showSuccessMessage("✅ Profile updated successfully!")
+                } else {
+                    showErrorMessage("❌ Failed to update profile: " + status)
+                }
+            }
+        }
+    }
 
-                   CustomTextField { id: titleIn; placeholder: "Book Title"; Layout.fillWidth: true }
-                   CustomTextField { id: authorIn; placeholder: "Author Name"; Layout.fillWidth: true }
+    // ========== COMPONENT LIFECYCLE ==========
+    Component.onCompleted: {
+        if (typeof networkManager !== "undefined" && networkManager !== null && userId > 0) {
+            networkManager.getPublisherBooks(userId)
+        }
+        if (favoriteAuthor === "") {
+            favoriteAuthor = "Not set"
+        }
+    }
 
-                   ComboBox {
-                       id: genreIn
-                       model: ["NonFiction", "Mystery", "Romance", "SciFi", "Fantasy", "Biography", "History", "SelfHelp", "Poetry", "Children", "Other"]
-                       Layout.fillWidth: true
-                   }
+    // ========== UI ==========
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
 
-                   TextArea {
-                       id: descIn
-                       placeholderText: "Description..."
-                       Layout.fillWidth: true; Layout.preferredHeight: 100
-                       background: Rectangle { color: "#3D2B43"; border.color: "#D4AF37" }
-                       color: "white"
-                   }
+        // ===== SIDEBAR =====
+        Rectangle {
+            Layout.fillHeight: true
+            Layout.preferredWidth: 250
+            color: "#1A0F1F"
 
-                   RowLayout {
-                       CustomTextField { id: priceIn; placeholder: "Price ($)"; Layout.fillWidth: true }
-                       CustomTextField { id: discountIn; placeholder: "Discount (%)"; Layout.fillWidth: true }
-                   }
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 20
 
-                   RowLayout {
-                       Layout.fillWidth: true
-                       Button {
-                           text: "Upload Cover Image"
-                           onClicked: coverLabel.text = "selected_cover.jpg"
-                       }
-                       Text { id: coverLabel; text: "No cover selected"; color: "#BBB" }
-                   }
+                Image {
+                    source: "qrc:/images/giraffe.png"
+                    Layout.preferredWidth: 80
+                    Layout.preferredHeight: 80
+                    Layout.alignment: Qt.AlignHCenter
+                }
 
-                   RowLayout {
-                       Layout.fillWidth: true
-                       Button {
-                           text: "Upload PDF File"
-                           onClicked: pdfLabel.text = "selected_book.pdf"
-                       }
-                       Text { id: pdfLabel; text: "No PDF selected"; color: "#BBB" }
-                   }
+                Text {
+                    text: username !== "" ? username : "Publisher"
+                    color: "#D4AF37"
+                    font.bold: true
+                    font.pixelSize: 18
+                    Layout.alignment: Qt.AlignHCenter
+                }
 
-                   Button {
-                       text: isEditing ? "SAVE CHANGES" : "PUBLISH BOOK"
-                       highlighted: true
-                       Layout.fillWidth: true; Layout.preferredHeight: 50
-                       onClicked: {
-                           if (isEditing) {
-                               updateBook(editingBookId, titleIn.text, authorIn.text, genreIn.currentText, descIn.text, parseFloat(priceIn.text), parseFloat(discountIn.text), coverLabel.text, pdfLabel.text);
-                               isEditing = false;
-                           } else {
-                               publishBook(titleIn.text, authorIn.text, genreIn.currentText, descIn.text, parseFloat(priceIn.text), parseFloat(discountIn.text), coverLabel.text, pdfLabel.text);
-                           }
-                           clearForm();
-                           mainStack.currentIndex = 1; // Return to My Books list
-                       }
-                   }
-               }
-           }
+                Rectangle {
+                    Layout.preferredHeight: 2
+                    Layout.fillWidth: true
+                    color: "#3D2B43"
+                }
 
-           // 4. ACCOUNT SETTINGS (Section 3-1: Password & Favourite Author Security)
-           // --- بخش تنظیمات حساب در StackLayout ---
-           ColumnLayout {
-               width: parent.width - 100
-               anchors.centerIn: parent
-               spacing: 15
+                Repeater {
+                    model: ["Statistics", "My Books", "Add New Book", "Account Settings"]
+                    delegate: Button {
+                        required property int index
+                        required property string modelData
+                        text: modelData
+                        Layout.fillWidth: true
+                        flat: true
+                        onClicked: {
+                            if (index === 2) {
+                                isEditing = false;
+                                clearForm();
+                            }
+                            mainStack.currentIndex = index;
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: (mainStack.currentIndex === parent.index) ? "#D4AF37" : "#FFFFFF"
+                            horizontalAlignment: Text.AlignLeft
+                            font.pixelSize: 16
+                        }
+                    }
+                }
 
-               Text {
-                   text: "Account Settings";
-                   color: "#D4AF37";
-                   font.pixelSize: 24;
-                   font.bold: true;
-                   Layout.alignment: Qt.AlignHCenter
-               }
+                Item { Layout.fillHeight: true }
 
-               // فیلد نام کاربری
-               ColumnLayout {
-                   spacing: 5; Layout.fillWidth: true
-                   Text { text: "Username:"; color: "#BBB"; font.pixelSize: 14 }
-                   CustomTextField { id: profUser; text: publisherUsername; Layout.fillWidth: true }
-               }
+                Button {
+                    text: "Logout"
+                    Layout.fillWidth: true
+                    onClicked: {
+                        if (typeof rootStackView !== "undefined" && rootStackView !== null) {
+                            rootStackView.pop()
+                        }
+                    }
+                }
+            }
+        }
 
-               // فیلد نویسنده مورد علاقه (اختیاری بر اساس طراحی شما)
-               ColumnLayout {
-                   spacing: 5; Layout.fillWidth: true
-                   Text { text: "Favorite Author:"; color: "#BBB"; font.pixelSize: 14 }
-                   CustomTextField { id: profFavAuthor; text: favoriteAuthor; Layout.fillWidth: true }
-               }
+        // ===== MAIN CONTENT =====
+        StackLayout {
+            id: mainStack
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            currentIndex: 0
 
-               Rectangle { Layout.preferredHeight: 1; Layout.fillWidth: true; color: "#3D2B43"; Layout.topMargin:10 ; Layout.bottomMargin: 10}
+            // ===== TAB 0: STATISTICS =====
+            ScrollView {
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent ? parent.width - 40 : 800
+                    spacing: 30
+                    Layout.margins: 20
 
+                    Text {
+                        text: "Publisher Dashboard Statistics"
+                        color: "#D4AF37"
+                        font.pixelSize: 28
+                        font.bold: true
+                    }
 
-               Text { text: "Change Password"; color: "#D4AF37"; font.pixelSize: 18; font.bold: true }
+                    RowLayout {
+                        spacing: 20
+                        StatCard {
+                            title: "Total Revenue"
+                            value: "$" + totalRevenue.toFixed(2)
+                            icon: "💰"
+                        }
+                        StatCard {
+                            title: "Total Published Books"
+                            value: totalBooksPublished.toString()
+                            icon: "📚"
+                        }
+                        StatCard {
+                            title: "Active Books"
+                            value: totalActiveBooks.toString()
+                            icon: "✅"
+                        }
+                    }
 
-               // فیلد رمز عبور فعلی
-               ColumnLayout {
-                   spacing: 5; Layout.fillWidth: true
-                   Text { text: "Current Password:"; color: "#BBB"; font.pixelSize: 14 }
-                   CustomTextField {
-                       id: currentPassIn;
-                       echoMode: TextInput.Password;
-                       placeholder: "Enter current password to authorize changes";
-                       Layout.fillWidth: true
-                   }
-               }
+                    Text {
+                        text: "Best Selling Books (Sales Count)"
+                        color: "#FFF"
+                        font.pixelSize: 20
+                        Layout.topMargin: 20
+                    }
 
-               // فیلد رمز عبور جدید
-               ColumnLayout {
-                   spacing: 5; Layout.fillWidth: true
-                   Text { text: "New Password:"; color: "#BBB"; font.pixelSize: 14 }
-                   CustomTextField { id: newPassIn; echoMode: TextInput.Password; placeholder: "Leave blank to keep current"; Layout.fillWidth: true }
-               }
+                    RowLayout {
+                        height: 200
+                        spacing: 40
+                        Layout.leftMargin: 20
+                        Repeater {
+                            model: booksModel
+                            Rectangle {
+                                width: 50
+                                height: Math.max(20, (model.sales / 350) * 150)
+                                color: model.active ? "#D4AF37" : "#666666"
+                                Layout.alignment: Qt.AlignBottom
+                                Text {
+                                    text: model.sales + " sales"
+                                    color: "#FFF"
+                                    font.pixelSize: 11
+                                    anchors.bottom: parent.top
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                Text {
+                                    text: model.title
+                                    color: "#FFF"
+                                    font.pixelSize: 10
+                                    anchors.top: parent.bottom
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    wrapMode: Text.Wrap
+                                    width: 80
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-               Text {
-                   id: errorMsg
-                   color: "#FF4444"
-                   font.pixelSize: 12
-                   visible: false
-               }
+            // ===== TAB 1: MY BOOKS =====
+            ListView {
+                id: booksListView
+                model: booksModel
+                clip: true
 
-               Button {
-                   text: "SAVE ALL CHANGES"
-                   Layout.fillWidth: true
-                   Layout.preferredHeight: 45
-                   onClicked: {
-                       // منطق امنیتی تغییر رمز
-                       if (currentPassIn.text !== publisherPassword) {
-                           errorMsg.text = "Error: Current password is incorrect!";
-                           errorMsg.visible = true;
-                       } else {
-                           // تایید شد - اعمال تغییرات
-                           publisherUsername = profUser.text;
-                           favoriteAuthor = profFavAuthor.text;
+                header: ColumnLayout {
+                    width: booksListView.width
+                    spacing: 10
 
-                           if (newPassIn.text !== "") {
-                               publisherPassword = newPassIn.text;
-                           }
+                    Text {
+                        text: "Manage My Published Books (" + totalBooksPublished + " total)"
+                        color: "#D4AF37"
+                        font.pixelSize: 24
+                        padding: 20
+                        Layout.fillWidth: true
+                    }
 
-                           errorMsg.text = "Settings updated successfully!";
-                           errorMsg.color = "#44FF44";
-                           errorMsg.visible = true;
-                           currentPassIn.text = "";
-                           newPassIn.text = "";
+                    Rectangle {
+                        visible: showSuccess
+                        Layout.fillWidth: true
+                        Layout.margins: 10
+                        height: 40
+                        radius: 5
+                        color: "#2E7D32"
 
-                           // ارسال سیگنال به بک اند (اختیاری)
-                           updateProfile(publisherUsername, publisherPassword, favoriteAuthor);
-                       }
-                   }
-               }
-           } // پایان ColumnLayout مربوط به Account Settings
-       } // پایان StackLayout (mainStack)
-   } // پایان RowLayout اصلی
+                        Text {
+                            anchors.centerIn: parent
+                            text: successMessageText
+                            color: "white"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
 
-   // --- Helper Functions ---
-   function clearForm() {
-       titleIn.text = "";
-       authorIn.text = "";
-       genreIn.currentIndex = 0;
-       descIn.text = "";
-       priceIn.text = "";
-       discountIn.text = "";
-       coverLabel.text = "No cover selected";
-       pdfLabel.text = "No PDF selected";
-   }
+                        Timer {
+                            running: showSuccess
+                            interval: 3000
+                            onTriggered: showSuccess = false
+                        }
+                    }
 
-   // --- Reusable UI Elements ---
-   component StatCard : Rectangle {
-       property string title: ""
-       property string value: ""
-       property string icon: ""
-       Layout.preferredWidth: 250; Layout.preferredHeight: 100; color: "#3D2B43"; radius: 10
-       border.color: "#D4AF37"; border.width: 1
-       ColumnLayout {
-           anchors.centerIn: parent
-           Text { text: icon + " " + title; color: "#BBB"; font.pixelSize: 14 }
-           Text { text: value; color: "#D4AF37"; font.pixelSize: 22; font.bold: true }
-       }
-   }
+                    Rectangle {
+                        visible: showError
+                        Layout.fillWidth: true
+                        Layout.margins: 10
+                        height: 40
+                        radius: 5
+                        color: "#C62828"
 
-   component CustomTextField : TextField {
-       id: tf
-       property string placeholder: ""
-       placeholderText: placeholder
-       color: "white"
-       placeholderTextColor: "#888"
-       background: Rectangle {
-           color: "#3D2B43"
-           border.color: tf.activeFocus ? "#D4AF37" : "#555"
-           border.width: 2
-           radius: 5
-       }
-   }
-} // پایان Rectangle اصلی (publisherRoot)
+                        Text {
+                            anchors.centerIn: parent
+                            text: successMessageText
+                            color: "white"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Timer {
+                            running: showError
+                            interval: 3000
+                            onTriggered: showError = false
+                        }
+                    }
+                }
+
+                delegate: Rectangle {
+                    width: booksListView.width - 40
+                    height: 130
+                    color: model.active ? "#3D2B43" : "#2A1A30"
+                    radius: 10
+                    x: 20
+                    anchors.margins: 10
+                    opacity: model.active ? 1.0 : 0.7
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 15
+
+                        Rectangle {
+                            width: 75
+                            height: 100
+                            color: "#555"
+                            radius: 5
+                            clip: true
+
+                            Image {
+                                id: coverImage
+                                anchors.fill: parent
+                                source: model.coverImagePath !== "" ? "file:///" + model.coverImagePath : ""
+                                fillMode: Image.PreserveAspectCrop
+                                visible: model.coverImagePath !== ""
+                                onStatusChanged: {
+                                    if (status === Image.Error) {
+                                        if (model.coverData !== "") {
+                                            source = "data:image/png;base64," + model.coverData
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "📖"
+                                font.pixelSize: 35
+                                visible: model.coverImagePath === "" && model.coverData === ""
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 3
+                            Layout.fillWidth: true
+
+                            RowLayout {
+                                spacing: 10
+                                Text {
+                                    text: model.title
+                                    color: "#FFF"
+                                    font.bold: true
+                                    font.pixelSize: 16
+                                }
+                                Text {
+                                    text: model.active ? "● Active" : "● Deactivated"
+                                    color: model.active ? "#44FF44" : "#FF4444"
+                                    font.pixelSize: 11
+                                    font.bold: true
+                                }
+                            }
+
+                            Text {
+                                text: "Author: " + model.author + " | Genre: " + model.genre
+                                color: "#BBB"
+                                font.pixelSize: 12
+                            }
+
+                            Text {
+                                text: "Description: " + (model.desc.length > 60 ? model.desc.substring(0, 60) + "..." : model.desc)
+                                color: "#999"
+                                font.pixelSize: 11
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            RowLayout {
+                                spacing: 15
+                                Text {
+                                    text: "Price: $" + model.price
+                                    color: "#D4AF37"
+                                    font.pixelSize: 13
+                                }
+                                Text {
+                                    text: "Discount: " + model.discount + "%"
+                                    color: "#FF5252"
+                                    font.pixelSize: 13
+                                    visible: model.discount > 0
+                                }
+                                Text {
+                                    text: "⭐ " + model.rating
+                                    color: "#FFD700"
+                                    font.pixelSize: 13
+                                }
+                                Text {
+                                    text: "Sales: " + model.sales
+                                    color: "#AAA"
+                                    font.pixelSize: 12
+                                }
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        ColumnLayout {
+                            spacing: 8
+
+                            Button {
+                                text: "Edit"
+                                Layout.preferredWidth: 100
+                                Layout.preferredHeight: 32
+                                background: Rectangle {
+                                    color: "#D4AF37"
+                                    radius: 5
+                                }
+                                contentItem: Text {
+                                    text: "Edit"
+                                    color: "#1A0F1F"
+                                    font.bold: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                onClicked: {
+                                    isEditing = true;
+                                    editingBookId = model.bookId;
+                                    titleIn.text = model.title;
+                                    authorIn.text = model.author;
+                                    var genreIndex = genreIn.find(model.genre);
+                                    genreIn.currentIndex = genreIndex !== -1 ? genreIndex : 0;
+                                    descIn.text = model.desc;
+                                    priceIn.text = model.price.toString();
+                                    discountIn.text = model.discount.toString();
+
+                                    // ذخیره مسیرهای فعلی از دیتابیس
+                                    coverImagePath = model.coverImagePath || "";
+                                    pdfFilePath = model.pdfFilePath || "";
+
+                                    // ریست کردن فلگ‌ها
+                                    isCoverChanged = false;
+                                    isPdfChanged = false;
+
+                                    coverLabel.text = model.coverImagePath ? "Current: " + model.coverImagePath.split('/').pop() : "No cover";
+                                    pdfLabel.text = model.pdfFilePath ? "Current: " + model.pdfFilePath.split('/').pop() : "No PDF";
+                                    mainStack.currentIndex = 2;
+                                }
+                            }
+
+                            Button {
+                                text: model.active ? "Deactivate" : "Activate"
+                                Layout.preferredWidth: 100
+                                Layout.preferredHeight: 32
+                                background: Rectangle {
+                                    color: model.active ? "#FF6B35" : "#44BB44"
+                                    radius: 5
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "white"
+                                    font.bold: true
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                onClicked: {
+                                    if (typeof networkManager === "undefined") return;
+
+                                    if (model.active) {
+                                        networkManager.deactivateBook(userId, model.bookId);
+                                    } else {
+                                        networkManager.activateBook(userId, model.bookId);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ===== TAB 2: ADD NEW BOOK =====
+            ScrollView {
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent ? parent.width - 100 : 800
+                    anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
+                    spacing: 15
+
+                    Text {
+                        text: isEditing ? "Edit Book Details" : "Publish a New Book"
+                        color: "#D4AF37"
+                        font.pixelSize: 24
+                        Layout.topMargin: 20
+                    }
+
+                    CustomTextField { id: titleIn; placeholder: "Book Title"; Layout.fillWidth: true }
+                    CustomTextField { id: authorIn; placeholder: "Author Name"; Layout.fillWidth: true }
+
+                    ComboBox {
+                        id: genreIn
+                        model: ["Fiction", "NonFiction", "Mystery", "Romance", "SciFi", "Fantasy",
+                                "Biography", "History", "SelfHelp", "Poetry", "Children", "Other"]
+                        Layout.fillWidth: true
+                        background: Rectangle {
+                            color: "#3D2B43"
+                            border.color: genreIn.activeFocus ? "#D4AF37" : "#555"
+                            border.width: 2
+                            radius: 5
+                        }
+                        contentItem: Text {
+                            text: genreIn.displayText
+                            color: "white"
+                            font.pixelSize: 14
+                            leftPadding: 10
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        indicator: Text {
+                            text: "▼"
+                            color: "#D4AF37"
+                            font.pixelSize: 16
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    TextArea {
+                        id: descIn
+                        placeholderText: "Description..."
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 100
+                        background: Rectangle {
+                            color: "#3D2B43"
+                            border.color: descIn.activeFocus ? "#D4AF37" : "#555"
+                            border.width: 2
+                            radius: 5
+                        }
+                        color: "white"
+                        placeholderTextColor: "#888"
+                    }
+
+                    RowLayout {
+                        spacing: 15
+                        Layout.fillWidth: true
+
+                        CustomTextField {
+                            id: priceIn
+                            placeholder: "Price ($)"
+                            Layout.fillWidth: true
+                            validator: DoubleValidator { bottom: 0; decimals: 2 }
+                        }
+
+                        CustomTextField {
+                            id: discountIn
+                            placeholder: "Discount (%)"
+                            Layout.fillWidth: true
+                            validator: DoubleValidator { bottom: 0; top: 100; decimals: 2 }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button {
+                            text: "Upload Cover Image"
+                            Layout.preferredHeight: 35
+                            background: Rectangle {
+                                color: "#D4AF37"
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#1A0F1F"
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: coverFileDialog.open()
+                        }
+                        Text {
+                            id: coverLabel
+                            text: "No cover selected"
+                            color: "#BBB"
+                            font.pixelSize: 12
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Button {
+                            text: "Upload PDF File"
+                            Layout.preferredHeight: 35
+                            background: Rectangle {
+                                color: "#D4AF37"
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: parent.text
+                                color: "#1A0F1F"
+                                font.bold: true
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            onClicked: pdfFileDialog.open()
+                        }
+                        Text {
+                            id: pdfLabel
+                            text: "No PDF selected"
+                            color: "#BBB"
+                            font.pixelSize: 12
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Button {
+                        text: isEditing ? "SAVE CHANGES" : "PUBLISH BOOK"
+                        highlighted: true
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 50
+                        background: Rectangle {
+                            color: "#D4AF37"
+                            radius: 5
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "#1A0F1F"
+                            font.bold: true
+                            font.pixelSize: 16
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            if (typeof networkManager === "undefined") return;
+
+                            var priceVal = parseFloat(priceIn.text) || 0.0
+                            var discountVal = parseFloat(discountIn.text) || 0.0
+                            var now = Math.floor(Date.now() / 1000)
+                            var oneYearLater = now + 365 * 24 * 60 * 60
+
+                            if (isEditing) {
+                                // ===== اصلاح: ارسال مسیرهای صحیح =====
+                                // اگر فایل جدید آپلود نشده، مسیر قدیمی را ارسال کن
+                                var finalCoverPath = isCoverChanged ? coverImagePath : coverImagePath
+                                var finalPdfPath = isPdfChanged ? pdfFilePath : pdfFilePath
+
+                                // اگر فایل جدید آپلود نشده، مسیر خالی ارسال کن تا سرور از مسیر قبلی استفاده کند
+                                if (!isCoverChanged) {
+                                    finalCoverPath = ""
+                                }
+                                if (!isPdfChanged) {
+                                    finalPdfPath = ""
+                                }
+
+                                networkManager.updateBookDetails(
+                                    editingBookId,
+                                    titleIn.text,
+                                    authorIn.text,
+                                    priceVal,
+                                    genreIn.currentText,
+                                    descIn.text,
+                                    finalCoverPath,
+                                    finalPdfPath,
+                                    "publisher",
+                                    userId
+                                );
+
+                                if (discountVal > 0) {
+                                    networkManager.applyDiscountToBook(userId, editingBookId, discountVal, 0, now, oneYearLater);
+                                } else {
+                                    networkManager.removeDiscountFromBook(userId, editingBookId);
+                                }
+                            } else {
+                                pendingDiscount = discountVal;
+                                networkManager.addBook(
+                                    userId,
+                                    titleIn.text,
+                                    authorIn.text,
+                                    priceVal,
+                                    genreIn.currentText,
+                                    descIn.text,
+                                    coverImagePath,
+                                    pdfFilePath
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ===== TAB 3: ACCOUNT SETTINGS =====
+            ColumnLayout {
+                width: parent ? parent.width - 100 : 800
+                anchors.centerIn: parent
+                spacing: 15
+
+                Text {
+                    text: "Account Settings"
+                    color: "#D4AF37"
+                    font.pixelSize: 24
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                ColumnLayout {
+                    spacing: 5
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Username:"
+                        color: "#BBB"
+                        font.pixelSize: 14
+                    }
+                    CustomTextField {
+                        id: profUser
+                        text: username
+                        Layout.fillWidth: true
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: 5
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Favorite Author:"
+                        color: "#BBB"
+                        font.pixelSize: 14
+                    }
+                    CustomTextField {
+                        id: profFavAuthor
+                        text: favoriteAuthor
+                        Layout.fillWidth: true
+                        placeholder: "Enter your favorite author"
+                    }
+                }
+
+                Rectangle {
+                    Layout.preferredHeight: 1
+                    Layout.fillWidth: true
+                    color: "#3D2B43"
+                    Layout.topMargin: 10
+                    Layout.bottomMargin: 10
+                }
+
+                Text {
+                    text: "Change Password"
+                    color: "#D4AF37"
+                    font.pixelSize: 18
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                ColumnLayout {
+                    spacing: 5
+                    Layout.fillWidth: true
+                    Text {
+                        text: "Current Password:"
+                        color: "#BBB"
+                        font.pixelSize: 14
+                    }
+                    CustomTextField {
+                        id: currentPassIn
+                        echoMode: TextInput.Password
+                        placeholder: "Enter current password to authorize changes"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: 5
+                    Layout.fillWidth: true
+                    Text {
+                        text: "New Password:"
+                        color: "#BBB"
+                        font.pixelSize: 14
+                    }
+                    CustomTextField {
+                        id: newPassIn
+                        echoMode: TextInput.Password
+                        placeholder: "Leave blank to keep current"
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Text {
+                    id: errorMsg
+                    color: "#FF4444"
+                    font.pixelSize: 12
+                    visible: false
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Button {
+                    text: "SAVE ALL CHANGES"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+                    background: Rectangle {
+                        color: "#D4AF37"
+                        radius: 5
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        font.pixelSize: 14
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    onClicked: {
+                        if (currentPassIn.text !== publisherPassword && publisherPassword !== "") {
+                            errorMsg.text = "Error: Current password is incorrect!"
+                            errorMsg.visible = true
+                            errorMsg.color = "#FF4444"
+                        } else {
+                            username = profUser.text
+                            favoriteAuthor = profFavAuthor.text
+
+                            if (newPassIn.text !== "") {
+                                publisherPassword = newPassIn.text
+                            }
+
+                            errorMsg.text = "Settings updated successfully!"
+                            errorMsg.color = "#44FF44"
+                            errorMsg.visible = true
+                            currentPassIn.text = ""
+                            newPassIn.text = ""
+
+                            if (typeof networkManager !== "undefined") {
+                                networkManager.updateProfile(userId, [])
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== HELPER FUNCTIONS ==========
+    function clearForm() {
+        titleIn.text = ""
+        authorIn.text = ""
+        genreIn.currentIndex = 0
+        descIn.text = ""
+        priceIn.text = ""
+        discountIn.text = ""
+        coverImagePath = ""
+        pdfFilePath = ""
+        coverLabel.text = "No cover selected"
+        pdfLabel.text = "No PDF selected"
+        pendingDiscount = 0
+        isCoverChanged = false
+        isPdfChanged = false
+    }
+
+    function showSuccessMessage(msg) {
+        successMessageText = msg
+        showSuccess = true
+        showError = false
+    }
+
+    function showErrorMessage(msg) {
+        successMessageText = msg
+        showError = true
+        showSuccess = false
+    }
+
+    // ========== COMPONENTS ==========
+    component StatCard : Rectangle {
+        property string title: ""
+        property string value: ""
+        property string icon: ""
+        Layout.preferredWidth: 250
+        Layout.preferredHeight: 100
+        color: "#3D2B43"
+        radius: 10
+        border.color: "#D4AF37"
+        border.width: 1
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            Text {
+                text: icon + " " + title
+                color: "#BBB"
+                font.pixelSize: 14
+            }
+            Text {
+                text: value
+                color: "#D4AF37"
+                font.pixelSize: 22
+                font.bold: true
+            }
+        }
+    }
+
+    component CustomTextField : TextField {
+        id: tf
+        property string placeholder: ""
+        placeholderText: placeholder
+        color: "white"
+        placeholderTextColor: "#888"
+        background: Rectangle {
+            color: "#3D2B43"
+            border.color: tf.activeFocus ? "#D4AF37" : "#555"
+            border.width: 2
+            radius: 5
+        }
+    }
+}
