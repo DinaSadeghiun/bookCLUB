@@ -209,6 +209,22 @@ bool PublisherService::removeBook(int publisherId, int bookId) {
     return false;
 }
 
+bool PublisherService::activateBook(int publisherId, int bookId) {
+    Q_ASSERT(publisherId > 0);
+    Q_ASSERT(bookId > 0);
+    if (publisherId <= 0 || bookId <= 0 || !bookRepo) {
+        return false;
+    }
+    auto bookOpt = bookRepo->findById(bookId);
+    if (!bookOpt || bookOpt->getPublisherId() != publisherId) {
+        return false;
+    }
+    if (bookRepo->activate(bookId)) {
+        emit bookActivated(publisherId, bookId);
+        return true;
+    }
+    return false;
+}
 
 bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPrice) {
     Q_ASSERT(publisherId > 0);
@@ -235,11 +251,16 @@ bool PublisherService::updateBookPrice(int publisherId, int bookId, double newPr
 }
 
 //Update book
-bool PublisherService::updateBookDetailsByPublisher(const Book& book) {
-    if (book.getId() <= 0 || !bookRepo) return false;
+bool PublisherService::updateBookDetailsByPublisher(int publisherId, const Book& book) {
+    if (publisherId <= 0 || book.getId() <= 0 || !bookRepo) return false;
 
     auto bookOpt = bookRepo->findById(book.getId());
     if (!bookOpt) return false;
+
+    if (bookOpt->getPublisherId() != publisherId) {
+        qDebug() << "Publisher" << publisherId << "does not own book" << book.getId();
+        return false;
+    }
 
     bookOpt->setTitle(book.getTitle());
     bookOpt->setAuthor(book.getAuthor());

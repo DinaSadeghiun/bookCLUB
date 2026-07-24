@@ -66,9 +66,8 @@ double Book::getFinalPrice() const {
 
 //setter
 void Book::setId(int id) {
-    if (this->id == -1) {
         this->id = id;
-    }
+
 }
 void Book::setTitle(const QString& t) { title = t; }
 void Book::setAuthor(const QString& a) { author = a; }

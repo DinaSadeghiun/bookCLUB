@@ -26,6 +26,7 @@ public:
 
     // Book
     static QJsonObject serializeBook(const Book& b);
+    static QJsonObject serializeBook(const Book& b, const std::optional<Discount>& discount);
     static QJsonArray serializeBookList(const QList<Book>& books);
     static Book deserializeBook(const QJsonObject& obj);
 

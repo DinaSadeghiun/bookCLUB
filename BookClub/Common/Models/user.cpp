@@ -1,9 +1,8 @@
 #include "user.h"
 
 //creat new
-User::User(const QString& username, const QString& password, const QString& sa, double balance, QList<Genre> favs)
+User::User(const QString& username, const QString& password, const QString& sa, QList<Genre> favs)
     : Person(username, password, sa),
-    walletBalance(balance),
     favoriteGenres(favs)
 {
     cart = new ShoppingCart(this->id);
@@ -12,9 +11,8 @@ User::User(const QString& username, const QString& password, const QString& sa, 
 
 //LOAD from DB
 User::User(int id, const QString& username, const QString& passwordHash, const QDateTime& createdAt,
-           bool isActive, const QString& sa, double balance, QList<Genre> favs)
+           bool isActive, const QString& sa, QList<Genre> favs)
     : Person(id, username, passwordHash, createdAt, isActive, sa),
-    walletBalance(balance),
     favoriteGenres(favs)
 {
     cart = new ShoppingCart(this->id);
@@ -28,7 +26,7 @@ User::~User() {
 
 // Deep Copy
 User::User(const User& other)
-    : Person(other), walletBalance(other.walletBalance), favoriteGenres(other.favoriteGenres)
+    : Person(other), favoriteGenres(other.favoriteGenres)
 {
     this->cart = new ShoppingCart(*(other.cart));
     this->library = new PersonalLibrary(*(other.library));
@@ -39,7 +37,6 @@ User& User::operator=(const User& other) {
     if (this != &other) {
         Person::operator=(other);
 
-        this->walletBalance = other.walletBalance;
         this->favoriteGenres = other.favoriteGenres;
 
         delete this->cart;
@@ -54,12 +51,10 @@ User& User::operator=(const User& other) {
 // Move Constructor
 User::User(User&& other) noexcept
     : Person(std::move(other)),
-    walletBalance(other.walletBalance),
     favoriteGenres(std::move(other.favoriteGenres)),
     cart(other.cart),
     library(other.library)
 {
-    other.walletBalance = 0.0;
     other.cart = nullptr;
     other.library = nullptr;
 }
@@ -69,7 +64,6 @@ User& User::operator=(User&& other) noexcept {
     if (this != &other) {
         Person::operator=(std::move(other));
 
-        this->walletBalance = other.walletBalance;
         this->favoriteGenres = std::move(other.favoriteGenres);
 
         delete this->cart;
@@ -78,7 +72,6 @@ User& User::operator=(User&& other) noexcept {
         this->cart = other.cart;
         this->library = other.library;
 
-        other.walletBalance = 0.0;
         other.cart = nullptr;
         other.library = nullptr;
     }
@@ -92,10 +85,6 @@ QString User::getRole() const {
 
 QList<Genre> User::getFavoriteGenres() const {
     return favoriteGenres;
-}
-
-double User::getWalletBalance() const {
-    return this->walletBalance;
 }
 
 ShoppingCart* User::getCart() const {
@@ -121,26 +110,7 @@ bool User::setFavoriteGenres(const QList<Genre>& genres) {
     return true;
 }
 
-void User::setWalletBalance(double amount) {
-    walletBalance = amount;
-}
 //methods
-bool User::deposit(double amount) {
-    if (amount > 0) {
-        this->walletBalance += amount;
-        return true;
-    }
-    return false;
-}
-
-bool User::withdraw(double amount) {
-    if (amount > 0 && this->walletBalance >= amount) {
-        this->walletBalance -= amount;
-        return true;
-    }
-    return false;
-}
-
 void User::addFavoriteGenre(Genre g) {
     if (!favoriteGenres.contains(g)) favoriteGenres.append(g);
 }

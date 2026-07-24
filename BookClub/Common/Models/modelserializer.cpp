@@ -1,4 +1,5 @@
 #include "modelserializer.h"
+#include <QFile>
 
 
 // Book
@@ -18,7 +19,52 @@ QJsonObject ModelSerializer::serializeBook(const Book& b) {
     o["ratingCount"] = b.getRatingCount();
     o["salesCount"] = b.getSalesCount();
     o["isAvailable"] = b.getIsAvailable();
+    o["discount"] = b.getDiscountAmount();
+
+    QString coverData = "";
+    if (!b.getCoverImagePath().isEmpty()) {
+        QFile coverFile(b.getCoverImagePath());
+        if (coverFile.open(QIODevice::ReadOnly)) {
+            coverData = "data:image/jpeg;base64," + QString::fromLatin1(coverFile.readAll().toBase64());
+        }
+    }
+    o["coverImageData"] = coverData;
+
     return o;
+}
+
+QJsonObject ModelSerializer::serializeBook(const Book& b, const std::optional<Discount>& discount) {
+    QJsonObject o;
+    o["id"] = b.getId();
+    o["publisherId"] = b.getPublisherId();
+    o["discountId"] = b.getDiscountId();
+    o["title"] = b.getTitle();
+    o["author"] = b.getAuthor();
+    o["genre"] = genreToString(b.getGenre());
+    o["description"] = b.getDescription();
+    o["coverImagePath"] = b.getCoverImagePath();
+    o["pdfFilePath"] = b.getPdfFilePath();
+    o["price"] = b.getPrice();
+    o["totalRating"] = b.getTotalRating();
+    o["ratingCount"] = b.getRatingCount();
+    o["salesCount"] = b.getSalesCount();
+    o["isAvailable"] = b.getIsAvailable();
+
+    if (discount.has_value()) {
+        o["discountValue"] = discount->getValue();
+        o["discountType"] = static_cast<int>(discount->getType());
+    } else {
+        o["discountValue"] = 0.0;
+        o["discountType"] = 0;
+    }
+    QString coverData = "";
+    if (!b.getCoverImagePath().isEmpty()) {
+        QFile coverFile(b.getCoverImagePath());
+        if (coverFile.open(QIODevice::ReadOnly)) {
+            coverData = "data:image/jpeg;base64," + QString::fromLatin1(coverFile.readAll().toBase64());
+        }
+    }
+    o["coverImageData"] = coverData;    return o;
 }
 
 Book ModelSerializer::deserializeBook(const QJsonObject& o) {
@@ -82,7 +128,6 @@ QJsonObject ModelSerializer::serializeUser(const User& u) {
     o["username"] = u.getUsername();
     o["createdAt"] = u.getCreatedAt().toSecsSinceEpoch();
     o["isActive"] = u.getIsActive();
-    o["walletBalance"] = u.getWalletBalance();
     o["role"] = "user";
 
     QJsonArray favs;
@@ -105,9 +150,7 @@ User ModelSerializer::deserializeUser(const QJsonObject& o) {
         o["username"].toString(),
         "",
         QDateTime::fromSecsSinceEpoch(o["createdAt"].toVariant().toLongLong()),
-        o["isActive"].toBool(), "",
-        o["walletBalance"].toDouble()
-        );
+        o["isActive"].toBool(), "");
 
     for (Genre g : favs) {
         u.addFavoriteGenre(g);
@@ -221,15 +264,19 @@ QJsonObject ModelSerializer::serializeCartDetails(const CartDetails& details) {
     return json;
 }
 
+// Order
 QJsonObject ModelSerializer::serializeOrder(const Order& order) {
     QJsonObject json;
     json["orderId"] = order.getId();
     json["userId"] = order.getUserId();
-    json["totalPrice"] = order.getFinalPrice();
+    json["rawTotalPrice"] = order.getRawPrice();
+    json["totalDiscountAmount"] = order.getDiscountAmount();
+    json["finalPriceToPay"] = order.getFinalPrice();
     json["orderDate"] = order.getOrderDate().toString(Qt::ISODate);
     json["bookIds"] = serializeIntList(order.getBookIds());
     return json;
 }
+
 
 QJsonArray ModelSerializer::serializeOrderList(const QList<Order>& orders) {
     QJsonArray arr;

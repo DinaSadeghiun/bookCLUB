@@ -144,7 +144,9 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
     }
     // 2. Books
     else if (action == "getAllBooks" || action == "addBook" ||
-             action == "updateBookPrice" || action == "removeBook" ||
+             action == "updateBookPrice" ||
+             action == "activateBook" || action == "deactivateBook" ||
+             action == "removeBook" || action == "getPublisherBooks" ||
              action == "getBookDetails" || action == "searchBooks" ||
              action == "applyDiscountToBook" || action == "removeDiscountFromBook" ||
              action == "updateBookDetails") {
@@ -493,13 +495,25 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
         QList<Book> books = bookService->getAllAvailableBooks();
         qDebug() << "Server: Found" << books.size() << "books in database.";
 
+        QJsonArray arr;
+        DiscountRepository discountRepo(&DatabaseManager::instance());
+        for (const Book& b : std::as_const(books)) {
+            std::optional<Discount> disc;
+            if (b.getDiscountId() > 0) {
+                disc = discountRepo.findById(b.getDiscountId());
+            }
+            arr.append(ModelSerializer::serializeBook(b, disc));
+        }
+
         response["status"] = "success";
-        response["data"] = ModelSerializer::serializeBookList(books);
+        response["data"] = arr;
     }
     else if (action == "addBook") {
         int pubId = data.value("publisherId").toInt();
         Book book = ModelSerializer::deserializeBook(data);
+        book.setId(-1);
         book.setPublisherId(pubId);
+        book.setDiscountId(-1);
 
         QString coverB64 = data["coverImage"].toString();
         QString pdfB64 = data["pdfFile"].toString();
@@ -538,6 +552,24 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
         }
     }
 
+    else if (action == "getPublisherBooks") {
+        int pubId = data.value("publisherId").toInt();
+        QList<Book> books = bookService->getBooksByPublisher(pubId);
+
+        QJsonArray arr;
+        DiscountRepository discountRepo(&DatabaseManager::instance());
+        for (const Book& b : books) {
+            std::optional<Discount> disc;
+            if (b.getDiscountId() > 0) {
+                disc = discountRepo.findById(b.getDiscountId());
+            }
+            arr.append(ModelSerializer::serializeBook(b, disc));
+        }
+
+        response["status"] = "success";
+        response["data"] = arr;
+    }
+
     else if (action == "updateBookPrice") {
         int pubId = data.value("publisherId").toInt();
         int bookId = data.value("bookId").toInt();
@@ -564,6 +596,20 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
             response["status"] = "error";
             response["message"] = "Failed to remove book. Owner verification failed.";
         }
+    }
+    else if (action == "deactivateBook") {
+        int pubId = data.value("publisherId").toInt();
+        int bookId = data.value("bookId").toInt();
+        bool success = publisherService->removeBook(pubId, bookId);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to deactivate book.";
+    }
+    else if (action == "activateBook") {
+        int pubId = data.value("publisherId").toInt();
+        int bookId = data.value("bookId").toInt();
+        bool success = publisherService->activateBook(pubId, bookId);
+        response["status"] = success ? "success" : "error";
+        if (!success) response["message"] = "Failed to activate book.";
     }
     else if (action == "getBookDetails") {
         int bookId = data.value("bookId").toInt();
@@ -646,6 +692,37 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
             response["status"] = "error";
             response["message"] = "Invalid book data";
         } else {
+            auto existingBook = bookService->getBookById(book.getId());
+
+            QString coverB64 = data["coverImage"].toString();
+            QString pdfB64 = data["pdfFile"].toString();
+
+            if (!coverB64.isEmpty()) {
+                QDir().mkpath("uploads/covers");
+                QString coverFileName = QUuid::createUuid().toString(QUuid::WithoutBraces) + ".jpg";
+                QFile coverFile("uploads/covers/" + coverFileName);
+                if (coverFile.open(QIODevice::WriteOnly)) {
+                    coverFile.write(QByteArray::fromBase64(coverB64.toUtf8()));
+                    coverFile.close();
+                    book.setCoverImagePath("uploads/covers/" + coverFileName);
+                }
+            } else if (existingBook.has_value()) {
+                book.setCoverImagePath(existingBook->getCoverImagePath());
+            }
+
+            if (!pdfB64.isEmpty()) {
+                QDir().mkpath("uploads/pdfs");
+                QString pdfFileName = QUuid::createUuid().toString(QUuid::WithoutBraces) + ".pdf";
+                QFile pdfFile("uploads/pdfs/" + pdfFileName);
+                if (pdfFile.open(QIODevice::WriteOnly)) {
+                    pdfFile.write(QByteArray::fromBase64(pdfB64.toUtf8()));
+                    pdfFile.close();
+                    book.setPdfFilePath("uploads/pdfs/" + pdfFileName);
+                }
+            } else if (existingBook.has_value()) {
+                book.setPdfFilePath(existingBook->getPdfFilePath());
+            }
+
             bool success = false;
             if (role == "admin") {
                 success = adminService->updateBookDetailsByAdmin(book);
@@ -656,10 +733,10 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
                     handler->sendResponse(response);
                     return;
                 }
-                success = publisherService->updateBookDetailsByPublisher(publisherId, book.getId(), book);
+                success = publisherService->updateBookDetailsByPublisher(publisherId, book);
             } else {
                 response["status"] = "error";
-                response["message"] = "Invalid role for book update";
+                response["message"] = "Invalid role";
                 handler->sendResponse(response);
                 return;
             }

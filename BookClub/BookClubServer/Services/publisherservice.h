@@ -53,8 +53,9 @@ public:
     // Book Management
     bool addNewBook(int publisherId, Book& book);
     bool updateBookPrice(int publisherId, int bookId, double newPrice);
-    bool updateBookDetailsByPublisher(const Book& book);
+    bool updateBookDetailsByPublisher(int publisherId, const Book& book);
     bool removeBook(int publisherId, int bookId);
+    bool activateBook(int publisherId, int bookId);
     bool addRevenue(int publisherId, double amount);
     QList<Book> getPublisherBooks(int publisherId);
     // Discount Management
@@ -71,6 +72,7 @@ signals:
     void publisherCredentialsChanged(int publisherId);
     void bookAdded(int publisherId, int bookId);
     void bookRemoved(int publisherId, int bookId);
+    void bookActivated(int publisherId, int bookId);
     void bookPriceUpdated(int bookId, double newPrice);
     void discountApplied(int bookId, int discountId);
     void discountRemoved(int bookId);

@@ -88,6 +88,10 @@ bool BookRepository::save(Book& book) {
             qDebug() << "Books Update Failed:" << q.lastError().text();
             return false;
         }
+        if (q.numRowsAffected() <= 0) {
+            qDebug() << "Books Update: No rows affected for id" << book.getId();
+            return false;
+        }
         return true;
     }
 }
@@ -129,7 +133,7 @@ QList<Book> BookRepository::findByPublisherId(int publisherId) {
     QSqlDatabase db = dbManager->getDatabase();
     QList<Book> list;
     QSqlQuery q(db);
-    q.prepare("SELECT * FROM Books WHERE publisher_id = ? AND is_available = 1");
+    q.prepare("SELECT * FROM Books WHERE publisher_id = ?");
     q.addBindValue(publisherId);
 
     if (q.exec()) {
@@ -163,6 +167,14 @@ bool BookRepository::remove(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     q.prepare("UPDATE Books SET is_available = 0 WHERE id = ?");
+    q.addBindValue(id);
+    return q.exec() && q.numRowsAffected() > 0;
+}
+
+bool BookRepository::activate(int id) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+    q.prepare("UPDATE Books SET is_available = 1 WHERE id = ?");
     q.addBindValue(id);
     return q.exec() && q.numRowsAffected() > 0;
 }

@@ -8,18 +8,17 @@
 
 class User : public Person {
 private:
-    double walletBalance;
     QList<Genre> favoriteGenres;
     ShoppingCart* cart;
     PersonalLibrary* library;
 
 public:
     //creat new
-    User(const QString& username, const QString& password, const QString& sa, double balance, QList<Genre> favs = {});
+    User(const QString& username, const QString& password, const QString& sa, QList<Genre> favs = {});
 
     //LOAD from DB
     User(int id, const QString& username, const QString& passwordHash, const QDateTime& createdAt,
-         bool isActive, const QString& sa, double balance, QList<Genre> favs={});
+         bool isActive, const QString& sa, QList<Genre> favs={});
 
 
     ~User() override;
@@ -33,7 +32,6 @@ public:
     QString getRole() const override;
 
     // Getters
-    double getWalletBalance() const;
     QList<Genre> getFavoriteGenres() const;
     ShoppingCart* getCart() const;
     PersonalLibrary* getLibrary() const;
@@ -41,11 +39,8 @@ public:
     //setter
     void setId(int newId) override;
     bool setFavoriteGenres(const QList<Genre>& favs);
-    void setWalletBalance(double amount);
 
     // Methods
-    bool deposit(double amount);
-    bool withdraw(double amount);
     void addFavoriteGenre(Genre g);
 
 };
