@@ -99,9 +99,13 @@ bool AdminService::changeAdminUsername(int adminId, const QString& newUsername, 
     return adminRepo->save(*adminOpt);
 }
 
-bool AdminService::changeSecurityAnswer(int adminId, const QString& newAnswer) {
+bool AdminService::changeSecurityAnswer(int adminId, const QString& newAnswer, const QString& password) {
     auto adminOpt = adminRepo->findById(adminId);
     if (!adminOpt) return false;
+
+    if (!adminOpt->verifyPassword(password)) {
+        return false;
+    }
 
     adminOpt->setSecurityAnswer(newAnswer);
     return adminRepo->save(*adminOpt);

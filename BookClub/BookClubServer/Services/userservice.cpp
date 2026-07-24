@@ -153,14 +153,19 @@ bool UserService::changeUserUsername(int userId, const QString& newUsername, con
     return false;
 }
 
-bool UserService::changeSecurityAnswer(int userId, const QString& newAnswer) {
-    if (userId <= 0 || newAnswer.trimmed().isEmpty()) {
+bool UserService::changeSecurityAnswer(int userId, const QString& newAnswer, const QString& password) {
+    if (userId <= 0 || newAnswer.trimmed().isEmpty() || password.isEmpty()) {
         return false;
     }
     auto userOpt = userRepo->findById(userId);
     if (!userOpt.has_value()) {
         return false;
     }
+
+    if (!userOpt->verifyPassword(password)) {
+        return false;
+    }
+
     User user = userOpt.value();
     user.setSecurityAnswer(newAnswer.trimmed());
     if (userRepo->save(user)) {

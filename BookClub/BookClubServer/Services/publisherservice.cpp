@@ -155,17 +155,26 @@ bool PublisherService::changePublisherUsername(int publisherId, const QString& n
 
 }
 
-bool PublisherService::changeSecurityAnswer(int publisherId, const QString& newAnswer) {
-    if (publisherId <= 0 || newAnswer.trimmed().isEmpty()) {
+bool PublisherService::changeSecurityAnswer(int publisherId, const QString& newAnswer, const QString& password) {
+    if (publisherId <= 0 || newAnswer.trimmed().isEmpty() || password.isEmpty()) {
         return false;
     }
     auto pubOpt = pubRepo->findById(publisherId);
     if (!pubOpt.has_value()) {
         return false;
     }
+
+    if (!pubOpt->verifyPassword(password)) {
+        return false;
+    }
+
     Publisher publisher = pubOpt.value();
     publisher.setSecurityAnswer(newAnswer.trimmed());
-    return pubRepo->save(publisher);
+    if (pubRepo->save(publisher)) {
+        emit publisherCredentialsChanged(publisherId);
+        return true;
+    }
+    return false;
 }
 
 

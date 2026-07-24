@@ -36,7 +36,7 @@ public:
     // Account Management
     bool changeUserPassword(int userId, const QString& oldPassword, const QString& newPassword);
     bool changeUserUsername(int userId, const QString& newUsername, const QString& password);
-    bool changeSecurityAnswer(int userId, const QString& newAnswer);
+    bool changeSecurityAnswer(int userId, const QString& newAnswer, const QString& password);
 
     // Genres Preference Management
     bool updateUserFavoriteGenres(int userId, const QList<Genre>& genres);
