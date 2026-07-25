@@ -7,6 +7,7 @@
 #include "clienthandler.h"
 #include "Notification.h"
 
+class Book;
 class UserService;
 class BookService;
 class CommentService;

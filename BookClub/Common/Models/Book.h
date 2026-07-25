@@ -29,7 +29,7 @@ public:
          const QString& description, const QString& coverImagePath,
          const QString& pdfFilePath, double price,
          double totalRating, int ratingCount, int salesCount, bool isAvailable);
-
+    Book() = default;
     ~Book() = default;
 
     // Getters

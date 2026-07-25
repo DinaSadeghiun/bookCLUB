@@ -1,4 +1,6 @@
 #include "modelserializer.h"
+#include "DB/databasemanager.h"
+#include "DB/discountrepository.h"
 #include <QFile>
 
 
@@ -173,6 +175,7 @@ QJsonObject ModelSerializer::serializePublisher(const Publisher& p) {
     o["username"] = p.getUsername();
     o["createdAt"] = p.getCreatedAt().toSecsSinceEpoch();
     o["isActive"] = p.getIsActive();
+    o["securityAnswer"] = p.getSecurityAnswer();
     o["companyName"] = p.getCompanyName();
     o["revenue"] = p.getRevenue();
     o["role"] = "publisher";
