@@ -32,7 +32,6 @@ public:
     // Authentication & Registration
     QString registerPublisher(const QString& username,
                               const QString& password,
-                              const QString& companyName,
                               const QString& securityAns = "1");
 
 

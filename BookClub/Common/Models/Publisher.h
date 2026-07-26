@@ -17,30 +17,27 @@ struct SalesStats {
 class Publisher : public Person {
 
 private:
-    QString companyName;
     SalesStats salesStats;
     double revenue = 0.0;
 
 
 public:
     //creat new
-    Publisher(const QString& name, const QString& password, const QString& sa, const QString& companyName);
+    Publisher(const QString& name, const QString& password, const QString& sa);
 
     //LOAD from DB
     Publisher(int id, const QString& name, const QString& passwordHash,
               const QDateTime& createdAt, bool isActive, const QString& sa,
-              const QString& companyName, double revenue=0.0);
+              double revenue=0.0);
 
     ~Publisher() override = default;
 
     QString getRole() const override;
 
     // Getters
-    QString getCompanyName() const;
     double getRevenue() const;
 
     // Setters
-    void setCompanyName(const QString& name);
     void setRevenue(double amount);
     void setId(int newId) override;
 

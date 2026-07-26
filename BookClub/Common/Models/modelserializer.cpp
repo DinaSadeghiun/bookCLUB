@@ -176,7 +176,6 @@ QJsonObject ModelSerializer::serializePublisher(const Publisher& p) {
     o["createdAt"] = p.getCreatedAt().toSecsSinceEpoch();
     o["isActive"] = p.getIsActive();
     o["securityAnswer"] = p.getSecurityAnswer();
-    o["companyName"] = p.getCompanyName();
     o["revenue"] = p.getRevenue();
     o["role"] = "publisher";
     return o;
@@ -189,7 +188,6 @@ Publisher ModelSerializer::deserializePublisher(const QJsonObject& o) {
         "",
         QDateTime::fromSecsSinceEpoch(o["createdAt"].toVariant().toLongLong()),
         o["isActive"].toBool(), "",
-        o["companyName"].toString(),
         o["revenue"].toDouble()
         );
 }
@@ -337,4 +335,3 @@ Notification ModelSerializer::deserializeNotification(const QJsonObject& o) {
         o["isRead"].toBool()
         );
 }
-

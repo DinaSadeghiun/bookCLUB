@@ -16,10 +16,9 @@ Publisher PublisherRepository::fromQuery(QSqlQuery& q) const {
     bool active = q.value("is_active").toBool();
     QString secA = Person::decryptData(q.value("security_answer").toString());
 
-    QString companyName = q.value("company_name").toString();
     double revenue = q.value("revenue").toDouble();
 
-    Publisher pub(id, username, pwHash, created, active, secA, companyName);
+    Publisher pub(id, username, pwHash, created, active, secA);
     pub.setRevenue(revenue);
     return pub;
 }
@@ -48,9 +47,8 @@ bool PublisherRepository::save(Publisher& pub) {
         }
         pub.setId(q.lastInsertId().toInt());
 
-        q.prepare("INSERT INTO Publishers (person_id, company_name, revenue) VALUES (:pid, :cname, :rev)");
+        q.prepare("INSERT INTO Publishers (person_id, revenue) VALUES (:pid, :rev)");
         q.bindValue(":pid", pub.getId());
-        q.bindValue(":cname", pub.getCompanyName());
         q.bindValue(":rev", pub.getRevenue());
 
         if (!q.exec()) {
@@ -72,8 +70,7 @@ bool PublisherRepository::save(Publisher& pub) {
             return false;
         }
 
-        q.prepare("UPDATE Publishers SET company_name=:cname, revenue=:rev WHERE person_id=:pid");
-        q.bindValue(":cname", pub.getCompanyName());
+        q.prepare("UPDATE Publishers SET revenue=:rev WHERE person_id=:pid");
         q.bindValue(":rev", pub.getRevenue());
         q.bindValue(":pid", pub.getId());
 
@@ -90,7 +87,7 @@ QList<Publisher> PublisherRepository::findAll() const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
-    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+    q.prepare("SELECT p.*, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
               "WHERE p.role = :role");
 
@@ -109,12 +106,11 @@ QList<Publisher> PublisherRepository::searchPublishers(const QString& queryStr) 
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
 
-    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+    q.prepare("SELECT p.*, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
-              "WHERE p.role = :role AND (pub.company_name LIKE :cname OR p.username = :uname)");
+              "WHERE p.role = :role AND p.username = :uname");
 
     q.bindValue(":role", ROLE_PUBLISHER);
-    q.bindValue(":cname", "%" + queryStr + "%");
     q.bindValue(":uname", Person::encryptData(queryStr));
 
     QList<Publisher> result;
@@ -130,7 +126,7 @@ QList<Publisher> PublisherRepository::searchPublishers(const QString& queryStr) 
 std::optional<Publisher> PublisherRepository::findById(int id) const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+    q.prepare("SELECT p.*, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
               "WHERE p.id = :id AND p.role = :role");
     q.bindValue(":id", id);
@@ -145,7 +141,7 @@ std::optional<Publisher> PublisherRepository::findById(int id) const {
 std::optional<Publisher> PublisherRepository::findByUsername(const QString& username) const {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
-    q.prepare("SELECT p.*, pub.company_name, pub.revenue FROM Persons p "
+    q.prepare("SELECT p.*, pub.revenue FROM Persons p "
               "JOIN Publishers pub ON p.id = pub.person_id "
               "WHERE p.username = :uname AND p.role = :role");
     q.bindValue(":uname", Person::encryptData(username));

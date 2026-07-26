@@ -1,17 +1,14 @@
 #include "Publisher.h"
 
 //creat new
-Publisher::Publisher(const QString& name, const QString& password, const QString& sa, const QString& companyName)
+Publisher::Publisher(const QString& name, const QString& password, const QString& sa)
     : Person(name, password, sa),
-    companyName(companyName)
 {}
 
 //LOAD from DB
 Publisher::Publisher(int id, const QString& name, const QString& passwordHash,
-                     const QDateTime& createdAt, bool isActive, const QString& sa,
-                     const QString& companyName, double revenue)
+                     const QDateTime& createdAt, bool isActive, const QString& sa, double revenue)
     : Person(id, name, passwordHash, createdAt, isActive, sa),
-    companyName(companyName),
     revenue(revenue)
 {}
 
@@ -21,11 +18,9 @@ QString Publisher::getRole() const {
 }
 
 // Getters
-QString Publisher::getCompanyName() const { return companyName; }
 double Publisher::getRevenue() const { return revenue; }
 
 // Setters
-void Publisher::setCompanyName(const QString& name) { this->companyName = name; }
 void Publisher::setId(int newId) {
     if (id == -1){
     id = newId;

@@ -91,7 +91,6 @@ bool DatabaseManager::createTables() {
     if (!q.exec(R"(
         CREATE TABLE IF NOT EXISTS Publishers (
             person_id     INTEGER PRIMARY KEY,
-            company_name  TEXT NOT NULL,
             revenue       REAL DEFAULT 0.0,
             FOREIGN KEY(person_id) REFERENCES Persons(id) ON DELETE CASCADE
         )

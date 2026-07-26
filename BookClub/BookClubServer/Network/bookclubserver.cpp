@@ -97,7 +97,7 @@ void BookClubServer::initializeServices() {
     if (checkBooks.isEmpty()) {
         qDebug() << "Database is empty. Injecting test data...";
 
-        Publisher testPub("nasher1", "1234", "Ghoghnoos Pub", "Tehran");
+        Publisher testPub("nasher1", "1234", "default");   // ← securityAnswer
         pubRepo->save(testPub);
         int pubId = testPub.getId();
         if(pubId == -1) pubId = 1;
@@ -325,10 +325,9 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
     else if (action == "registerPublisher") {
         QString u = data.value("username").toString().trimmed();
         QString p = data.value("password").toString();
-        QString comp = data.value("companyName").toString().trimmed();
         QString sa = data.value("securityAnswer").toString().trimmed();
 
-        QString resMsg = publisherService->registerPublisher(u, p, comp, sa);
+        QString resMsg = publisherService->registerPublisher(u, p, sa);
         if (resMsg == "SUCCESS") {
             response["status"] = "success";
             response["message"] = "Publisher registration completed successfully";
@@ -508,20 +507,6 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
     }
 }
 
-//helpper
-QJsonArray serializeBookListWithDiscount(const QList<Book>& books, BookService* bookService) {
-    QJsonArray arr;
-    DiscountRepository discountRepo(&DatabaseManager::instance());
-    for (const Book& b : books) {
-        std::optional<Discount> disc;
-        if (b.getDiscountId() > 0) {
-            disc = discountRepo.findById(b.getDiscountId());
-        }
-        arr.append(ModelSerializer::serializeBook(b, disc));
-    }
-    return arr;
-}
-
 void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, const QJsonObject& data) {
     QJsonObject response;
     response["action"] = action;
@@ -529,19 +514,8 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     if (action == "getAllBooks") {
         QList<Book> books = bookService->getAllAvailableBooks();
         qDebug() << "Server: Found" << books.size() << "books in database.";
-
-        QJsonArray arr;
-        DiscountRepository discountRepo(&DatabaseManager::instance());
-        for (const Book& b : std::as_const(books)) {
-            std::optional<Discount> disc;
-            if (b.getDiscountId() > 0) {
-                disc = discountRepo.findById(b.getDiscountId());
-            }
-            arr.append(ModelSerializer::serializeBook(b, disc));
-        }
-
         response["status"] = "success";
-        response["data"] = arr;
+        response["data"] = serializeBookListWithDiscount(books);
     }
     else if (action == "addBook") {
         int pubId = data.value("publisherId").toInt();
@@ -590,19 +564,8 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     else if (action == "getPublisherBooks") {
         int pubId = data.value("publisherId").toInt();
         QList<Book> books = bookService->getBooksByPublisher(pubId);
-
-        QJsonArray arr;
-        DiscountRepository discountRepo(&DatabaseManager::instance());
-        for (const Book& b : std::as_const(books)) {
-            std::optional<Discount> disc;
-            if (b.getDiscountId() > 0) {
-                disc = discountRepo.findById(b.getDiscountId());
-            }
-            arr.append(ModelSerializer::serializeBook(b, disc));
-        }
-
         response["status"] = "success";
-        response["data"] = arr;
+        response["data"] = serializeBookListWithDiscount(books);
     }
 
     else if (action == "updateBookPrice") {
@@ -648,13 +611,45 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     }
     else if (action == "getBookDetails") {
         int bookId = data.value("bookId").toInt();
+        int userId = data.value("userId").toInt();
+
         auto bookOpt = bookService->getBookById(bookId);
         if (bookOpt.has_value()) {
-            QJsonObject bookJson = ModelSerializer::serializeBook(*bookOpt);
+            Book book = bookOpt.value();
 
-            auto publisherOpt = publisherService->getPublisherById(bookOpt->getPublisherId());
+            std::optional<Discount> disc;
+            if (book.getDiscountId() > 0) {
+                DiscountRepository discountRepo(&DatabaseManager::instance());
+                auto raw = discountRepo.findById(book.getDiscountId());
+                QDateTime now = QDateTime::currentDateTime();
+                if (raw.has_value() && raw->getIsActive() &&
+                    now >= raw->getStartDate() && now <= raw->getEndDate()) {
+                    disc = raw;
+                }
+            }
+            QJsonObject bookJson = ModelSerializer::serializeBook(book, disc);
+
+            auto publisherOpt = publisherService->getPublisherById(book.getPublisherId());
             if (publisherOpt.has_value()) {
-                bookJson["publisherName"] = publisherOpt->getCompanyName();
+                bookJson["publisherUsername"] = publisherOpt->getUsername();
+            }
+
+            if (userId > 0) {
+                bookJson["isPurchased"] = personalLibraryService->hasPurchased(userId, bookId);
+
+                CartDetails cartDetails = shoppingCartService->getCartDetails(userId);
+                bookJson["isInCart"] = cartDetails.bookIds.contains(bookId);
+
+                QList<int> wishlist = personalLibraryService->getWishlist(userId);
+                bookJson["isInWishlist"] = wishlist.contains(bookId);
+
+                QList<int> favorites = personalLibraryService->getFaveBooks(userId);
+                bookJson["isFavorite"] = favorites.contains(bookId);
+            } else {
+                bookJson["isPurchased"] = false;
+                bookJson["isInCart"] = false;
+                bookJson["isInWishlist"] = false;
+                bookJson["isFavorite"] = false;
             }
 
             response["status"] = "success";
@@ -667,9 +662,8 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     else if (action == "searchBooks") {
         QString query = data.value("query").toString().trimmed();
         QList<Book> found = bookService->search(query);
-
         response["status"] = "success";
-        response["data"] = ModelSerializer::serializeBookList(found);
+        response["data"] = serializeBookListWithDiscount(found);
     }
     else if (action == "applyDiscountToBook") {
         int pubId = data.value("publisherId").toInt();
@@ -822,11 +816,9 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     else if (action == "getBooksByGenre") {
         int genreId = data.value("genreId").toInt();
         Genre genre = static_cast<Genre>(genreId);
-
         QList<Book> books = bookService->getBooksByGenre(genre);
-
         response["status"] = "success";
-        response["data"] = ModelSerializer::serializeBookList(books);
+        response["data"] = serializeBookListWithDiscount(books);
     }
     else {
         response["status"] = "error";
@@ -1149,7 +1141,6 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
             QJsonObject po;
             po["id"] = p.getId();
             po["username"] = p.getUsername();
-            po["companyName"] = p.getCompanyName();
             arr.append(po);
         }
         response["status"] = "success";
@@ -1178,7 +1169,6 @@ void BookClubServer::handleAdminActions(ClientHandler* handler, const QString& a
             QJsonObject po;
             po["id"] = p.getId();
             po["username"] = p.getUsername();
-            po["companyName"] = p.getCompanyName();
             arr.append(po);
         }
         response["status"] = "success";

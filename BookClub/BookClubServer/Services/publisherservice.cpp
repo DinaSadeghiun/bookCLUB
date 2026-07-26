@@ -15,7 +15,6 @@ PublisherService::PublisherService(PublisherRepository* pRepo, BookRepository* b
 
 QString PublisherService::registerPublisher(const QString& username,
                                             const QString& password,
-                                            const QString& companyName,
                                             const QString& securityAns)
 {
     if (!pubRepo) {
@@ -23,10 +22,9 @@ QString PublisherService::registerPublisher(const QString& username,
     }
 
     QString trimmedUser = username.trimmed();
-    QString trimmedCompany = companyName.trimmed();
     QString trimmedAns = securityAns.trimmed();
 
-    if (trimmedUser.isEmpty() || password.isEmpty() || trimmedCompany.isEmpty() || trimmedAns.isEmpty()) {
+    if (trimmedUser.isEmpty() || password.isEmpty() || trimmedAns.isEmpty()) {
         return "EMPTY_FIELDS";
     }
 
@@ -35,7 +33,7 @@ QString PublisherService::registerPublisher(const QString& username,
         return "USERNAME_TAKEN";
     }
 
-    Publisher newPub(trimmedUser, password, trimmedAns, trimmedCompany);
+    Publisher newPub(trimmedUser, password, trimmedAns);
 
     if (pubRepo->save(newPub)) {
         emit publisherRegistered(newPub.getId());
@@ -44,7 +42,6 @@ QString PublisherService::registerPublisher(const QString& username,
         return "DATABASE_ERROR";
     }
 }
-
 
 std::optional<Publisher> PublisherService::login(const QString& username, const QString& password) {
     if (!pubRepo) {
