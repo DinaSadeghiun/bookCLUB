@@ -48,7 +48,7 @@ Rectangle {
         onAccepted: {
             coverImagePath = coverFileDialog.file
             coverLabel.text = coverFileDialog.file.toString().split('/').pop()
-            isCoverChanged = true  // ← فلگ تغییر
+            isCoverChanged = true
         }
     }
 
@@ -59,7 +59,7 @@ Rectangle {
         onAccepted: {
             pdfFilePath = pdfFileDialog.file
             pdfLabel.text = pdfFileDialog.file.toString().split('/').pop()
-            isPdfChanged = true  // ← فلگ تغییر
+            isPdfChanged = true
         }
     }
 
@@ -191,8 +191,18 @@ Rectangle {
             else if (action === "updateProfile") {
                 if (statusUpper === "SUCCESS" || statusUpper === "OK") {
                     showSuccessMessage("✅ Profile updated successfully!")
+                   console.log("SettingsView - userId:", userId)
                 } else {
                     showErrorMessage("❌ Failed to update profile: " + status)
+                }
+            }
+            else if (action === "changeUsername" || action === "updateSecurityAnswer" || action === "changePassword") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    if (action === "changeUsername") username = profUser.text.trim()
+                    if (action === "updateSecurityAnswer") favoriteAuthor = profFavAuthor.text.trim()
+                    showSuccessMessage("✅ " + (data.message || "Settings updated successfully!"))
+                } else {
+                    showErrorMessage("❌ " + (data.message || (action + " failed.")))
                 }
             }
         }
@@ -453,23 +463,16 @@ Rectangle {
                             Image {
                                 id: coverImage
                                 anchors.fill: parent
-                                source: model.coverImagePath !== "" ? "file:///" + model.coverImagePath : ""
+                                source: model.coverData !== "" ? model.coverData : (model.coverImagePath !== "" ? "file:///" + model.coverImagePath : "")
                                 fillMode: Image.PreserveAspectCrop
-                                visible: model.coverImagePath !== ""
-                                onStatusChanged: {
-                                    if (status === Image.Error) {
-                                        if (model.coverData !== "") {
-                                            source = "data:image/png;base64," + model.coverData
-                                        }
-                                    }
-                                }
+                                visible: source !== ""
                             }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: "📖"
                                 font.pixelSize: 35
-                                visible: model.coverImagePath === "" && model.coverData === ""
+                                visible: model.coverData === "" && model.coverImagePath === ""
                             }
                         }
 
@@ -564,11 +567,9 @@ Rectangle {
                                     priceIn.text = model.price.toString();
                                     discountIn.text = model.discount.toString();
 
-                                    // ذخیره مسیرهای فعلی از دیتابیس
                                     coverImagePath = model.coverImagePath || "";
                                     pdfFilePath = model.pdfFilePath || "";
 
-                                    // ریست کردن فلگ‌ها
                                     isCoverChanged = false;
                                     isPdfChanged = false;
 
@@ -770,18 +771,8 @@ Rectangle {
                             var oneYearLater = now + 365 * 24 * 60 * 60
 
                             if (isEditing) {
-                                // ===== اصلاح: ارسال مسیرهای صحیح =====
-                                // اگر فایل جدید آپلود نشده، مسیر قدیمی را ارسال کن
-                                var finalCoverPath = isCoverChanged ? coverImagePath : coverImagePath
-                                var finalPdfPath = isPdfChanged ? pdfFilePath : pdfFilePath
-
-                                // اگر فایل جدید آپلود نشده، مسیر خالی ارسال کن تا سرور از مسیر قبلی استفاده کند
-                                if (!isCoverChanged) {
-                                    finalCoverPath = ""
-                                }
-                                if (!isPdfChanged) {
-                                    finalPdfPath = ""
-                                }
+                                var finalCoverPath = isCoverChanged ? coverImagePath : ""
+                                var finalPdfPath = isPdfChanged ? pdfFilePath : ""
 
                                 networkManager.updateBookDetails(
                                     editingBookId,
@@ -820,144 +811,154 @@ Rectangle {
             }
 
             // ===== TAB 3: ACCOUNT SETTINGS =====
-            ColumnLayout {
-                width: parent ? parent.width - 100 : 800
-                anchors.centerIn: parent
-                spacing: 15
-
-                Text {
-                    text: "Account Settings"
-                    color: "#D4AF37"
-                    font.pixelSize: 24
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
+            ScrollView {
+                contentWidth: availableWidth
                 ColumnLayout {
-                    spacing: 5
-                    Layout.fillWidth: true
+                    width: parent ? parent.width - 100 : 800
+                    anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
+                    spacing: 15
+                    Layout.topMargin: 20
+
                     Text {
-                        text: "Username:"
-                        color: "#BBB"
-                        font.pixelSize: 14
-                    }
-                    CustomTextField {
-                        id: profUser
-                        text: username
-                        Layout.fillWidth: true
-                    }
-                }
-
-                ColumnLayout {
-                    spacing: 5
-                    Layout.fillWidth: true
-                    Text {
-                        text: "Favorite Author:"
-                        color: "#BBB"
-                        font.pixelSize: 14
-                    }
-                    CustomTextField {
-                        id: profFavAuthor
-                        text: favoriteAuthor
-                        Layout.fillWidth: true
-                        placeholder: "Enter your favorite author"
-                    }
-                }
-
-                Rectangle {
-                    Layout.preferredHeight: 1
-                    Layout.fillWidth: true
-                    color: "#3D2B43"
-                    Layout.topMargin: 10
-                    Layout.bottomMargin: 10
-                }
-
-                Text {
-                    text: "Change Password"
-                    color: "#D4AF37"
-                    font.pixelSize: 18
-                    font.bold: true
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                ColumnLayout {
-                    spacing: 5
-                    Layout.fillWidth: true
-                    Text {
-                        text: "Current Password:"
-                        color: "#BBB"
-                        font.pixelSize: 14
-                    }
-                    CustomTextField {
-                        id: currentPassIn
-                        echoMode: TextInput.Password
-                        placeholder: "Enter current password to authorize changes"
-                        Layout.fillWidth: true
-                    }
-                }
-
-                ColumnLayout {
-                    spacing: 5
-                    Layout.fillWidth: true
-                    Text {
-                        text: "New Password:"
-                        color: "#BBB"
-                        font.pixelSize: 14
-                    }
-                    CustomTextField {
-                        id: newPassIn
-                        echoMode: TextInput.Password
-                        placeholder: "Leave blank to keep current"
-                        Layout.fillWidth: true
-                    }
-                }
-
-                Text {
-                    id: errorMsg
-                    color: "#FF4444"
-                    font.pixelSize: 12
-                    visible: false
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                Button {
-                    text: "SAVE ALL CHANGES"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 45
-                    background: Rectangle {
+                        text: "Account Settings"
                         color: "#D4AF37"
-                        radius: 5
-                    }
-                    contentItem: Text {
-                        text: parent.text
-                        color: "#1A0F1F"
+                        font.pixelSize: 24
                         font.bold: true
-                        font.pixelSize: 14
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        Layout.alignment: Qt.AlignHCenter
                     }
-                    onClicked: {
-                        if (currentPassIn.text !== publisherPassword && publisherPassword !== "") {
-                            errorMsg.text = "Error: Current password is incorrect!"
-                            errorMsg.visible = true
-                            errorMsg.color = "#FF4444"
-                        } else {
-                            username = profUser.text
-                            favoriteAuthor = profFavAuthor.text
 
-                            if (newPassIn.text !== "") {
-                                publisherPassword = newPassIn.text
+                    ColumnLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Text {
+                            text: "Username:"
+                            color: "#BBB"
+                            font.pixelSize: 14
+                        }
+                        CustomTextField {
+                            id: profUser
+                            text: username
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Text {
+                            text: "Favorite Author:"
+                            color: "#BBB"
+                            font.pixelSize: 14
+                        }
+                        CustomTextField {
+                            id: profFavAuthor
+                            text: favoriteAuthor
+                            Layout.fillWidth: true
+                            placeholder: "Enter your favorite author"
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.preferredHeight: 1
+                        Layout.fillWidth: true
+                        color: "#3D2B43"
+                        Layout.topMargin: 10
+                        Layout.bottomMargin: 10
+                    }
+
+                    Text {
+                        text: "Change Password"
+                        color: "#D4AF37"
+                        font.pixelSize: 18
+                        font.bold: true
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    ColumnLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Text {
+                            text: "Current Password:"
+                            color: "#BBB"
+                            font.pixelSize: 14
+                        }
+                        CustomTextField {
+                            id: currentPassIn
+                            echoMode: TextInput.Password
+                            placeholder: "Enter current password to authorize changes"
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 5
+                        Layout.fillWidth: true
+                        Text {
+                            text: "New Password:"
+                            color: "#BBB"
+                            font.pixelSize: 14
+                        }
+                        CustomTextField {
+                            id: newPassIn
+                            echoMode: TextInput.Password
+                            placeholder: "Leave blank to keep current"
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    Text {
+                        id: errorMsg
+                        color: "#FF4444"
+                        font.pixelSize: 12
+                        visible: false
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+
+                    Button {
+                        text: "SAVE ALL CHANGES"
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+                        background: Rectangle {
+                            color: "#D4AF37"
+                            radius: 5
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "#1A0F1F"
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: {
+                            if (typeof networkManager === "undefined") return;
+
+                            errorMsg.visible = false;
+
+                            var wantsUsernameChange = profUser.text.trim() !== "" && profUser.text !== username;
+                            var wantsFavAuthorChange = profFavAuthor.text.trim() !== "" && profFavAuthor.text !== favoriteAuthor;
+                            var wantsPasswordChange = newPassIn.text !== "";
+
+                            if ((wantsUsernameChange || wantsFavAuthorChange || wantsPasswordChange) && currentPassIn.text === "") {
+                                errorMsg.text = "Error: Enter current password to save any changes!";
+                                errorMsg.color = "#FF4444";
+                                errorMsg.visible = true;
+                                return;
                             }
 
-                            errorMsg.text = "Settings updated successfully!"
-                            errorMsg.color = "#44FF44"
-                            errorMsg.visible = true
-                            currentPassIn.text = ""
-                            newPassIn.text = ""
-
-                            if (typeof networkManager !== "undefined") {
-                                networkManager.updateProfile(userId, [])
+                            if (wantsUsernameChange) {
+                                networkManager.changeUsername(userId, profUser.text.trim(), currentPassIn.text, "publisher");
                             }
+
+                            if (wantsFavAuthorChange) {
+                                networkManager.updateSecurityAnswer(userId, profFavAuthor.text.trim(), currentPassIn.text, "publisher");
+                            }
+
+                            if (wantsPasswordChange) {
+                                networkManager.changePassword(userId, currentPassIn.text, newPassIn.text, "publisher");
+                            }
+
+                            currentPassIn.text = "";
+                            newPassIn.text = "";
                         }
                     }
                 }

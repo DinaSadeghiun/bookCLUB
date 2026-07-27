@@ -26,5 +26,7 @@
         <file>HomeView.qml</file>
         <file>AdminDashboard.qml</file>
         <file>PublisherDashboard.qml</file>
+        <file>BookPage.qml</file>
+        <file>PdfReader.qml</file>
     </qresource>
 </RCC>

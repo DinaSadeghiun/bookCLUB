@@ -4,6 +4,9 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QUrl>
+#include <QDir>
+#include <QStandardPaths>
+
 
 NetworkManager::NetworkManager(QObject* parent)
     : QObject(parent), socket(new QTcpSocket(this))
@@ -76,16 +79,23 @@ void NetworkManager::loginPublisher(const QString& username, const QString& pass
     sendRequest("loginPublisher", data);
 }
 
-void NetworkManager::registerPublisher(const QString& username, const QString& password, const QString& companyName, const QString& securityAnswer)
+void NetworkManager::registerPublisher(const QString& username, const QString& password, const QString& securityAnswer)
 {
     QJsonObject data;
     data["username"] = username;
     data["password"] = password;
-    data["companyName"] = companyName;
     data["securityAnswer"] = securityAnswer;
     sendRequest("registerPublisher", data);
 }
-
+void NetworkManager::changePassword(int id, const QString& oldPassword, const QString& newPassword, const QString& role)
+{
+    QJsonObject data;
+    data["id"] = id;
+    data["oldPassword"] = oldPassword;
+    data["newPassword"] = newPassword;
+    data["role"] = role;
+    sendRequest("changePassword", data);
+}
 void NetworkManager::loginAdmin(const QString& username, const QString& password)
 {
     QJsonObject data;
@@ -127,15 +137,30 @@ void NetworkManager::updateProfile(int userId, const QVariantList& favoriteGenre
     sendRequest("updateProfile", data);
 }
 
-void NetworkManager::updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& role)
+void NetworkManager::updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& password, const QString& role)
 {
     QJsonObject data;
     data["id"] = userId;
     data["securityAnswer"] = securityAnswer;
+    data["password"] = password;
     data["role"] = role;
     sendRequest("updateSecurityAnswer", data);
 }
+void NetworkManager::checkUsernameExists(const QString& username)
+{
+    QJsonObject data;
+    data["username"] = username.trimmed();
+    sendRequest("checkUsernameExists", data);
+}
 
+void NetworkManager::verifySecurityAnswer(const QString& username, const QString& role, const QString& answer)
+{
+    QJsonObject data;
+    data["username"] = username.trimmed();
+    data["role"] = role.toLower();
+    data["securityAnswer"] = answer.trimmed();
+    sendRequest("verifySecurityAnswer", data);
+}
 // Books Operations
 void NetworkManager::getAllBooks()
 {
@@ -180,6 +205,57 @@ void NetworkManager::addBook(int publisherId, const QString& title, const QStrin
 
     sendRequest("addBook", data);
 }
+void NetworkManager::getBookPdf(int userId, int bookId)
+{
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    sendRequest("getBookPdf", data);
+}
+
+QString NetworkManager::saveBase64ToCache(const QString& base64Data, const QString& fileName)
+{
+    if (base64Data.isEmpty() || fileName.isEmpty()) {
+        emit errorOccurred("Base64 data or file name is empty.");
+        return QString();
+    }
+
+    QByteArray fileData = QByteArray::fromBase64(base64Data.toUtf8());
+    if (fileData.isEmpty()) {
+        emit errorOccurred("Failed to decode base64 data.");
+        return QString();
+    }
+
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (cacheDir.isEmpty()) {
+        emit errorOccurred("Cache directory is not available.");
+        return QString();
+    }
+
+    QDir dir;
+    if (!dir.mkpath(cacheDir)) {
+        emit errorOccurred("Failed to create cache directory.");
+        return QString();
+    }
+
+    QString fullPath = cacheDir + "/" + fileName;
+
+    QFile file(fullPath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        emit errorOccurred("Failed to save file: " + fullPath);
+        return QString();
+    }
+
+    file.write(fileData);
+    file.close();
+
+    return fullPath;
+}
+
+void NetworkManager::getBooksByGenre(int genreId) {
+    QJsonObject data;
+    data["genreId"] = genreId;
+    sendRequest("getBooksByGenre", data);}
 void NetworkManager::updateBookDetails(int bookId, const QString& title, const QString& author,
                                        double price, const QString& genre, const QString& description,
                                        const QString& coverPath, const QString& pdfPath,
@@ -245,12 +321,14 @@ void NetworkManager::activateBook(int publisherId, int bookId) {
     sendRequest("activateBook", data);
 }
 
-void NetworkManager::getBookDetails(int bookId)
+void NetworkManager::getBookDetails(int userId, int bookId)
 {
     QJsonObject data;
+    data["userId"] = userId;
     data["bookId"] = bookId;
     sendRequest("getBookDetails", data);
 }
+
 
 void NetworkManager::searchBooks(const QString& query)
 {
@@ -258,7 +336,11 @@ void NetworkManager::searchBooks(const QString& query)
     data["query"] = query;
     sendRequest("searchBooks", data);
 }
-
+void NetworkManager::getHomeData(int userId) {
+    QJsonObject data;
+    data["userId"] = userId;
+    sendRequest("getHomeData", data);
+}
 // Discount
 void NetworkManager::applyDiscountToBook(int publisherId, int bookId, double value, int type, qint64 startDate, qint64 endDate)
 {

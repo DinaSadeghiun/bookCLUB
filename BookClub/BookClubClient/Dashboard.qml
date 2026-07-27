@@ -7,19 +7,53 @@ Item {
 
     required property string username
     required property string userRole
-    property int userId: 0 // شناسه کاربر برای درخواست‌های شبکه
+    property int userId: 0
     property var userGenres: []
     property int cartItemCount: 0
     property int currentTab: 0
+    property string favoriteAuthor: ""
+
+    // ---------------------------------------------------------------
+    // Central book cache: id -> book object (from getAllBooks).
+    // Wishlist / Favorites / Cart / PurchasedBooks / Shelves only ever
+    // give us book IDs, never full book data, so every tab resolves
+    // titles/authors/covers through this single shared map instead of
+    // re-fetching or guessing.
+    // ---------------------------------------------------------------
+    property var booksById: ({})
+    property var allBooksList: []
+
+    Connections {
+        target: contentLoader.item
+        ignoreUnknownSignals: true
+        enabled: contentLoader.item !== null
+
+        function onBookSelected(bookId) {
+            var mainStack = dashboardRoot.StackView.view
+            if (mainStack) {
+                mainStack.push("BookPage.qml", {
+                    "bookId": bookId,
+                    "networkManager": networkManager,
+                    "userId": userId
+                })
+            }
+        }
+    }
+    Component.onCompleted: {
+        if (networkManager) {
+            networkManager.getHomeData(userId)
+        }
+        currentTab = 0
+        loadCurrentView()
+    }
+
+    onCurrentTabChanged: loadCurrentView()
 
     // Background for the entire dashboard
     Rectangle {
         anchors.fill: parent
-        color: "#1A0F1F" // Match GenreSelection background
+        color: "#1A0F1F"
     }
-
-    Component.onCompleted: loadCurrentView()
-    onCurrentTabChanged: loadCurrentView()
 
     function loadCurrentView() {
         var props = {
@@ -28,7 +62,10 @@ Item {
             "userId": userId,
             "userGenres": userGenres,
             "cartItemCount": cartItemCount,
-            "networkManager": networkManager // ارسال مستقیم NetworkManager به تب‌ها
+            "networkManager": networkManager,
+            "booksById": booksById,
+            "allBooksList": allBooksList,
+            "favoriteAuthor": favoriteAuthor
         }
         switch (currentTab) {
         case 0: contentLoader.setSource("HomeView.qml", props); break
@@ -36,6 +73,7 @@ Item {
         case 2: contentLoader.setSource("SearchView.qml", props); break
         case 3: contentLoader.setSource("CartView.qml", props); break
         case 4: contentLoader.setSource("SettingsView.qml", props); break
+        default: contentLoader.setSource("HomeView.qml", props); break
         }
     }
 
@@ -48,9 +86,8 @@ Item {
             id: sidebar
             Layout.preferredWidth: 220
             Layout.fillHeight: true
-            color: "#2D1B33" // Dark Purple sidebar
+            color: "#2D1B33"
 
-            // Subtle Gold Border on the right
             Rectangle {
                 width: 1
                 anchors.right: parent.right
@@ -64,7 +101,6 @@ Item {
                 anchors.margins: 16
                 spacing: 15
 
-                // Giraffe Logo Area
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     width: 100
@@ -86,7 +122,7 @@ Item {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: "Welcome, " + username
-                    color: "#D4AF37" // Gold text
+                    color: "#D4AF37"
                     font.pixelSize: 18
                     font.bold: true
                 }
@@ -99,9 +135,8 @@ Item {
                     opacity: 0.7
                 }
 
-                Item { Layout.preferredHeight: 20 } // Spacer
+                Item { Layout.preferredHeight: 20 }
 
-                // Navigation Buttons
                 Repeater {
                     model: ["Home", "Library", "Search", "Cart", "Settings"]
                     delegate: Button {
@@ -123,10 +158,11 @@ Item {
                             leftPadding: 15
                             verticalAlignment: Text.AlignVCenter
                         }
+                        onClicked: {
+                            currentTab = index
+                            loadCurrentView()
+                        }
 
-                        onClicked: currentTab = index
-
-                        // Cart badge
                         Rectangle {
                             visible: index === 3 && cartItemCount > 0
                             width: 22; height: 22; radius: 11
@@ -146,9 +182,8 @@ Item {
                     }
                 }
 
-                Item { Layout.fillHeight: true } // spacer
+                Item { Layout.fillHeight: true }
 
-                // Logout Button
                 Button {
                     Layout.fillWidth: true
                     text: "Logout"
@@ -177,7 +212,6 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // Animation for smooth tab switching
             onSourceChanged: {
                 opacity = 0
                 fadeIn.start()
@@ -195,6 +229,22 @@ Item {
             Connections {
                 target: contentLoader.item
                 ignoreUnknownSignals: true
+                enabled: contentLoader.item !== null
+
+                // ناوبری هوشمند به صفحه مشخصات کتاب به محض دریافت سیگنال از لودر
+                function onBookSelected(bookId) {
+                    var mainStack = dashboardRoot.StackView.view
+                    if (mainStack) {
+                        console.log("Dashboard: Navigating to BookPage.qml for bookId:", bookId)
+                        mainStack.push("qrc:/BookPage.qml", {
+                            "bookId": bookId,
+                            "networkManager": networkManager,
+                            "userId": userId
+                        })
+                    } else {
+                        console.error("Dashboard: StackView not found for navigation!")
+                    }
+                }
 
                 function onLogoutRequested() {
                     var sv = dashboardRoot.StackView.view
@@ -207,6 +257,12 @@ Item {
                 function onUserGenresChanged() {
                     if (contentLoader.item && contentLoader.item.userGenres !== undefined) {
                         dashboardRoot.userGenres = contentLoader.item.userGenres
+                    }
+                }
+
+                function onCartItemCountChanged() {
+                    if (contentLoader.item && contentLoader.item.cartItemCount !== undefined) {
+                        dashboardRoot.cartItemCount = contentLoader.item.cartItemCount
                     }
                 }
             }

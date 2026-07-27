@@ -17,8 +17,6 @@ Rectangle {
         function onResponseReceived(action, status, data) {
             if (action === "register" && status === "success") {
                 var newUserId = data.userId || data.id || 0;
-
-                // Navigate to GenreSelection with the valid userId received from server
                 signUpPage.StackView.view.push("GenreSelection.qml", {
                     "username": usernameField.text,
                     "userRole": "User",
@@ -28,6 +26,21 @@ Rectangle {
             } else if (action === "register" && status === "error") {
                 errorText.text = data.message || "Registration failed!";
                 errorText.visible = true;
+            }
+            else if (action === "registerPublisher") {
+                if (status === "success") {
+                    var newPubId = data.id || data.userId || 0;
+                    signUpPage.StackView.view.replace("PublisherDashboard.qml", {
+                        "username": usernameField.text,
+                        "userId": newPubId,
+                        "userRole": "Publisher",
+                        "favoriteAuthor": favoriteAuthorField.text,
+                        "networkManager": networkManager
+                    });
+                } else {
+                    errorText.text = data.message || "Publisher registration failed!";
+                    errorText.visible = true;
+                }
             }
         }
     }
@@ -180,16 +193,14 @@ Rectangle {
 
                 // 3. Send Request to Server via NetworkManager
                 if (selectedRole === "Publisher") {
+                    var companyName = "Default Publisher Co.";
                     networkManager.registerPublisher(
                         usernameField.text,
                         passwordField.text,
-                       companyName ,
-                        secAnswer
+                        secAnswer   // ← فقط securityAnswer
                     )
 
-                    signUpPage.StackView.view.replace("PublisherDashboard.qml", {
-                        "username": usernameField.text
-                    })
+
                 } else {
                     // Send registration request for regular user and wait for network response to get userId
                     networkManager.registerUser(

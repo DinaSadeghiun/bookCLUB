@@ -7,68 +7,146 @@ ScrollView {
     contentWidth: availableWidth
     clip: true
 
-    // Required properties received from Dashboard
     required property string username
     required property string userRole
     required property var networkManager
     property int userId: 0
+    property var booksById: ({})
+    property var allBooksList: []
 
-    // Internal state properties to handle Add/Edit action and the target index
     property string activeAction: "Add"
-    property int selectedShelfIndex: -1
 
-    // Dynamic models for real data from server (No Mock Data)
-    ListModel { id: allBooksModel }
+    ListModel { id: purchasedModel }
     ListModel { id: favoritesModel }
     ListModel { id: wishlistModel }
     ListModel { id: shelvesModel }
+    ListModel { id: selectedShelfBooksModel }
+    property string selectedShelfName: ""
+
+    function bookRowFor(bookId) {
+        var book = booksById[bookId];
+        if (!book) {
+            console.warn("bookRowFor: book not found in booksById for ID:", bookId)
+            return {
+                "bookId": bookId,
+                "title": "(book #" + bookId + ")",
+                "author": "",
+                "image": "qrc:/assets/books/default_cover.png"
+            };
+        }
+        return {
+            "bookId": book.id,
+            "title": book.title || "Unknown",
+            "author": book.author || "Unknown",
+            "image": book.coverImageData || "qrc:/assets/books/default_cover.png",
+            "price": book.price || 0
+        };
+    }
+
+    function refreshLibrary() {
+        if (!networkManager || userId <= 0) return;
+        console.log("LibraryView: refreshLibrary called for userId:", userId)
+        networkManager.getPurchasedBooks(userId);
+        networkManager.getFavorites(userId);
+        networkManager.getWishlist(userId);
+        networkManager.getShelfNames(userId);
+    }
 
     Component.onCompleted: {
-        // Request user library data from server upon loading
+        console.log("LibraryView: Component.onCompleted - userId:", userId)
         if (networkManager && userId > 0) {
-            networkManager.requestUserLibrary(userId);
-            networkManager.requestUserShelves(userId);
+            // اول همه کتاب‌ها رو دریافت کن تا booksById پر بشه
+            networkManager.getAllBooks()
+        } else {
+            console.warn("LibraryView: networkManager or userId invalid")
         }
     }
 
-    // Connections to handle server responses
     Connections {
         target: networkManager
-        ignoreUnknownSignals: true
+        function onResponseReceived(action, status, data) {
+            var ok = status === "success" || status === "SUCCESS"
+            console.log("LibraryView: onResponseReceived - action:", action, "status:", status, "ok:", ok)
 
-        function onUserLibraryReceived(libraryData) {
-            allBooksModel.clear();
-            favoritesModel.clear();
-            wishlistModel.clear();
-
-            for (var i = 0; i < libraryData.length; i++) {
-                var book = libraryData[i];
-                var bookData = {
-                    "bookId": book.id,
-                    "title": book.title,
-                    "author": book.author,
-                    "year": book.year || "N/A",
-                    "image": book.image || "qrc:/assets/books/default_cover.png"
-                };
-
-                allBooksModel.append(bookData);
-
-                if (book.isFavorite) {
-                    favoritesModel.append(bookData);
+            if (action === "getAllBooks" && ok) {
+                var map = {}
+                if (Array.isArray(data)) {
+                    for (var i = 0; i < data.length; i++) {
+                        var book = data[i]
+                        if (book && book.id) {
+                            if (!book.coverImageData) {
+                                book.coverImageData = "qrc:/assets/books/default_cover.png"
+                            }
+                            map[book.id] = book
+                        }
+                    }
                 }
-                if (book.isWishlist) {
-                    wishlistModel.append(bookData);
-                }
+                libraryView.booksById = map
+                libraryView.allBooksList = Array.isArray(data) ? data : []
+                console.log("LibraryView: booksById loaded with", Object.keys(map).length, "books")
+                // حالا که booksById پر شده، کتابخانه را رفرش کن
+                refreshLibrary()
             }
-        }
-
-        function onUserShelvesReceived(shelvesData) {
-            shelvesModel.clear();
-            for (var i = 0; i < shelvesData.length; i++) {
-                shelvesModel.append({
-                    "shelfId": shelvesData[i].id,
-                    "name": shelvesData[i].name
-                });
+            else if (action === "getPurchasedBooks" && ok) {
+                purchasedModel.clear();
+                console.log("LibraryView: getPurchasedBooks data:", data)
+                for (var i = 0; i < data.length; i++) {
+                    purchasedModel.append(bookRowFor(data[i]));
+                }
+                console.log("LibraryView: purchasedModel count:", purchasedModel.count)
+            }
+            else if (action === "getFavorites" && ok) {
+                favoritesModel.clear();
+                console.log("LibraryView: getFavorites response, data:", JSON.stringify(data))
+                if (Array.isArray(data)) {
+                    for (var i = 0; i < data.length; i++) {
+                        var row = bookRowFor(data[i])
+                        console.log("LibraryView: favorite book:", row.title, "ID:", data[i])
+                        favoritesModel.append(row)
+                    }
+                } else {
+                    console.warn("LibraryView: getFavorites data is not an array:", data)
+                }
+                console.log("LibraryView: favoritesModel count:", favoritesModel.count)
+            }
+            else if (action === "getWishlist" && ok) {
+                wishlistModel.clear();
+                console.log("LibraryView: getWishlist data:", data)
+                for (var i = 0; i < data.length; i++) {
+                    wishlistModel.append(bookRowFor(data[i]));
+                }
+                console.log("LibraryView: wishlistModel count:", wishlistModel.count)
+            }
+            else if (action === "getShelfNames" && ok) {
+                shelvesModel.clear();
+                var names = Array.isArray(data) ? data : []
+                for (var i = 0; i < names.length; i++) {
+                    shelvesModel.append({ "name": names[i] });
+                }
+                console.log("LibraryView: shelvesModel count:", shelvesModel.count)
+            }
+            else if (action === "getBooksInShelf" && ok) {
+                selectedShelfBooksModel.clear();
+                for (var i = 0; i < data.length; i++) {
+                    selectedShelfBooksModel.append(bookRowFor(data[i]));
+                }
+                console.log("LibraryView: selectedShelfBooksModel count:", selectedShelfBooksModel.count)
+            }
+            else if (action === "addToFavorites" || action === "removeFromFavorites") {
+                console.log("LibraryView: add/remove favorites response, status:", status)
+                // بعد از اضافه/حذف، دوباره لیست فیوریت‌ها رو دریافت کن
+                if (userId > 0) {
+                    networkManager.getFavorites(userId);
+                }
+                if (!ok) console.log(action, "failed:", data.message)
+            }
+            else if (action === "addToWishlist" || action === "removeFromWishlist") {
+                networkManager.getWishlist(userId);
+                if (!ok) console.log(action, "failed:", data.message)
+            }
+            else if (action === "createShelf" || action === "deleteShelf") {
+                networkManager.getShelfNames(userId);
+                if (!ok) console.log(action, "failed:", data.message)
             }
         }
     }
@@ -96,7 +174,7 @@ ScrollView {
             Layout.fillWidth: true
             background: Rectangle { color: "transparent" }
             Repeater {
-                model: ["All Books", "Favorites", "Wishlist", "Shelves"]
+                model: ["Purchased", "Favorites", "Wishlist", "Shelves"]
                 TabButton {
                     text: modelData
                     contentItem: Text {
@@ -120,9 +198,9 @@ ScrollView {
             Layout.preferredHeight: 600
             currentIndex: libraryTabBar.currentIndex
 
-            // 1. All Books List
+            // 1. Purchased Books (بدون دکمه Favorite)
             ListView {
-                model: allBooksModel
+                model: purchasedModel
                 spacing: 10
                 delegate: Rectangle {
                     width: parent.width
@@ -138,16 +216,12 @@ ScrollView {
                         spacing: 15
 
                         Rectangle {
-                            width: 55
-                            height: 80
-                            color: "#1A0F1F"
-                            radius: 4
-                            border.color: "#A08EAD"
-                            border.width: 1
-
+                            width: 55; height: 80; color: "#1A0F1F"; radius: 4
+                            border.color: "#A08EAD"; border.width: 1
+                            clip: true
                             Image {
-                                anchors.fill: parent
-                                source: model.image
+                                anchors.fill: parent;
+                                source: model.image;
                                 fillMode: Image.PreserveAspectFit
                             }
                         }
@@ -155,20 +229,26 @@ ScrollView {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 5
-                            Text { text: model.title; color: "white"; font.bold: true; font.pixelSize: 16 }
-                            Text { text: "Author: " + model.author + " | Year: " + model.year; color: "#A08EAD"; font.pixelSize: 12 }
-                        }
-
-                        Button {
-                            text: "Details"
-                            font.pixelSize: 12
-                            contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
-                            background: Rectangle { color: "#D4AF37"; radius: 5 }
-                            onClicked: {
-                                console.log("View details for book:", model.bookId)
+                            Text {
+                                text: model.title;
+                                color: "white";
+                                font.bold: true;
+                                font.pixelSize: 16
+                            }
+                            Text {
+                                text: "Author: " + model.author;
+                                color: "#A08EAD";
+                                font.pixelSize: 12
                             }
                         }
+                        // دکمه ❤ Favorite حذف شد - کاربر فقط از BookPage می‌تونه اضافه کنه
                     }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: purchasedModel.count === 0
+                    text: "You haven't purchased any books yet."
+                    color: "#A08EAD"
                 }
             }
 
@@ -192,10 +272,9 @@ ScrollView {
                             border.width: 2
                             radius: 8
                             clip: true
-
                             Image {
-                                anchors.fill: parent
-                                source: model.image
+                                anchors.fill: parent;
+                                source: model.image;
                                 fillMode: Image.PreserveAspectFit
                             }
                         }
@@ -207,7 +286,31 @@ ScrollView {
                             font.pixelSize: 14
                             elide: Text.ElideRight
                         }
+                        Button {
+                            text: "Remove"
+                            Layout.alignment: Qt.AlignHCenter
+                            contentItem: Text {
+                                text: parent.text;
+                                color: "white";
+                                font.pixelSize: 11
+                            }
+                            background: Rectangle {
+                                color: "#FF5555";
+                                radius: 5
+                            }
+                            onClicked: {
+                                if (networkManager) {
+                                    networkManager.removeFromFavorites(userId, model.bookId);
+                                }
+                            }
+                        }
                     }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: favoritesModel.count === 0
+                    text: "No favorite books yet."
+                    color: "#A08EAD"
                 }
             }
 
@@ -230,9 +333,10 @@ ScrollView {
 
                         Rectangle {
                             width: 40; height: 60; color: "#1A0F1F"; radius: 4
+                            clip: true
                             Image {
-                                anchors.fill: parent
-                                source: model.image
+                                anchors.fill: parent;
+                                source: model.image;
                                 fillMode: Image.PreserveAspectFit
                             }
                         }
@@ -246,16 +350,27 @@ ScrollView {
 
                         Button {
                             text: "Remove"
-                            contentItem: Text { text: parent.text; color: "white" }
-                            background: Rectangle { color: "#FF5555"; radius: 5 }
+                            contentItem: Text {
+                                text: parent.text;
+                                color: "white"
+                            }
+                            background: Rectangle {
+                                color: "#FF5555";
+                                radius: 5
+                            }
                             onClicked: {
                                 if (networkManager) {
                                     networkManager.removeFromWishlist(userId, model.bookId);
-                                    wishlistModel.remove(index);
                                 }
                             }
                         }
                     }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: wishlistModel.count === 0
+                    text: "No books in wishlist."
+                    color: "#A08EAD"
                 }
             }
 
@@ -267,8 +382,16 @@ ScrollView {
                     text: "+ Add New Shelf"
                     Layout.preferredWidth: 150
                     Layout.preferredHeight: 40
-                    contentItem: Text { text: parent.text; color: "#1A0F1F"; font.bold: true; horizontalAlignment: Text.AlignHCenter }
-                    background: Rectangle { color: "#D4AF37"; radius: 5 }
+                    contentItem: Text {
+                        text: parent.text;
+                        color: "#1A0F1F";
+                        font.bold: true;
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    background: Rectangle {
+                        color: "#D4AF37";
+                        radius: 5
+                    }
 
                     onClicked: {
                         libraryView.activeAction = "Add"
@@ -279,13 +402,13 @@ ScrollView {
 
                 ListView {
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: 250
                     spacing: 10
                     model: shelvesModel
                     delegate: Rectangle {
                         width: parent.width
                         height: 60
-                        color: "#2D1B33"
+                        color: libraryView.selectedShelfName === model.name ? "#3D2B43" : "#2D1B33"
                         radius: 5
                         border.color: "#D4AF37"
                         border.width: 1
@@ -303,39 +426,115 @@ ScrollView {
                             }
 
                             Button {
-                                text: "Edit Name"
-                                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: "#5c3d75"; radius: 4 }
+                                text: "View Books"
+                                contentItem: Text {
+                                    text: parent.text;
+                                    color: "white";
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                background: Rectangle {
+                                    color: "#5c3d75";
+                                    radius: 4
+                                }
                                 onClicked: {
-                                    libraryView.activeAction = "Edit"
-                                    libraryView.selectedShelfIndex = index
-                                    shelfInputField.text = model.name
-                                    shelfDialog.open()
+                                    libraryView.selectedShelfName = model.name
+                                    if (networkManager) {
+                                        networkManager.getBooksInShelf(userId, model.name)
+                                    }
                                 }
                             }
 
                             Button {
                                 text: "Delete"
-                                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter }
-                                background: Rectangle { color: "#FF5555"; radius: 4 }
+                                contentItem: Text {
+                                    text: parent.text;
+                                    color: "white";
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                background: Rectangle {
+                                    color: "#FF5555";
+                                    radius: 4
+                                }
                                 onClicked: {
                                     if (networkManager) {
-                                        networkManager.deleteShelf(userId, model.shelfId);
-                                        shelvesModel.remove(index);
+                                        networkManager.deleteShelf(userId, model.name);
                                     }
                                 }
                             }
                         }
                     }
                 }
+
+                Text {
+                    visible: libraryView.selectedShelfName !== ""
+                    text: "Books in \"" + libraryView.selectedShelfName + "\":"
+                    color: "#D4AF37"
+                    font.bold: true
+                }
+
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 200
+                    visible: libraryView.selectedShelfName !== ""
+                    model: selectedShelfBooksModel
+                    spacing: 6
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 45
+                        color: "#1A0F1F"
+                        radius: 5
+                        border.color: "#A08EAD"
+                        border.width: 0.5
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            Text {
+                                text: model.title;
+                                color: "white";
+                                Layout.fillWidth: true
+                            }
+                            Button {
+                                text: "Remove"
+                                contentItem: Text {
+                                    text: parent.text;
+                                    color: "white";
+                                    font.pixelSize: 10
+                                }
+                                background: Rectangle {
+                                    color: "#FF5555";
+                                    radius: 4
+                                }
+                                onClicked: {
+                                    if (networkManager) {
+                                        networkManager.removeBookFromShelf(
+                                            userId,
+                                            libraryView.selectedShelfName,
+                                            model.bookId
+                                        );
+                                        networkManager.getBooksInShelf(
+                                            userId,
+                                            libraryView.selectedShelfName
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        visible: selectedShelfBooksModel.count === 0
+                        text: "This shelf is empty."
+                        color: "#A08EAD"
+                    }
+                }
             }
         }
     }
 
-    // Modal popup dialog for handling Shelf input operations safely
     Dialog {
         id: shelfDialog
-        title: libraryView.activeAction === "Add" ? "Create New Shelf" : "Edit Shelf Name"
+        title: "Create New Shelf"
         standardButtons: Dialog.Ok | Dialog.Cancel
         anchors.centerIn: parent
         modal: true
@@ -387,18 +586,8 @@ ScrollView {
 
         onAccepted: {
             var trimmedText = shelfInputField.text.trim()
-            if (trimmedText !== "") {
-                if (libraryView.activeAction === "Add") {
-                    if (networkManager) {
-                        networkManager.createShelf(userId, trimmedText);
-                    }
-                } else if (libraryView.activeAction === "Edit" && libraryView.selectedShelfIndex !== -1) {
-                    var shelfId = shelvesModel.get(libraryView.selectedShelfIndex).shelfId;
-                    if (networkManager) {
-                        networkManager.updateShelf(userId, shelfId, trimmedText);
-                    }
-                    shelvesModel.setProperty(libraryView.selectedShelfIndex, "name", trimmedText)
-                }
+            if (trimmedText !== "" && networkManager) {
+                networkManager.createShelf(userId, trimmedText);
             }
         }
     }

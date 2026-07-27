@@ -187,6 +187,7 @@ Rectangle {
                     rootStackView.push("qrc:/Dashboard.qml", {
                         "username": username,
                         "userRole": userRole,
+                        "userId": userId,
                         "userGenres": selectedGenres
                     })
                 }

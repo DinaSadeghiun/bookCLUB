@@ -1,9 +1,12 @@
 #ifndef NETWORKMANAGER_H
+#define NETWORKMANAGER_H
+
 #include <QObject>
 #include <QTcpSocket>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QVariantList>
+#include <QAbstractSocket>
 
 class NetworkManager : public QObject
 {
@@ -23,30 +26,36 @@ public:
     Q_INVOKABLE void login(const QString& username, const QString& password);
     Q_INVOKABLE void registerUser(const QString& username, const QString& password, const QString& securityAnswer, const QVariantList& favoriteGenres);
     Q_INVOKABLE void loginPublisher(const QString& username, const QString& password);
-    Q_INVOKABLE void registerPublisher(const QString& username, const QString& password, const QString& companyName, const QString& securityAnswer);
+    Q_INVOKABLE void registerPublisher(const QString& username, const QString& password, const QString& securityAnswer);
     Q_INVOKABLE void loginAdmin(const QString& username, const QString& password);
     Q_INVOKABLE void changeUsername(int id, const QString& newUsername, const QString& password, const QString& role);
     Q_INVOKABLE void resetPassword(const QString& username, const QString& securityAnswer, const QString& newPassword);
     Q_INVOKABLE void updateProfile(int userId, const QVariantList& favoriteGenres);
-    Q_INVOKABLE void updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& role);
-
+    Q_INVOKABLE void updateSecurityAnswer(int userId, const QString& securityAnswer, const QString& password, const QString& role);
+    Q_INVOKABLE void changePassword(int id, const QString& oldPassword, const QString& newPassword, const QString& role);
+    Q_INVOKABLE void checkUsernameExists(const QString& username);
+    Q_INVOKABLE  void verifySecurityAnswer(const QString& username, const QString& role, const QString& answer);
     // Books Operations
+    Q_INVOKABLE void getBookPdf(int userId, int bookId);
+    Q_INVOKABLE QString saveBase64ToCache(const QString& base64Data, const QString& fileName);
+    Q_INVOKABLE void getBooksByGenre(int genreId);
     Q_INVOKABLE void getAllBooks();
-    Q_INVOKABLE  void addBook(int publisherId, const QString& title, const QString& author,
-                                         double price, const QString& genre, const QString& description,
-                                         const QString& coverPath, const QString& pdfPath);
+    Q_INVOKABLE void addBook(int publisherId, const QString& title, const QString& author,
+                             double price, const QString& genre, const QString& description,
+                             const QString& coverPath, const QString& pdfPath);
     Q_INVOKABLE void updateBookDetails(int bookId, const QString& title, const QString& author,
-                           double price, const QString& genre, const QString& description,
-                           const QString& coverImagePath, const QString& pdfFilePath,
-                           const QString& role, int publisherId = -1);
+                                       double price, const QString& genre, const QString& description,
+                                       const QString& coverImagePath, const QString& pdfFilePath,
+                                       const QString& role, int publisherId = -1);
     Q_INVOKABLE void getPublisherBooks(int publisherId);
-
     Q_INVOKABLE void updateBookPrice(int publisherId, int bookId, double price);
     Q_INVOKABLE void removeBook(int publisherId, int bookId);
     Q_INVOKABLE void deactivateBook(int publisherId, int bookId);
     Q_INVOKABLE void activateBook(int publisherId, int bookId);
-    Q_INVOKABLE void getBookDetails(int bookId);
+    Q_INVOKABLE void getBookDetails(int userId, int bookId);
+
     Q_INVOKABLE void searchBooks(const QString& query);
+    Q_INVOKABLE void getHomeData(int userId);
 
     // Discount
     Q_INVOKABLE void applyDiscountToBook(int publisherId, int bookId, double value, int type, qint64 startDate, qint64 endDate);
@@ -101,9 +110,10 @@ public:
 signals:
     void connectionChanged(bool isConnected);
     void errorOccurred(const QString& errorMessage);
-    void responseReceived(const QString& action, const QString& status, const QVariant& data);  // <-- تغییر از QJsonObject به QVariant
+    void responseReceived(const QString& action, const QString& status, const QVariant& data);
     void rawResponseReceived(const QJsonObject& response);
     void notificationReceived(const QJsonObject& data);
+
 private slots:
     void onConnected();
     void onDisconnected();

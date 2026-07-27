@@ -2,127 +2,429 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
-Rectangle {
-    id: adminDashboard
-    anchors.fill: parent
-    color: "#2D1B33" // Deep purple background
+// =====================================================================
+// Admin Dashboard - single-file version
+// Sidebar (Users / Books / Comments) + Loader that swaps between three
+// inline Components instead of separate .qml files.
+// =====================================================================
 
-    // --- MOCK DATABASE MODELS ---
-    ListModel {
-        id: usersModel
-        ListElement { userId: 1; username: "ali_dev"; password: "123"; role: "User"; favAuthor: "J.K. Rowling"; regDate: "2026/02/10"; status: "Active" }
-        ListElement { userId: 2; username: "tehran_publish"; password: "456"; role: "Publisher"; favAuthor: "N/A"; regDate: "2026/01/15"; status: "Active" }
-        ListElement { userId: 3; username: "reza_99"; password: "789"; role: "User"; favAuthor: "Victor Hugo"; regDate: "2026/03/01"; status: "Blocked" }
+Item {
+    id: dashboardRoot
+
+    required property string username
+    required property string userRole
+    property int userId: 0
+    property int currentTab: 0
+
+    Component.onCompleted: currentTab = 0
+
+    // Background for the entire dashboard
+    Rectangle {
+        anchors.fill: parent
+        color: "#1A0F1F"
     }
 
-    ListModel {
-        id: filteredUsersModel
-        Component.onCompleted: updateFilteredModel("")
-    }
-
-    function updateFilteredModel(filterText) {
-        filteredUsersModel.clear();
-        for (var i = 0; i < usersModel.count; i++) {
-            var item = usersModel.get(i);
-            if (filterText === "" || item.username.toLowerCase().indexOf(filterText.toLowerCase()) !== -1) {
-                filteredUsersModel.append(item);
-            }
-        }
-    }
-
-    ListModel {
-        id: booksModel
-        ListElement { bookId: 101; title: "Shahnameh"; author: "Ferdowsi"; publisher: "tehran_publish"; genre: "Epic"; price: "150"; description: "Persian epic poetry." }
-        ListElement { bookId: 102; title: "Qt 6 Guide"; author: "Qt Team"; publisher: "gilan_book"; genre: "Education"; price: "200"; description: "C++ Framework guide." }
-    }
-
-    ListModel {
-        id: commentsModel
-        ListElement { commentId: 1; user: "ali_dev"; bookTitle: "Shahnameh"; content: "Excellent quality!" }
-        ListElement { commentId: 2; user: "reza_99"; bookTitle: "Qt 6 Guide"; content: "Very helpful for beginners." }
-    }
-
-    // --- UI STRUCTURE ---
     RowLayout {
         anchors.fill: parent
         spacing: 0
 
-        // SIDEBAR
+        // ================= Sidebar =================
         Rectangle {
-            Layout.preferredWidth: parent.width * 0.22
+            id: sidebar
+            Layout.preferredWidth: 220
             Layout.fillHeight: true
-            color: "#1E0F24"
+            color: "#2D1B33"
+
+            Rectangle {
+                width: 1
+                anchors.right: parent.right
+                height: parent.height
+                color: "#D4AF37"
+                opacity: 0.3
+            }
 
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 16
-                spacing: 20
+                spacing: 15
 
-                Text {
-                    text: "ADMIN PANEL"
-                    color: "#D4AF37"
-                    font.bold: true
-                    font.pixelSize: 22
+                Rectangle {
                     Layout.alignment: Qt.AlignHCenter
+                    width: 100
+                    height: 100
+                    radius: 50
+                    color: "#1A0F1F"
+                    border.color: "#D4AF37"
+                    border.width: 2
+
+                    Image {
+                        anchors.centerIn: parent
+                        source: "qrc:/assets/images/giraffe.png"
+                        fillMode: Image.PreserveAspectFit
+                        width: 70
+                        height: 70
+                    }
                 }
 
-                Button { text: "Manage Users"; Layout.fillWidth: true; onClicked: stackLayout.currentIndex = 0 }
-                Button { text: "Manage Books"; Layout.fillWidth: true; onClicked: stackLayout.currentIndex = 1 }
-                Button { text: "Manage Comments"; Layout.fillWidth: true; onClicked: stackLayout.currentIndex = 2 }
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "Welcome, " + username
+                    color: "#D4AF37"
+                    font.pixelSize: 18
+                    font.bold: true
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: userRole
+                    color: "#D4AF37"
+                    font.pixelSize: 12
+                    opacity: 0.7
+                }
+
+                Item { Layout.preferredHeight: 20 }
+
+                Repeater {
+                    model: ["Users", "Books", "Comments"]
+                    delegate: Button {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 45
+
+                        background: Rectangle {
+                            color: currentTab === index ? "#D4AF37" : "transparent"
+                            radius: 8
+                            border.color: currentTab === index ? "#D4AF37" : "transparent"
+                        }
+
+                        contentItem: Text {
+                            text: modelData
+                            color: currentTab === index ? "#1A0F1F" : "#D4AF37"
+                            font.pixelSize: 16
+                            font.bold: currentTab === index
+                            leftPadding: 15
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: currentTab = index
+                    }
+                }
 
                 Item { Layout.fillHeight: true }
+
+                Button {
+                    Layout.fillWidth: true
+                    text: "Logout"
+                    onClicked: {
+                        if (dashboardRoot.StackView.view) {
+                            dashboardRoot.StackView.view.clear()
+                            dashboardRoot.StackView.view.push("Login.qml")
+                        }
+                    }
+                    background: Rectangle {
+                        color: "transparent"
+                        border.color: "#D4AF37"
+                        border.width: 1
+                        radius: 8
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#D4AF37"
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                }
             }
         }
 
-        // MAIN CONTENT
-        StackLayout {
-            id: stackLayout
+        // ================= Content area =================
+        Loader {
+            id: contentLoader
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // TAB 0: USERS
-            Rectangle {
-                color: "transparent"
-                ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 20
-                    Text { text: "User Management"; color: "#D4AF37"; font.pixelSize: 22; font.bold: true }
+            sourceComponent: currentTab === 0 ? usersViewComponent
+                              : currentTab === 1 ? booksViewComponent
+                              : commentsViewComponent
+
+            onSourceComponentChanged: {
+                opacity = 0
+                fadeIn.start()
+            }
+
+            NumberAnimation {
+                id: fadeIn
+                target: contentLoader
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: 250
+            }
+        }
+    }
+
+    // =====================================================================
+    // Users tab
+    // =====================================================================
+    Component {
+        id: usersViewComponent
+
+        Item {
+            id: usersRoot
+
+            property string activeType: "users"   // "users" | "publishers"
+            property string searchQuery: ""
+
+            ListModel { id: usersModel }
+
+            function fillModel(list, isPublisher) {
+                usersModel.clear()
+                if (!list) return
+                for (var i = 0; i < list.length; i++) {
+                    var u = list[i]
+                    usersModel.append({
+                        "userId": u.id || u.userId || 0,
+                        "username": u.username || "Unknown",
+                        "registeredAt": u.createdAt || u.registrationDate || u.registeredAt || u.joinDate || "",
+                        "isBlocked": u.isBlocked !== undefined ? u.isBlocked : (u.blocked !== undefined ? u.blocked : false),
+                        "isPublisher": isPublisher
+                    })
+                }
+            }
+
+            function loadUsers() {
+                if (!networkManager) return
+                if (activeType === "users")
+                    networkManager.getAllUsers()
+                else
+                    networkManager.getAllPublishers()
+            }
+
+            function doSearch() {
+                if (!networkManager) return
+                if (searchQuery === "") { loadUsers(); return }
+                if (activeType === "users")
+                    networkManager.searchUsers(searchQuery)
+                else
+                    networkManager.searchPublishers(searchQuery)
+            }
+
+            Component.onCompleted: loadUsers()
+
+            Connections {
+                target: networkManager
+                function onResponseReceived(action, status, data) {
+                    var ok = (status === "success" || status === "SUCCESS")
+
+                    // TODO: اگه اسم فیلدها با پاسخ واقعی سرور فرق داشت، با این لاگ اصلاحش کنید
+                    if (action === "getAllUsers" || action === "getAllPublishers"
+                            || action === "searchUsers" || action === "searchPublishers") {
+                        console.log("AdminUsersView - " + action + ":", JSON.stringify(data))
+                    }
+
+                    if (!ok) return
+
+                    if (action === "getAllUsers" || action === "searchUsers") {
+                        fillModel(data, false)
+                    } else if (action === "getAllPublishers" || action === "searchPublishers") {
+                        fillModel(data, true)
+                    } else if (action === "blockUser" || action === "unblockUser" || action === "deleteUser") {
+                        loadUsers()
+                    }
+                }
+            }
+
+            Rectangle { anchors.fill: parent; color: "#1A0F1F" }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
+
+                Text {
+                    text: "User Management"
+                    color: "#D4AF37"
+                    font.pixelSize: 22
+                    font.bold: true
+                }
+
+                RowLayout {
+                    spacing: 10
+
+                    Button {
+                        text: "Users"
+                        background: Rectangle {
+                            color: usersRoot.activeType === "users" ? "#D4AF37" : "#2D1B33"
+                            radius: 8; border.color: "#D4AF37"; border.width: 1
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: usersRoot.activeType === "users" ? "#1A0F1F" : "#D4AF37"
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        onClicked: {
+                            usersRoot.activeType = "users"
+                            usersRoot.searchQuery = ""
+                            searchField.text = ""
+                            usersRoot.loadUsers()
+                        }
+                    }
+
+                    Button {
+                        text: "Publishers"
+                        background: Rectangle {
+                            color: usersRoot.activeType === "publishers" ? "#D4AF37" : "#2D1B33"
+                            radius: 8; border.color: "#D4AF37"; border.width: 1
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: usersRoot.activeType === "publishers" ? "#1A0F1F" : "#D4AF37"
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+                        onClicked: {
+                            usersRoot.activeType = "publishers"
+                            usersRoot.searchQuery = ""
+                            searchField.text = ""
+                            usersRoot.loadUsers()
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
                     TextField {
-                        placeholderText: "Search Username..."; Layout.fillWidth: true
-                        onTextChanged: updateFilteredModel(text)
+                        id: searchField
+                        Layout.preferredWidth: 220
+                        placeholderText: "Search by username..."
+                        color: "white"
+                        placeholderTextColor: "#807090"
+                        background: Rectangle {
+                            color: "#2D1B33"; border.color: "#5c3d75"; border.width: 1; radius: 8
+                        }
+                        onTextChanged: usersRoot.searchQuery = text
+                        onAccepted: usersRoot.doSearch()
                     }
-                    // Users Table Header
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Text { text: "User/Pass"; color: "#D4AF37"; Layout.preferredWidth: 150; font.bold: true }
-                        Text { text: "Role"; color: "#D4AF37"; Layout.preferredWidth: 80; font.bold: true }
-                        Text { text: "Fav Author"; color: "#D4AF37"; Layout.fillWidth: true; font.bold: true }
-                        Text { text: "Reg Date"; color: "#D4AF37"; Layout.preferredWidth: 100; font.bold: true }
-                        Text { text: "Status"; color: "#D4AF37"; Layout.preferredWidth: 80; font.bold: true }
-                        Text { text: "Actions"; color: "#D4AF37"; Layout.preferredWidth: 100; font.bold: true }
+
+                    Button {
+                        text: "Search"
+                        onClicked: usersRoot.doSearch()
+                        background: Rectangle { color: "#5c3d75"; radius: 8 }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
                     }
-                    ListView {
-                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-                        model: filteredUsersModel
-                        delegate: Rectangle {
-                            width: parent.width; height: 60; color: index % 2 === 0 ? "#331E3A" : "#3D2744"
-                            RowLayout {
-                                anchors.fill: parent; anchors.margins: 10
-                                Column { Layout.preferredWidth: 150; Text { text: model.username; color: "white"; font.bold: true } Text { text: "PW: " + model.password; color: "#AAA"; font.pixelSize: 10 } }
-                                Text { text: model.role; color: "#D4AF37"; Layout.preferredWidth: 80 }
-                                Text { text: model.favAuthor; color: "white"; Layout.fillWidth: true }
-                                Text { text: model.regDate; color: "white"; Layout.preferredWidth: 100 }
-                                Text { text: model.status; color: model.status === "Blocked" ? "#FF4D4D" : "#4DFF4D"; Layout.preferredWidth: 80 }
-                                Button {
-                                    text: model.status === "Active" ? "Block" : "Activate"
-                                    Layout.preferredWidth: 100
-                                    onClicked: {
-                                        for(var i=0; i<usersModel.count; i++) {
-                                            if(usersModel.get(i).userId === model.userId) {
-                                                usersModel.setProperty(i, "status", model.status === "Active" ? "Blocked" : "Active");
-                                                break;
-                                            }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: "#2D1B33"
+                    radius: 12
+                    border.color: "#5c3d75"
+                    border.width: 1
+                    clip: true
+
+                    Text {
+                        anchors.centerIn: parent
+                        visible: usersModel.count === 0
+                        text: "No " + usersRoot.activeType + " found."
+                        color: "#A08EAD"
+                        font.pixelSize: 14
+                    }
+
+                    ScrollView {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        clip: true
+
+                        ListView {
+                            id: listView
+                            model: usersModel
+                            spacing: 8
+
+                            delegate: Rectangle {
+                                width: listView.width
+                                height: 60
+                                color: "#1A0F1F"
+                                radius: 8
+                                border.color: "#3d2545"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 10
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
+                                        Text {
+                                            text: model.username + (model.isPublisher ? " (Publisher)" : "")
+                                            color: "#D4AF37"
+                                            font.bold: true
+                                            font.pixelSize: 14
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
                                         }
-                                        updateFilteredModel("");
+
+                                        Text {
+                                            text: model.registeredAt !== "" ? ("Joined: " + model.registeredAt) : ""
+                                            color: "#A08EAD"
+                                            font.pixelSize: 11
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 90
+                                        height: 26
+                                        radius: 13
+                                        color: model.isBlocked ? "#FF5555" : "#4CAF50"
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: model.isBlocked ? "Blocked" : "Active"
+                                            color: "white"
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    Button {
+                                        text: model.isBlocked ? "Unblock" : "Block"
+                                        Layout.preferredWidth: 90
+                                        background: Rectangle { color: "#5c3d75"; radius: 6 }
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: "white"
+                                            font.pixelSize: 12
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                        onClicked: {
+                                            if (!networkManager) return
+                                            if (model.isBlocked)
+                                                networkManager.unblockUser(model.userId)
+                                            else
+                                                networkManager.blockUser(model.userId)
+                                        }
+                                    }
+
+                                    Button {
+                                        text: "Delete"
+                                        Layout.preferredWidth: 80
+                                        background: Rectangle { color: "#8B2C2C"; radius: 6 }
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: "white"
+                                            font.pixelSize: 12
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                        onClicked: {
+                                            deleteConfirmDialog.targetUserId = model.userId
+                                            deleteConfirmDialog.targetUsername = model.username
+                                            deleteConfirmDialog.open()
+                                        }
                                     }
                                 }
                             }
@@ -131,101 +433,458 @@ Rectangle {
                 }
             }
 
-            // TAB 1: BOOKS
-            Rectangle {
-                color: "transparent"
-                ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 20
-                    Text { text: "Book Management"; color: "#D4AF37"; font.pixelSize: 22; font.bold: true }
+            Dialog {
+                id: deleteConfirmDialog
+                property int targetUserId: 0
+                property string targetUsername: ""
+                title: "Confirm Delete"
+                modal: true
+                anchors.centerIn: parent
+                standardButtons: Dialog.Yes | Dialog.No
 
-                    // Books Table Header
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.bottomMargin: 5
-                        Text { text: "Book Info (Title/Author/Genre)"; color: "#D4AF37"; Layout.fillWidth: true; font.bold: true }
-                        Text { text: "Publisher"; color: "#D4AF37"; Layout.preferredWidth: 120; font.bold: true }
-                        Text { text: "Price"; color: "#D4AF37"; Layout.preferredWidth: 80; font.bold: true }
-                        Text { text: "Actions"; color: "#D4AF37"; Layout.preferredWidth: 150; font.bold: true }
-                    }
-
-                    ListView {
-                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-                        model: booksModel
-                        delegate: Rectangle {
-                            width: parent.width; height: 60; color: index % 2 === 0 ? "#331E3A" : "#3D2744"
-                            RowLayout {
-                                anchors.fill: parent; anchors.margins: 10
-                                Column {
-                                    Layout.fillWidth: true
-                                    Text { text: model.title; color: "white"; font.bold: true }
-                                    Text { text: model.author + " | " + model.genre; color: "#AAA"; font.pixelSize: 11 }
-                                }
-                                Text { text: model.publisher; color: "white"; Layout.preferredWidth: 120 }
-                                Text { text: model.price + " $"; color: "#D4AF37"; Layout.preferredWidth: 80 }
-                                Row {
-                                    spacing: 5
-                                    Button { text: "Edit"; onClicked: { editBookDialog.targetIndex = index; editTitle.text = model.title; editGenre.text = model.genre; editPrice.text = model.price; editDesc.text = model.description; editBookDialog.open() } }
-                                    Button { text: "Delete"; background: Rectangle { color: "#8B0000" } onClicked: booksModel.remove(index) }
-                                }
-                            }
-                        }
-                    }
+                contentItem: Text {
+                    text: "Are you sure you want to delete \"" + deleteConfirmDialog.targetUsername + "\"? This cannot be undone."
+                    color: "white"
+                    wrapMode: Text.WordWrap
                 }
-            }
 
-            // TAB 2: COMMENTS
-            Rectangle {
-                color: "transparent"
-                ColumnLayout {
-                    anchors.fill: parent; anchors.margins: 20
-                    Text { text: "Comment Moderation"; color: "#D4AF37"; font.pixelSize: 22; font.bold: true }
-                    ListView {
-                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-                        model: commentsModel
-                        delegate: Rectangle {
-                            width: parent.width; height: 70; color: index % 2 === 0 ? "#331E3A" : "#3D2744"
-                            RowLayout {
-                                anchors.fill: parent; anchors.margins: 10
-                                Column { Layout.fillWidth: true; Text { text: model.user + " on " + model.bookTitle; color: "#D4AF37"; font.bold: true } Text { text: model.content; color: "white"; wrapMode: Text.WordWrap; width: 400 } }
-                                Button { text: "Delete"; background: Rectangle { color: "#8B0000" } onClicked: commentsModel.remove(index) }
-                            }
-                        }
-                    }
+                background: Rectangle {
+                    color: "#2D1B33"; border.color: "#D4AF37"; border.width: 1; radius: 10
+                }
+
+                onAccepted: {
+                    if (networkManager)
+                        networkManager.deleteUserByAdmin(deleteConfirmDialog.targetUserId)
                 }
             }
         }
     }
 
-    // EDIT BOOK DIALOG
-    Dialog {
-        id: editBookDialog
-        property int targetIndex: -1
-        title: "Edit Book Information"; anchors.centerIn: parent; modal: true
-        standardButtons: Dialog.Save | Dialog.Cancel
+    // =====================================================================
+    // Books tab
+    // =====================================================================
+    Component {
+        id: booksViewComponent
 
-        ColumnLayout {
-            spacing: 10
-            width: 300
+        Item {
+            id: booksRoot
 
-            Label { text: "Book Title:"; color: "#D4AF37"; font.bold: true }
-            TextField { id: editTitle; Layout.fillWidth: true }
+            ListModel { id: booksModel }
 
-            Label { text: "Genre:"; color: "#D4AF37"; font.bold: true }
-            TextField { id: editGenre; Layout.fillWidth: true }
+            function fillModel(list) {
+                booksModel.clear()
+                if (!list) return
+                for (var i = 0; i < list.length; i++) {
+                    var b = list[i]
+                    booksModel.append({
+                        "bookId": b.id || 0,
+                        "title": b.title || "Unknown",
+                        "author": b.author || "Unknown",
+                        "genre": b.genre || "",
+                        "price": b.price || 0,
+                        "isAvailable": b.isAvailable !== undefined ? b.isAvailable : true,
+                        "publisherId": b.publisherId || 0
+                    })
+                }
+            }
 
-            Label { text: "Price ($):"; color: "#D4AF37"; font.bold: true }
-            TextField { id: editPrice; Layout.fillWidth: true }
+            function loadBooks() {
+                if (networkManager) networkManager.getAllBooks()
+            }
 
-            Label { text: "Description:"; color: "#D4AF37"; font.bold: true }
-            TextArea { id: editDesc; Layout.fillWidth: true; implicitHeight: 100; wrapMode: Text.WordWrap }
+            Component.onCompleted: loadBooks()
+
+            Connections {
+                target: networkManager
+                function onResponseReceived(action, status, data) {
+                    var ok = (status === "success" || status === "SUCCESS")
+                    if (!ok) return
+                    if (action === "getAllBooks") fillModel(data)
+                    else if (action === "removeBook") loadBooks()
+                }
+            }
+
+            Rectangle { anchors.fill: parent; color: "#1A0F1F" }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
+
+                Text {
+                    text: "Book & Content Management"
+                    color: "#D4AF37"
+                    font.pixelSize: 22
+                    font.bold: true
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: "#2D1B33"
+                    radius: 12
+                    border.color: "#5c3d75"
+                    border.width: 1
+                    clip: true
+
+                    Text {
+                        anchors.centerIn: parent
+                        visible: booksModel.count === 0
+                        text: "No books found."
+                        color: "#A08EAD"
+                        font.pixelSize: 14
+                    }
+
+                    ScrollView {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        clip: true
+
+                        ListView {
+                            id: listView
+                            model: booksModel
+                            spacing: 8
+
+                            delegate: Rectangle {
+                                width: listView.width
+                                height: 64
+                                color: "#1A0F1F"
+                                radius: 8
+                                border.color: "#3d2545"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 10
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
+                                        Text {
+                                            text: model.title
+                                            color: "#D4AF37"
+                                            font.bold: true
+                                            font.pixelSize: 14
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        Text {
+                                            text: model.author + (model.genre !== "" ? " • " + model.genre : "")
+                                            color: "#A08EAD"
+                                            font.pixelSize: 11
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+
+                                    Text {
+                                        text: model.price === 0 ? "Free" : ("$" + model.price.toFixed(2))
+                                        color: "#4CAF50"
+                                        font.bold: true
+                                    }
+
+                                    Rectangle {
+                                        width: 90
+                                        height: 26
+                                        radius: 13
+                                        color: model.isAvailable ? "#4CAF50" : "#FF5555"
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: model.isAvailable ? "Available" : "Unavailable"
+                                            color: "white"
+                                            font.pixelSize: 11
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    Button {
+                                        text: "Remove"
+                                        Layout.preferredWidth: 90
+                                        background: Rectangle { color: "#8B2C2C"; radius: 6 }
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: "white"
+                                            font.pixelSize: 12
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                        onClicked: {
+                                            removeConfirmDialog.targetBookId = model.bookId
+                                            removeConfirmDialog.targetPublisherId = model.publisherId
+                                            removeConfirmDialog.targetTitle = model.title
+                                            removeConfirmDialog.open()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Dialog {
+                id: removeConfirmDialog
+                property int targetBookId: 0
+                property int targetPublisherId: 0
+                property string targetTitle: ""
+                title: "Confirm Removal"
+                modal: true
+                anchors.centerIn: parent
+                standardButtons: Dialog.Yes | Dialog.No
+
+                contentItem: Text {
+                    text: "Remove \"" + removeConfirmDialog.targetTitle + "\" from the store? This cannot be undone."
+                    color: "white"
+                    wrapMode: Text.WordWrap
+                }
+                background: Rectangle { color: "#2D1B33"; border.color: "#D4AF37"; border.width: 1; radius: 10 }
+
+                onAccepted: {
+                    if (networkManager)
+                        networkManager.removeBook(removeConfirmDialog.targetPublisherId, removeConfirmDialog.targetBookId)
+                }
+            }
         }
+    }
 
-        onAccepted: {
-            if (targetIndex !== -1) {
-                booksModel.setProperty(targetIndex, "title", editTitle.text);
-                booksModel.setProperty(targetIndex, "genre", editGenre.text);
-                booksModel.setProperty(targetIndex, "price", editPrice.text);
-                booksModel.setProperty(targetIndex, "description", editDesc.text);
+    // =====================================================================
+    // Comments tab
+    // =====================================================================
+    Component {
+        id: commentsViewComponent
+
+        Item {
+            id: commentsRoot
+
+            property int selectedBookId: 0
+            property string selectedBookTitle: ""
+
+            ListModel { id: booksModel2 }
+            ListModel { id: commentsModel }
+
+            function fillBooks(list) {
+                booksModel2.clear()
+                if (!list) return
+                for (var i = 0; i < list.length; i++) {
+                    var b = list[i]
+                    booksModel2.append({ "bookId": b.id || 0, "title": b.title || "Unknown" })
+                }
+            }
+
+            function fillComments(list) {
+                commentsModel.clear()
+                if (!list) return
+                for (var i = 0; i < list.length; i++) {
+                    var c = list[i]
+                    commentsModel.append({
+                        // TODO: اگه آیدی کامنت با اسم دیگه‌ای میاد، با کمک لاگ زیر اصلاحش کنید
+                        "commentId": c.id || c.commentId || 0,
+                        "username": c.username || ("User #" + (c.userId || 0)),
+                        "text": c.text || "",
+                        "rating": c.rating || 0
+                    })
+                }
+            }
+
+            function loadBooks() {
+                if (networkManager) networkManager.getAllBooks()
+            }
+
+            function selectBook(bookId, title) {
+                selectedBookId = bookId
+                selectedBookTitle = title
+                commentsModel.clear()
+                if (networkManager) networkManager.getComments(bookId)
+            }
+
+            Component.onCompleted: loadBooks()
+
+            Connections {
+                target: networkManager
+                function onResponseReceived(action, status, data) {
+                    var ok = (status === "success" || status === "SUCCESS")
+
+                    if (action === "getComments")
+                        console.log("AdminCommentsView - getComments raw:", JSON.stringify(data))
+
+                    if (!ok) return
+
+                    if (action === "getAllBooks") fillBooks(data)
+                    else if (action === "getComments") fillComments(data)
+                    else if (action === "adminRemoveComment") {
+                        if (commentsRoot.selectedBookId > 0 && networkManager)
+                            networkManager.getComments(commentsRoot.selectedBookId)
+                    }
+                }
+            }
+
+            Rectangle { anchors.fill: parent; color: "#1A0F1F" }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
+
+                Rectangle {
+                    Layout.preferredWidth: 260
+                    Layout.fillHeight: true
+                    color: "#2D1B33"
+                    radius: 12
+                    border.color: "#5c3d75"
+                    border.width: 1
+                    clip: true
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 10
+
+                        Text {
+                            text: "Select a Book"
+                            color: "#D4AF37"
+                            font.bold: true
+                            font.pixelSize: 16
+                        }
+
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+
+                            ListView {
+                                model: booksModel2
+                                spacing: 6
+
+                                delegate: Rectangle {
+                                    width: ListView.view ? ListView.view.width : 220
+                                    height: 40
+                                    radius: 8
+                                    color: commentsRoot.selectedBookId === model.bookId ? "#D4AF37" : "#1A0F1F"
+
+                                    Text {
+                                        anchors.fill: parent
+                                        anchors.margins: 8
+                                        text: model.title
+                                        color: commentsRoot.selectedBookId === model.bookId ? "#1A0F1F" : "white"
+                                        elide: Text.ElideRight
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: commentsRoot.selectBook(model.bookId, model.title)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: "#2D1B33"
+                    radius: 12
+                    border.color: "#5c3d75"
+                    border.width: 1
+                    clip: true
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 15
+                        spacing: 10
+
+                        Text {
+                            text: commentsRoot.selectedBookId > 0
+                                  ? "Comments on \"" + commentsRoot.selectedBookTitle + "\" (" + commentsModel.count + ")"
+                                  : "Select a book to view its comments"
+                            color: "#D4AF37"
+                            font.bold: true
+                            font.pixelSize: 16
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            visible: commentsRoot.selectedBookId > 0 && commentsModel.count === 0
+                            text: "No comments on this book."
+                            color: "#A08EAD"
+                            font.pixelSize: 13
+                        }
+
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+
+                            ListView {
+                                id: commentsList
+                                model: commentsModel
+                                spacing: 8
+
+                                delegate: Rectangle {
+                                    width: commentsList.width
+                                    color: "#1A0F1F"
+                                    radius: 8
+                                    border.color: "#3d2545"
+                                    border.width: 1
+                                    implicitHeight: commentBody.implicitHeight + 24
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 12
+                                        spacing: 10
+
+                                        ColumnLayout {
+                                            id: commentBody
+                                            Layout.fillWidth: true
+                                            spacing: 4
+
+                                            RowLayout {
+                                                spacing: 8
+                                                Text {
+                                                    text: model.username
+                                                    color: "#D4AF37"
+                                                    font.bold: true
+                                                    font.pixelSize: 13
+                                                }
+                                                Text {
+                                                    text: "★".repeat(model.rating) + "☆".repeat(5 - model.rating)
+                                                    color: "#D4AF37"
+                                                    font.pixelSize: 13
+                                                }
+                                            }
+
+                                            Text {
+                                                text: model.text
+                                                color: "white"
+                                                font.pixelSize: 13
+                                                wrapMode: Text.WordWrap
+                                                Layout.fillWidth: true
+                                            }
+                                        }
+
+                                        Button {
+                                            text: "Delete"
+                                            background: Rectangle { color: "#8B2C2C"; radius: 6 }
+                                            contentItem: Text {
+                                                text: parent.text
+                                                color: "white"
+                                                font.pixelSize: 12
+                                                horizontalAlignment: Text.AlignHCenter
+                                            }
+                                            onClicked: {
+                                                if (networkManager && model.commentId > 0)
+                                                    networkManager.adminRemoveComment(model.commentId)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

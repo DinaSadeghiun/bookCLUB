@@ -1,45 +1,139 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import QtPdf 6.5
+import QtQuick.Pdf
+import Qt.labs.settings 1.1
 
 Rectangle {
-    id: pdfReaderRoot
-    width: 1024
-    height: 768
-    color: "#2D1B33"
+    id: readerRoot
+    anchors.fill: parent
+    color: "#1A0F1F"
 
-    // --- C++ Integration Properties ---
-    property string pdfUrl: (typeof bookManager !== "undefined") ? bookManager.currentPdfPath : "file:///C:/sample.pdf"
-    property int bookId: (typeof bookManager !== "undefined") ? bookManager.currentBookId : 0
+    required property var networkManager
+    required property int bookId
 
-    signal exitReader()
+    property int userId: 0
+    property string title: "Reading"
 
-    // Timer to debounce saving the last read page to prevent overloading the database/network
-    Timer {
-        id: saveDelayTimer
-        interval: 1000
-        repeat: false
-        onTriggered: {
-            if (typeof bookManager !== "undefined") {
-                bookManager.saveLastReadPage(pdfReaderRoot.bookId, pdfView.currentPage);
-            } else {
-                console.log("C++ Interface: Saving page " + pdfView.currentPage + " for book " + pdfReaderRoot.bookId);
-            }
+    property bool loading: true
+    property string errorMessage: ""
+    property real minZoom: 0.6
+    property real maxZoom: 3.0
+    property real zoomStep: 0.15
+
+    // Simple local persistence for the last page per book/user.
+    property string progressKey: "pdf_reader_last_page_" + userId + "_" + bookId
+
+    PdfDocument {
+        id: pdfDoc
+    }
+
+    Settings {
+        id: readerSettings
+        category: "PdfReader"
+    }
+
+    function requestPdf() {
+        loading = true
+        errorMessage = ""
+
+        if (networkManager) {
+            networkManager.getBookPdf(userId, bookId)
+        } else {
+            loading = false
+            errorMessage = "No network connection available."
         }
     }
 
-    PdfDocument {
-        id: pdfDocument
-        source: pdfReaderRoot.pdfUrl
+    function clampPage(pageNumber) {
+        if (pdfDoc.pageCount <= 0)
+            return 0
+        return Math.max(0, Math.min(pdfDoc.pageCount - 1, pageNumber))
+    }
 
-        onStatusChanged: {
-            if (status === PdfDocument.Ready) {
-                // Restore last read page from backend settings
-                if (typeof bookManager !== "undefined") {
-                    var lastPage = bookManager.getLastReadPage(pdfReaderRoot.bookId);
-                    pdfView.currentPage = Math.min(lastPage, pdfDocument.pageCount - 1);
-                }
+    function goToPage(pageNumber) {
+        if (pdfDoc.status !== PdfDocument.Ready)
+            return
+
+        var targetPage = clampPage(pageNumber)
+        pageView.currentPage = targetPage
+        saveReadingProgress()
+    }
+
+    function nextPage() {
+        goToPage(pageView.currentPage + 1)
+    }
+
+    function previousPage() {
+        goToPage(pageView.currentPage - 1)
+    }
+
+    function zoomIn() {
+        pageView.renderScale = Math.min(maxZoom, pageView.renderScale + zoomStep)
+    }
+
+    function zoomOut() {
+        pageView.renderScale = Math.max(minZoom, pageView.renderScale - zoomStep)
+    }
+
+    function resetZoom() {
+        pageView.renderScale = 1.0
+    }
+
+    function saveReadingProgress() {
+        readerSettings.setValue(progressKey, pageView.currentPage)
+    }
+
+    function loadReadingProgress() {
+        var savedPage = readerSettings.value(progressKey, 0)
+        goToPage(Number(savedPage))
+    }
+
+    Component.onCompleted: requestPdf()
+
+    Connections {
+        target: networkManager
+
+        function onResponseReceived(action, status, data) {
+            if (action !== "getBookPdf")
+                return
+
+            var ok = status === "success" || status === "SUCCESS"
+            if (!ok) {
+                loading = false
+                errorMessage = (data && data.message) ? data.message : "Failed to load this book."
+                return
+            }
+
+            var base64 = data.pdfData || ""
+            if (base64 === "") {
+                loading = false
+                errorMessage = "This book has no PDF file available."
+                return
+            }
+
+            var localPath = networkManager.saveBase64ToCache(base64, "book_" + bookId + ".pdf")
+            if (localPath === "") {
+                loading = false
+                errorMessage = "Failed to save the PDF locally."
+                return
+            }
+
+            pdfDoc.source = localPath
+        }
+    }
+
+    Connections {
+        target: pdfDoc
+
+        function onStatusChanged() {
+            if (pdfDoc.status === PdfDocument.Ready) {
+                loading = false
+                errorMessage = ""
+                loadReadingProgress()
+            } else if (pdfDoc.status === PdfDocument.Error) {
+                loading = false
+                errorMessage = "Failed to open the PDF file."
             }
         }
     }
@@ -48,210 +142,301 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // 1. Top Control Bar (Flat Comic Theme)
         Rectangle {
             Layout.fillWidth: true
-            height: 60
-            color: "#1E1222"
-            border.color: "#D4AF37"
-            border.width: 2
+            Layout.preferredHeight: 60
+            color: "#2D1B33"
+            border.color: "#5C3D75"
+            border.width: 1
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 15
-                anchors.rightMargin: 15
-                spacing: 15
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                spacing: 12
 
-                // Close Button
                 Button {
-                    id: closeBtn
-                    text: "✖ Close"
-                    onClicked: {
-                        if (typeof bookManager !== "undefined") {
-                            bookManager.saveLastReadPage(pdfReaderRoot.bookId, pdfView.currentPage);
-                        }
-                        pdfReaderRoot.exitReader();
-                    }
-
+                    text: "Back"
                     contentItem: Text {
-                        text: closeBtn.text
+                        text: "\u2190 " + parent.text
                         color: "#D4AF37"
-                        font.bold: true
                         font.pixelSize: 14
+                        font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                     }
                     background: Rectangle {
-                        implicitWidth: 80
-                        implicitHeight: 35
-                        color: closeBtn.down ? "#1E1222" : "#2D1B33"
-                        border.color: "#D4AF37"
-                        border.width: 2
-                        radius: 4
+                        color: "transparent"
+                        radius: 6
+                        border.color: "#5C3D75"
+                        border.width: 1
+                    }
+                    onClicked: {
+                        saveReadingProgress()
+                        var sv = readerRoot.StackView ? readerRoot.StackView.view : null
+                        if (sv)
+                            sv.pop()
                     }
                 }
 
-                // Page Navigation (Prev / Next & Direct Jump)
-                Row {
-                    spacing: 5
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Button {
-                        id: prevBtn
-                        text: "◀"
-                        enabled: pdfView.currentPage > 0
-                        onClicked: pdfView.currentPage--
-
-                        background: Rectangle {
-                            implicitWidth: 35
-                            implicitHeight: 35
-                            color: !parent.enabled ? "#444" : (parent.down ? "#1E1222" : "#2D1B33")
-                            border.color: "#D4AF37"
-                            border.width: 2
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: prevBtn.text
-                            color: prevBtn.enabled ? "#D4AF37" : "#888"
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
-
-                    TextField {
-                        id: pageInput
-                        width: 55
-                        height: 35
-                        text: (pdfView.currentPage + 1).toString()
-                        color: "#D4AF37"
-                        font.bold: true
-                        horizontalAlignment: TextInput.AlignHCenter
-                        selectByMouse: true
-                        validator: IntValidator { bottom: 1; top: pdfDocument.pageCount }
-
-                        background: Rectangle {
-                            color: "#1E1222"
-                            border.color: "#D4AF37"
-                            border.width: 2
-                            radius: 4
-                        }
-
-                        onAccepted: {
-                            var targetPage = parseInt(text) - 1;
-                            if (targetPage >= 0 && targetPage < pdfDocument.pageCount) {
-                                pdfView.currentPage = targetPage;
-                            } else {
-                                text = (pdfView.currentPage + 1).toString();
-                            }
-                        }
-                    }
-
-                    Text {
-                        text: "/  " + pdfDocument.pageCount
-                        color: "#FFF"
-                        font.bold: true
-                        font.pixelSize: 14
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Button {
-                        id: nextBtn
-                        text: "▶"
-                        enabled: pdfView.currentPage < pdfDocument.pageCount - 1
-                        onClicked: pdfView.currentPage++
-
-                        background: Rectangle {
-                            implicitWidth: 35
-                            implicitHeight: 35
-                            color: !parent.enabled ? "#444" : (parent.down ? "#1E1222" : "#2D1B33")
-                            border.color: "#D4AF37"
-                            border.width: 2
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: nextBtn.text
-                            color: nextBtn.enabled ? "#D4AF37" : "#888"
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
+                Text {
+                    text: readerRoot.title
+                    color: "#D4AF37"
+                    font.bold: true
+                    font.pixelSize: 17
+                    elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
 
-                Item { Layout.fillWidth: true }
-
-                // Zoom Level Controls
-                Row {
-                    spacing: 10
-                    Layout.alignment: Qt.AlignVCenter
-
-                    Button {
-                        id: zoomOutBtn
-                        text: "Zoom -"
-                        onClicked: pdfView.zoomFactor = Math.max(0.5, pdfView.zoomFactor - 0.1)
-
-                        background: Rectangle {
-                            implicitWidth: 75
-                            implicitHeight: 35
-                            color: zoomOutBtn.down ? "#1E1222" : "#2D1B33"
-                            border.color: "#D4AF37"
-                            border.width: 2
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: zoomOutBtn.text
-                            color: "#D4AF37"
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
-
-                    Text {
-                        text: Math.round(pdfView.zoomFactor * 100) + "%"
-                        color: "white"
-                        font.bold: true
-                        font.pixelSize: 14
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-
-                    Button {
-                        id: zoomInBtn
-                        text: "Zoom +"
-                        onClicked: pdfView.zoomFactor = Math.min(3.0, pdfView.zoomFactor + 0.1)
-
-                        background: Rectangle {
-                            implicitWidth: 75
-                            implicitHeight: 35
-                            color: zoomInBtn.down ? "#1E1222" : "#2D1B33"
-                            border.color: "#D4AF37"
-                            border.width: 2
-                            radius: 4
-                        }
-                        contentItem: Text {
-                            text: zoomInBtn.text
-                            color: "#D4AF37"
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                    }
+                Text {
+                    visible: pdfDoc.status === PdfDocument.Ready
+                    text: "Page " + (pageView.currentPage + 1) + " / " + pdfDoc.pageCount
+                    color: "#A08EAD"
+                    font.pixelSize: 13
                 }
             }
         }
 
-        // 2. Main PDF View Area
-        PdfMultiPageView {
-            id: pdfView
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            document: pdfDocument
-            renderStrategy: PdfPageView.NoAntialiasing
+            color: "#140C18"
 
-            onCurrentPageChanged: {
-                pageInput.text = (pdfView.currentPage + 1).toString();
-                saveDelayTimer.restart();
+            PdfMultiPageView {
+                id: pageView
+                anchors.fill: parent
+                anchors.margins: 12
+                document: pdfDoc
+                visible: !readerRoot.loading && readerRoot.errorMessage === ""
+                renderScale: 1.0
+
+                ScrollBar.vertical: ScrollBar { }
+                ScrollBar.horizontal: ScrollBar { }
+
+                onCurrentPageChanged: {
+                    pageSelector.value = currentPage + 1
+                    saveReadingProgress()
+                }
+            }
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                visible: readerRoot.loading
+                spacing: 14
+
+                BusyIndicator {
+                    running: readerRoot.loading
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Text {
+                    text: "Loading book..."
+                    color: "#A08EAD"
+                    font.pixelSize: 14
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                visible: !readerRoot.loading && readerRoot.errorMessage !== ""
+                spacing: 14
+
+                Text {
+                    text: "!"
+                    color: "#FF6666"
+                    font.pixelSize: 40
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Text {
+                    text: readerRoot.errorMessage
+                    color: "#FF6666"
+                    font.pixelSize: 14
+                    wrapMode: Text.WordWrap
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.maximumWidth: 420
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Button {
+                    text: "Retry"
+                    Layout.alignment: Qt.AlignHCenter
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: "#D4AF37"
+                        radius: 6
+                    }
+                    onClicked: requestPdf()
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 72
+            color: "#2D1B33"
+            border.color: "#5C3D75"
+            border.width: 1
+            visible: pdfDoc.status === PdfDocument.Ready && !readerRoot.loading && readerRoot.errorMessage === ""
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 14
+                anchors.rightMargin: 14
+                spacing: 10
+
+                Button {
+                    text: "Previous"
+                    enabled: pageView.currentPage > 0
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: parent.enabled ? "#D4AF37" : "#6E6374"
+                        radius: 6
+                    }
+                    onClicked: previousPage()
+                }
+
+                Button {
+                    text: "Next"
+                    enabled: pageView.currentPage < pdfDoc.pageCount - 1
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: parent.enabled ? "#D4AF37" : "#6E6374"
+                        radius: 6
+                    }
+                    onClicked: nextPage()
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
+                    color: "#5C3D75"
+                    opacity: 0.8
+                }
+
+                Text {
+                    text: "Go to page"
+                    color: "#D4AF37"
+                    font.pixelSize: 13
+                }
+
+                SpinBox {
+                    id: pageSelector
+                    from: 1
+                    to: Math.max(1, pdfDoc.pageCount)
+                    value: 1
+                    editable: true
+                    Layout.preferredWidth: 90
+
+                    onValueModified: goToPage(value - 1)
+
+                    contentItem: TextInput {
+                        text: pageSelector.textFromValue(pageSelector.value, pageSelector.locale)
+                        color: "#D4AF37"
+                        horizontalAlignment: Qt.AlignHCenter
+                        verticalAlignment: Qt.AlignVCenter
+                        font.pixelSize: 13
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+                        readOnly: !pageSelector.editable
+                        validator: pageSelector.validator
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+                    }
+
+                    background: Rectangle {
+                        radius: 6
+                        color: "#1A0F1F"
+                        border.color: "#D4AF37"
+                        border.width: 1
+                    }
+                }
+
+                Rectangle {
+                    Layout.preferredWidth: 1
+                    Layout.fillHeight: true
+                    color: "#5C3D75"
+                    opacity: 0.8
+                }
+
+                Button {
+                    text: "-"
+                    Layout.preferredWidth: 38
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#D4AF37"
+                        font.pixelSize: 18
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: "#3D2B43"
+                        radius: 6
+                    }
+                    onClicked: zoomOut()
+                }
+
+                Text {
+                    text: Math.round(pageView.renderScale * 100) + "%"
+                    color: "#D4AF37"
+                    font.pixelSize: 13
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.preferredWidth: 56
+                }
+
+                Button {
+                    text: "+"
+                    Layout.preferredWidth: 38
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#D4AF37"
+                        font.pixelSize: 18
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: "#3D2B43"
+                        radius: 6
+                    }
+                    onClicked: zoomIn()
+                }
+
+                Button {
+                    text: "100%"
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: "#D4AF37"
+                        radius: 6
+                    }
+                    onClicked: resetZoom()
+                }
             }
         }
     }

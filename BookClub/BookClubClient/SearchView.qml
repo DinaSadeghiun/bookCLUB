@@ -7,14 +7,99 @@ Rectangle {
     anchors.fill: parent
     color: "#1A0F1F"
 
+    required property var networkManager
+    property int userId: 0
+    property var booksById: ({})
+    property var allBooksList: []
+
     property string selectedFilter: "All"
+
+    ListModel { id: resultsModel }
+
+    function passesFilter(book, query) {
+        if (query === "") return true;
+        var q = query.toLowerCase();
+        var titleMatch = book.title && book.title.toLowerCase().indexOf(q) !== -1;
+        var authorMatch = book.author && book.author.toLowerCase().indexOf(q) !== -1;
+        var publisherMatch = book.publisherUsername && book.publisherUsername.toLowerCase().indexOf(q) !== -1;
+
+        if (selectedFilter === "All") {
+            return titleMatch || authorMatch || publisherMatch;
+        }
+        if (selectedFilter === "Book Title") {
+            return titleMatch;
+        }
+        if (selectedFilter === "Author") {
+            return authorMatch;
+        }
+        if (selectedFilter === "Publisher") {
+            return publisherMatch;
+        }
+        return true;
+    }
+
+    function rebuildResults(rawList) {
+        resultsModel.clear();
+        var query = searchInput.text.trim();
+
+        for (var i = 0; i < rawList.length; i++) {
+            var book = rawList[i];
+            if (!book.isAvailable) continue;
+
+            var fullBook = searchRoot.booksById[book.id] || book;
+            if (!passesFilter(fullBook, query)) continue;
+
+            resultsModel.append({
+                "bookId": book.id,
+                "title": book.title,
+                "author": book.author,
+                "genre": book.genre,
+                "price": book.price,
+                "image": book.coverImageData || "qrc:/assets/images/giraffe.png",
+                "publisherUsername": fullBook.publisherUsername || ""
+            });
+        }
+    }
+
+    property var lastRawResults: []
+
+    Connections {
+        target: networkManager
+        function onResponseReceived(action, status, data) {
+            if (action === "searchBooks") {
+                if (status === "success" || status === "SUCCESS") {
+                    searchRoot.lastRawResults = data;
+                    rebuildResults(data);
+                } else {
+                    resultsModel.clear();
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: searchDebounce
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (searchInput.text.trim() === "") {
+                rebuildResults(searchRoot.allBooksList);
+            } else if (networkManager) {
+                networkManager.searchBooks(searchInput.text.trim());
+            }
+        }
+    }
+
+    Component.onCompleted: rebuildResults(allBooksList)
+    onSelectedFilterChanged: {
+        rebuildResults(searchInput.text.trim() === "" ? allBooksList : lastRawResults)
+    }
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 15
 
-        // Search Bar Section
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 50
@@ -43,11 +128,11 @@ Rectangle {
                     background: Rectangle { color: "transparent" }
                     font.pixelSize: 16
                     verticalAlignment: TextInput.AlignVCenter
+                    onTextChanged: searchDebounce.restart()
                 }
             }
         }
 
-        // Advanced Filters Section (Based on Project Docs: Title, Author, Publisher)
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -66,7 +151,6 @@ Rectangle {
                 Repeater {
                     model: ["All", "Book Title", "Author", "Publisher"]
                     Button {
-                        id: filterBtn
                         Layout.preferredHeight: 35
                         Layout.fillWidth: true
 
@@ -85,44 +169,40 @@ Rectangle {
                             radius: 5
                         }
 
-                        onClicked: {
-                            searchRoot.selectedFilter = modelData;
-                        }
+                        onClicked: searchRoot.selectedFilter = modelData
                     }
                 }
             }
         }
 
-        // Results Status Header
         RowLayout {
             Layout.fillWidth: true
             Text {
-                text: searchInput.text !== "" ? "Results for: \"" + searchInput.text + "\"" : "Popular / Recent Searches"
+                text: searchInput.text !== "" ? "Results for: \"" + searchInput.text + "\"" : "Browse All Books"
                 color: "#FFD700"
                 font.bold: true
                 font.pixelSize: 18
                 Layout.fillWidth: true
             }
             Text {
-                text: "Active Filter: " + searchRoot.selectedFilter
+                text: resultsModel.count + " result(s)"
                 color: "#A08EAD"
                 font.pixelSize: 12
             }
         }
 
-        // Results Grid
         GridView {
             id: resultsGrid
             Layout.fillWidth: true
             Layout.fillHeight: true
             cellWidth: 150
-            cellHeight: 250
+            cellHeight: 260
             clip: true
-            model: searchInput.text === "" ? 0 : 6
+            model: resultsModel
 
             delegate: Item {
                 width: 140
-                height: 240
+                height: 250
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -135,17 +215,21 @@ Rectangle {
                         radius: 8
                         border.color: "#FFD700"
                         border.width: 1
+                        clip: true
 
                         Image {
                             anchors.fill: parent
                             anchors.margins: 5
-                            source: "qrc:/assets/images/giraffe.png"
+                            source: model.image
                             fillMode: Image.PreserveAspectFit
+                            onStatusChanged: {
+                                if (status === Image.Error) source = "qrc:/assets/images/giraffe.png"
+                            }
                         }
                     }
 
                     Text {
-                        text: "Sample Book Title"
+                        text: model.title
                         color: "white"
                         font.bold: true
                         font.pixelSize: 12
@@ -155,7 +239,7 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Author Name"
+                        text: model.author
                         color: "#A08EAD"
                         font.pixelSize: 10
                         Layout.fillWidth: true
@@ -163,13 +247,17 @@ Rectangle {
                         elide: Text.ElideRight
                     }
 
-                    Text {
-                        text: "Publisher Name"
-                        color: "#FFD700"
-                        font.pixelSize: 9
+                    RowLayout {
                         Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
+                        Text {
+                            text: model.price === 0 ? "Free" : ("$" + model.price)
+                            color: model.price === 0 ? "#4CAF50" : "#FFD700"
+                            font.bold: true
+                            font.pixelSize: 11
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                        }
                     }
                 }
             }

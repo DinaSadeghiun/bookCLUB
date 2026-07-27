@@ -21,7 +21,7 @@ RESOURCES += \
 
 DISTFILES += \
     AdminDashboard.qml \
-    BookCard.qml \
+    BookPage.qml \
     CartView.qml \
     Dashboard.qml \
     ForgotPassword.qml \
@@ -32,7 +32,6 @@ DISTFILES += \
     PublisherDashboard.qml \
     SearchView.qml \
     SettingsView.qml \
-    UserPanel.qml \
     main.qml \
     Login.qml \
     SignUp.qml

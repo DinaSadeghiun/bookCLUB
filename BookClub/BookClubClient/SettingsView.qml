@@ -5,37 +5,158 @@ import QtQuick.Layouts 1.15
 Item {
     id: settingsRoot
 
+    required property int userId
     required property string username
     required property string userRole
-    property var userGenres: ["NonFiction", "Fiction", "Mystery"]
-    property int cartItemCount: 0
+    required property var networkManager
 
-    property string favoriteAuthor: "George Orwell"
-    property string userPassword: "password123"
-    property var purchaseHistory: [
-        "1984 - George Orwell",
-        "Animal Farm - George Orwell"
-    ]
+    property var userGenres: []
+    property var booksById: ({})
+    property bool loading: false
+    property string statusMessage: ""
+    property color statusColor: "#D4AF37"
+    property string favoriteAuthor: ""
 
-    signal logoutRequested()
+    ListModel { id: purchaseHistoryModel }
+
+    function showMessage(message, isError) {
+        statusMessage = message || ""
+        statusColor = isError ? "#FF6666" : "#66FF99"
+    }
+
+    function loadData() {
+        if (!networkManager)
+            return
+
+        loading = true
+        networkManager.getPurchasedBooks(userId)
+    }
+
+    function refreshPurchaseHistory() {
+        purchaseHistoryModel.clear()
+
+        for (var i = 0; i < settingsRoot._purchasedIds.length; i++) {
+            var id = settingsRoot._purchasedIds[i]
+            var book = booksById[id]
+
+            purchaseHistoryModel.append({
+                "title": book ? book.title : ("(book #" + id + ")"),
+                "author": book ? book.author : ""
+            })
+        }
+    }
+
+    property var _purchasedIds: []
+
+    onBooksByIdChanged: refreshPurchaseHistory()
+
+    function openGenreSelection() {
+        var targetStack = settingsRoot.StackView ? settingsRoot.StackView.view : null
+        if (!targetStack) {
+            showMessage("StackView not found", true)
+            return
+        }
+
+        var page = targetStack.push("GenreSelection.qml", {
+            "username": settingsRoot.username,
+            "userRole": settingsRoot.userRole,
+            "userId": settingsRoot.userId,
+            "isEditMode": true,
+            "initialGenres": settingsRoot.userGenres,
+            "networkManager": settingsRoot.networkManager
+        })
+
+        if (page && page.genresSaved) {
+            page.genresSaved.connect(function(genres) {
+                settingsRoot.userGenres = genres
+            })
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
         color: "#1A0F1F"
     }
 
+    Connections {
+        target: networkManager
+
+        function onResponseReceived(action, status, data) {
+            var ok = status === "success" || status === "SUCCESS"
+            loading = false
+
+            if (action === "changeUsername") {
+                if (ok) {
+                    settingsRoot.username = usernameField.text.trim()
+                    showMessage("Username updated successfully", false)
+                    usernamePasswordField.text = ""
+                } else {
+                    showMessage(data && data.message ? data.message : "Failed to update username", true)
+                }
+            }
+            else if (action === "changePassword") {
+                if (ok) {
+                    showMessage("Password changed successfully", false)
+                    currentPasswordField.text = ""
+                    newPasswordField.text = ""
+                    confirmPasswordField.text = ""
+                } else {
+                    showMessage(data && data.message ? data.message : "Failed to change password", true)
+                }
+            }
+            else if (action === "updateProfile") {
+                showMessage(
+                    ok ? "Favorite genres updated"
+                       : (data && data.message ? data.message : "Failed to update genres"),
+                    !ok
+                )
+            }
+            else if (action === "updateSecurityAnswer") {
+                if (ok) {
+                    settingsRoot.favoriteAuthor = favoriteAuthorField.text.trim()
+                    favoriteAuthorPasswordField.text = ""
+                    showMessage("Favorite author updated successfully", false)
+                } else {
+                    showMessage(
+                        data && data.message ? data.message : "Failed to update favorite author. Check your password.",
+                        true
+                    )
+                }
+            }
+            else if (action === "getPurchasedBooks") {
+                if (ok) {
+                    settingsRoot._purchasedIds = data || []
+                    refreshPurchaseHistory()
+                } else {
+                    settingsRoot._purchasedIds = []
+                    purchaseHistoryModel.clear()
+                    showMessage(data && data.message ? data.message : "Failed to load purchase history", true)
+                }
+            }
+        }
+
+        function onErrorOccurred(message) {
+            loading = false
+            showMessage(message, true)
+        }
+    }
+
     ScrollView {
         id: settingsScroll
         anchors.fill: parent
-        leftPadding: 20
-        rightPadding: 20
         clip: true
 
+        contentWidth: availableWidth
+        contentHeight: settingsContent.implicitHeight
+
         ColumnLayout {
+            id: settingsContent
             width: settingsScroll.availableWidth
             spacing: 20
 
-            Item { Layout.preferredHeight: 10 }
+            Item {
+                Layout.preferredHeight: 10
+            }
 
             Text {
                 text: "Settings"
@@ -43,12 +164,26 @@ Item {
                 font.pixelSize: 28
                 font.bold: true
                 Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
             }
 
-            //   Account Information
+            Text {
+                text: statusMessage
+                visible: statusMessage.length > 0
+                color: statusColor
+                font.pixelSize: 13
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+            }
+
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: accountCol.implicitHeight + 40
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.preferredHeight: accountCol.implicitHeight + 40
                 color: "#2D1B33"
                 radius: 12
                 border.color: "#D4AF37"
@@ -65,7 +200,6 @@ Item {
                         color: "#D4AF37"
                         font.pixelSize: 18
                         font.bold: true
-                        Layout.fillWidth: true
                     }
 
                     Text {
@@ -73,42 +207,72 @@ Item {
                         color: "#D4AF37"
                         opacity: 0.7
                         font.pixelSize: 14
-                        Layout.fillWidth: true
                     }
 
-                    ColumnLayout {
+                    Text {
+                        text: "User ID: " + settingsRoot.userId
+                        color: "#D4AF37"
+                        opacity: 0.7
+                        font.pixelSize: 14
+                    }
+
+                    Text {
+                        text: "Username"
+                        color: "#D4AF37"
+                        font.pixelSize: 13
+                        font.bold: true
+                    }
+
+                    TextField {
+                        id: usernameField
                         Layout.fillWidth: true
-                        spacing: 6
-                        Text {
-                            text: "Username"
-                            color: "#D4AF37"
-                            font.pixelSize: 13
-                            font.bold: true
-                            Layout.fillWidth: true
+                        implicitHeight: 45
+                        text: settingsRoot.username
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
                         }
-                        TextField {
-                            id: usernameField
-                            Layout.fillWidth: true
-                            implicitHeight: 45
-                            text: settingsRoot.username
-                            color: "#D4AF37"
-                            verticalAlignment: TextInput.AlignVCenter
-                            leftPadding: 12
-                            background: Rectangle {
-                                color: "#1A0F1F"
-                                radius: 6
-                                border.color: "#D4AF37"
-                                border.width: 1
-                            }
+                    }
+
+                    Text {
+                        text: "Confirm With Password"
+                        color: "#D4AF37"
+                        font.pixelSize: 13
+                        font.bold: true
+                    }
+
+                    TextField {
+                        id: usernamePasswordField
+                        Layout.fillWidth: true
+                        implicitHeight: 45
+                        placeholderText: "Enter your password"
+                        echoMode: TextInput.Password
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
                         }
                     }
 
                     Button {
                         text: "Update Username"
                         Layout.alignment: Qt.AlignRight
-                        implicitHeight: 40
-                        implicitWidth: 150
-                        background: Rectangle { color: "#D4AF37"; radius: 8 }
+                        Layout.preferredHeight: 42
+                        enabled: !loading
+
                         contentItem: Text {
                             text: parent.text
                             color: "#1A0F1F"
@@ -116,18 +280,159 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
+
+                        background: Rectangle {
+                            color: "#D4AF37"
+                            radius: 6
+                        }
+
                         onClicked: {
-                            settingsRoot.username = usernameField.text
-                            console.log("Update username to:", usernameField.text)
+                            if (!usernameField.text.trim()) {
+                                showMessage("Username cannot be empty", true)
+                                return
+                            }
+
+                            if (!usernamePasswordField.text) {
+                                showMessage("Password is required to change username", true)
+                                return
+                            }
+
+                            loading = true
+                            networkManager.changeUsername(
+                                settingsRoot.userId,
+                                usernameField.text.trim(),
+                                usernamePasswordField.text,
+                                settingsRoot.userRole
+                            )
                         }
                     }
                 }
             }
 
-            //Change Password
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: passCol.implicitHeight + 40
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.preferredHeight: authorCol.implicitHeight + 40
+                color: "#2D1B33"
+                radius: 12
+                border.color: "#D4AF37"
+                border.width: 1
+
+                ColumnLayout {
+                    id: authorCol
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 15
+
+                    Text {
+                        text: "Favorite Author"
+                        color: "#D4AF37"
+                        font.pixelSize: 18
+                        font.bold: true
+                    }
+
+                    Text {
+                        text: "Set your favorite author (also used as your security answer)"
+                        color: "#D4AF37"
+                        opacity: 0.7
+                        font.pixelSize: 13
+                    }
+
+                    TextField {
+                        id: favoriteAuthorField
+                        Layout.fillWidth: true
+                        implicitHeight: 45
+                        placeholderText: "Enter favorite author"
+                        text: settingsRoot.favoriteAuthor
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
+                        }
+                    }
+
+                    Text {
+                        text: "Confirm With Password"
+                        color: "#D4AF37"
+                        font.pixelSize: 13
+                        font.bold: true
+                    }
+
+                    TextField {
+                        id: favoriteAuthorPasswordField
+                        Layout.fillWidth: true
+                        implicitHeight: 45
+                        placeholderText: "Enter your password"
+                        echoMode: TextInput.Password
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
+                        }
+                    }
+
+                    Button {
+                        text: "Save Favorite Author"
+                        Layout.alignment: Qt.AlignRight
+                        Layout.preferredHeight: 42
+                        enabled: !loading
+
+                        contentItem: Text {
+                            text: parent.text
+                            color: "#1A0F1F"
+                            font.bold: true
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        background: Rectangle {
+                            color: "#D4AF37"
+                            radius: 6
+                        }
+
+                        onClicked: {
+                            var authorName = favoriteAuthorField.text.trim()
+
+                            if (!authorName) {
+                                showMessage("Favorite author cannot be empty", true)
+                                return
+                            }
+
+                            if (!favoriteAuthorPasswordField.text) {
+                                showMessage("Password is required to change the favorite author", true)
+                                return
+                            }
+
+                            loading = true
+                            networkManager.updateSecurityAnswer(
+                                settingsRoot.userId,
+                                authorName,
+                                favoriteAuthorPasswordField.text,
+                                settingsRoot.userRole
+                            )
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.preferredHeight: passCol.implicitHeight + 40
                 color: "#2D1B33"
                 radius: 12
                 border.color: "#D4AF37"
@@ -144,87 +449,71 @@ Item {
                         color: "#D4AF37"
                         font.pixelSize: 18
                         font.bold: true
-                        Layout.fillWidth: true
                     }
 
-                    ColumnLayout {
+                    TextField {
+                        id: currentPasswordField
                         Layout.fillWidth: true
-                        spacing: 6
-                        Text { text: "Current Password"; color: "#D4AF37"; font.pixelSize: 13; Layout.fillWidth: true }
-                        TextField {
-                            id: currentPasswordField
-                            Layout.fillWidth: true
-                            implicitHeight: 45
-                            placeholderText: "Enter Current Password"
-                            placeholderTextColor: "#80D4AF37"
-                            echoMode: TextInput.Password
-                            color: "#D4AF37"
-                            verticalAlignment: TextInput.AlignVCenter
-                            leftPadding: 12
-                            background: Rectangle {
-                                color: "#1A0F1F"; radius: 6
-                                border.color: "#D4AF37"; border.width: 1
-                            }
+                        implicitHeight: 45
+                        placeholderText: "Current password"
+                        echoMode: TextInput.Password
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
                         }
                     }
 
-                    ColumnLayout {
+                    TextField {
+                        id: newPasswordField
                         Layout.fillWidth: true
-                        spacing: 6
-                        Text { text: "New Password"; color: "#D4AF37"; font.pixelSize: 13; Layout.fillWidth: true }
-                        TextField {
-                            id: newPasswordField
-                            Layout.fillWidth: true
-                            implicitHeight: 45
-                            placeholderText: "Enter New Password"
-                            placeholderTextColor: "#80D4AF37"
-                            echoMode: TextInput.Password
-                            color: "#D4AF37"
-                            verticalAlignment: TextInput.AlignVCenter
-                            leftPadding: 12
-                            background: Rectangle {
-                                color: "#1A0F1F"; radius: 6
-                                border.color: "#D4AF37"; border.width: 1
-                            }
+                        implicitHeight: 45
+                        placeholderText: "New password"
+                        echoMode: TextInput.Password
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
+
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
                         }
                     }
 
-                    ColumnLayout {
+                    TextField {
+                        id: confirmPasswordField
                         Layout.fillWidth: true
-                        spacing: 6
-                        Text { text: "Confirm New Password"; color: "#D4AF37"; font.pixelSize: 13; Layout.fillWidth: true }
-                        TextField {
-                            id: confirmPasswordField
-                            Layout.fillWidth: true
-                            implicitHeight: 45
-                            placeholderText: "Confirm New Password"
-                            placeholderTextColor: "#80D4AF37"
-                            echoMode: TextInput.Password
-                            color: "#D4AF37"
-                            verticalAlignment: TextInput.AlignVCenter
-                            leftPadding: 12
-                            background: Rectangle {
-                                color: "#1A0F1F"; radius: 6
-                                border.color: "#D4AF37"; border.width: 1
-                            }
-                        }
-                    }
+                        implicitHeight: 45
+                        placeholderText: "Confirm new password"
+                        echoMode: TextInput.Password
+                        color: "#D4AF37"
+                        leftPadding: 12
+                        selectedTextColor: "#1A0F1F"
+                        selectionColor: "#D4AF37"
 
-                    Text {
-                        id: passwordError
-                        color: "#FF4444"
-                        visible: text.length > 0
-                        text: ""
-                        font.pixelSize: 13
-                        Layout.fillWidth: true
+                        background: Rectangle {
+                            color: "#1A0F1F"
+                            radius: 6
+                            border.color: "#D4AF37"
+                            border.width: 1
+                        }
                     }
 
                     Button {
                         text: "Update Password"
                         Layout.alignment: Qt.AlignRight
-                        implicitHeight: 40
-                        implicitWidth: 150
-                        background: Rectangle { color: "#D4AF37"; radius: 8 }
+                        Layout.preferredHeight: 42
+                        enabled: !loading
+
                         contentItem: Text {
                             text: parent.text
                             color: "#1A0F1F"
@@ -232,25 +521,40 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
+
+                        background: Rectangle {
+                            color: "#D4AF37"
+                            radius: 6
+                        }
+
                         onClicked: {
-                            if (newPasswordField.text !== confirmPasswordField.text) {
-                                passwordError.text = "Passwords do not match"
+                            if (!currentPasswordField.text || !newPasswordField.text || !confirmPasswordField.text) {
+                                showMessage("Please fill all password fields", true)
                                 return
                             }
-                            passwordError.text = ""
-                            console.log("Update password requested")
-                            currentPasswordField.text = ""
-                            newPasswordField.text = ""
-                            confirmPasswordField.text = ""
+
+                            if (newPasswordField.text !== confirmPasswordField.text) {
+                                showMessage("Passwords do not match", true)
+                                return
+                            }
+
+                            loading = true
+                            networkManager.changePassword(
+                                settingsRoot.userId,
+                                currentPasswordField.text,
+                                newPasswordField.text,
+                                settingsRoot.userRole
+                            )
                         }
                     }
                 }
             }
 
-            // Preferences
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: prefCol.implicitHeight + 40
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.preferredHeight: prefCol.implicitHeight + 40
                 color: "#2D1B33"
                 radius: 12
                 border.color: "#D4AF37"
@@ -263,14 +567,11 @@ Item {
                     spacing: 15
 
                     Text {
-                        text: "Preferences"
+                        text: "Favorite Genres"
                         color: "#D4AF37"
                         font.pixelSize: 18
                         font.bold: true
-                        Layout.fillWidth: true
                     }
-
-                    Text { text: "Favorite Genres"; color: "#D4AF37"; font.pixelSize: 13; font.bold: true; Layout.fillWidth: true }
 
                     Flow {
                         Layout.fillWidth: true
@@ -278,128 +579,61 @@ Item {
 
                         Repeater {
                             model: settingsRoot.userGenres
+
                             delegate: Rectangle {
+                                height: 30
+                                width: genreLabel.implicitWidth + 24
+                                radius: 14
                                 color: "#1A0F1F"
                                 border.color: "#D4AF37"
                                 border.width: 1
-                                radius: 14
-                                height: 30
-                                width: genreTag.implicitWidth + 24
 
                                 Text {
-                                    id: genreTag
+                                    id: genreLabel
                                     anchors.centerIn: parent
                                     text: modelData
                                     color: "#D4AF37"
-                                    font.pixelSize: 13
                                 }
                             }
                         }
+                    }
+
+                    Text {
+                        visible: settingsRoot.userGenres.length === 0
+                        text: "No favorite genres selected yet."
+                        color: "#D4AF37"
+                        opacity: 0.6
                     }
 
                     Button {
                         text: "Change Genres"
                         Layout.alignment: Qt.AlignRight
-                        implicitHeight: 40
-                        implicitWidth: 140
-                        background: Rectangle { color: "transparent"; border.color: "#D4AF37"; border.width: 1; radius: 8 }
+                        Layout.preferredHeight: 42
+                        enabled: !loading
+
                         contentItem: Text {
                             text: parent.text
-                            color: "#D4AF37"
+                            color: "white"
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        onClicked: {
-                            var targetStack = null;
 
-                            if (typeof stackView !== "undefined" && stackView !== null) {
-                                targetStack = stackView;
-                            } else if (typeof mainStack !== "undefined" && mainStack !== null) {
-                                targetStack = mainStack;
-                            } else if (settingsRoot.StackView && settingsRoot.StackView.view) {
-                                targetStack = settingsRoot.StackView.view;
-                            }
-
-                            if (targetStack) {
-                                var pushedItem = null;
-                                try {
-                                    pushedItem = targetStack.push("GenreSelection.qml", {
-                                        "username": settingsRoot.username,
-                                        "userRole": settingsRoot.userRole,
-                                        "isEditMode": true,
-                                        "initialGenres": settingsRoot.userGenres
-                                    });
-                                } catch (e) {
-                                    console.log("Relative path failed, trying QRC path...");
-                                    try {
-                                        pushedItem = targetStack.push("qrc:/GenreSelection.qml", {
-                                            "username": settingsRoot.username,
-                                            "userRole": settingsRoot.userRole,
-                                            "isEditMode": true,
-                                            "initialGenres": settingsRoot.userGenres
-                                        });
-                                    } catch (e2) {
-                                        console.error("Error loading GenreSelection.qml:", e2.message);
-                                    }
-                                }
-
-                                if (pushedItem) {
-                                    pushedItem.genresSaved.connect(function(genres) {
-                                        settingsRoot.userGenres = genres;
-                                    });
-                                }
-                            } else {
-                                console.error("Could not find StackView/mainStack in the component hierarchy.");
-                            }
+                        background: Rectangle {
+                            color: "#5c3d75"
+                            radius: 6
                         }
-                    }
 
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-                        Text { text: "Favorite Author"; color: "#D4AF37"; font.pixelSize: 13; font.bold: true; Layout.fillWidth: true }
-                        TextField {
-                            id: authorField
-                            Layout.fillWidth: true
-                            implicitHeight: 45
-                            text: settingsRoot.favoriteAuthor
-                            color: "#D4AF37"
-                            verticalAlignment: TextInput.AlignVCenter
-                            leftPadding: 12
-                            background: Rectangle {
-                                color: "#1A0F1F"; radius: 6
-                                border.color: "#D4AF37"; border.width: 1
-                            }
-                        }
-                    }
-
-                    Button {
-                        text: "Update Favorite Author"
-                        Layout.alignment: Qt.AlignRight
-                        implicitHeight: 40
-                        implicitWidth: 180
-                        background: Rectangle { color: "#D4AF37"; radius: 8 }
-                        contentItem: Text {
-                            text: parent.text
-                            color: "#1A0F1F"
-                            font.bold: true
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                        onClicked: {
-                            settingsRoot.favoriteAuthor = authorField.text
-                            console.log("Update favorite author to:", authorField.text)
-                        }
+                        onClicked: openGenreSelection()
                     }
                 }
             }
 
-            //  Purchase History
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: historyCol.implicitHeight + 40
+                Layout.leftMargin: 20
+                Layout.rightMargin: 20
+                Layout.preferredHeight: historyCol.implicitHeight + 40
                 color: "#2D1B33"
                 radius: 12
                 border.color: "#D4AF37"
@@ -413,22 +647,28 @@ Item {
 
                     RowLayout {
                         Layout.fillWidth: true
+
                         Text {
                             text: "Purchase History"
                             color: "#D4AF37"
                             font.pixelSize: 18
                             font.bold: true
                         }
-                        Item { Layout.fillWidth: true }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
                         Text {
-                            text: "Books purchased: " + settingsRoot.purchaseHistory.length
+                            text: "Books purchased: " + purchaseHistoryModel.count
                             color: "#D4AF37"
                             font.pixelSize: 13
                         }
                     }
 
                     Repeater {
-                        model: settingsRoot.purchaseHistory
+                        model: purchaseHistoryModel
+
                         delegate: Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: 45
@@ -437,44 +677,44 @@ Item {
                             border.color: "#D4AF37"
                             border.width: 0.5
 
-                            Text {
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.left: parent.left
+                            RowLayout {
+                                anchors.fill: parent
                                 anchors.leftMargin: 15
-                                text: modelData
-                                color: "#D4AF37"
-                                font.pixelSize: 13
+                                anchors.rightMargin: 15
+
+                                Text {
+                                    text: model.title
+                                    color: "#D4AF37"
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    text: model.author
+                                    color: "#D4AF37"
+                                    opacity: 0.6
+                                    font.pixelSize: 12
+                                }
                             }
                         }
                     }
 
                     Text {
-                        visible: settingsRoot.purchaseHistory.length === 0
+                        visible: purchaseHistoryModel.count === 0
                         text: "No purchases yet."
                         color: "#D4AF37"
                         opacity: 0.6
-                        font.pixelSize: 13
-                        Layout.fillWidth: true
                     }
                 }
             }
 
-            Button {
-                Layout.fillWidth: true
-                implicitHeight: 45
-                text: "Logout"
-                background: Rectangle { color: "transparent"; border.color: "#D4AF37"; border.width: 1; radius: 8 }
-                contentItem: Text {
-                    text: parent.text
-                    color: "#D4AF37"
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-                onClicked: settingsRoot.logoutRequested()
+            Item {
+                Layout.preferredHeight: 20
             }
-
-            Item { Layout.preferredHeight: 30 }
         }
     }
+
+    Component.onCompleted: loadData()
 }
