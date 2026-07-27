@@ -60,6 +60,16 @@ std::optional<User> UserService::loginUser(const QString& username, const QStrin
     return std::nullopt;
 }
 
+bool UserService::verifyUserSecurityAnswer(const QString& username, const QString& answer) const {
+    if (!userRepo) {
+        return false;
+    }
+    auto userOpt = getUserByUsername(username);
+    if (!userOpt.has_value()) {
+        return false;
+    }
+    return userOpt->verifySecurityAnswer(answer);
+}
 
 //password mng
 bool UserService::resetPasswordWithSecurityAnswer(const QString& username,

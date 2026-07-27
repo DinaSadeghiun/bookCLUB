@@ -73,7 +73,7 @@ void BookClubServer::initializeServices() {
     auto* adminRepo        = new AdminRepository(db);
 
     userService            = new UserService(userRepo, this);
-    bookService            = new BookService(bookRepo, discountRepo, userService, this);
+    bookService            = new BookService(bookRepo, discountRepo, userService, pubRepo, this);
     commentService         = new CommentService(commentRepo, bookRepo, this);
     shoppingCartService    = new ShoppingCartService(cartRepo, bookService, this);
     publisherService       = new PublisherService(pubRepo, bookRepo, discountRepo, this);
@@ -158,7 +158,8 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
         action == "loginAdmin" || action == "registerAdmin" ||
         action == "resetPassword" || action == "updateProfile" ||
         action == "changePassword" || action == "changeUsername" ||
-        action == "updateSecurityAnswer") {
+        action == "updateSecurityAnswer" ||
+        action == "checkUsernameExists" || action == "verifySecurityAnswer") {
         handleAuth(handler, action, data);
     }
     // 2. Books
@@ -505,6 +506,107 @@ void BookClubServer::handleAuth(ClientHandler* handler, const QString& action, c
         handler->sendResponse(response);
         return;
     }
+
+    else if (action == "checkUsernameExists") {
+        QString username = data.value("username").toString().trimmed();
+
+        bool exists = false;
+        QString foundRole;
+
+        //  User
+        auto userOpt = userService->getUserByUsername(username);
+        if (userOpt.has_value()) {
+            exists = true;
+            foundRole = "user";
+        }
+
+        //  Publisher
+        if (!exists) {
+            auto pubOpt = publisherService->getPublisherByPublishername(username);
+            if (pubOpt.has_value()) {
+                exists = true;
+                foundRole = "publisher";
+            }
+        }
+
+        //  Admin
+        if (!exists) {
+            auto adminOpt = adminService->getAdminByUsername(username);
+            if (adminOpt.has_value()) {
+                exists = true;
+                foundRole = "admin";
+            }
+        }
+
+        if (exists) {
+            QJsonObject dataObj;
+            dataObj["role"] = foundRole;
+            dataObj["username"] = username;
+
+            response["status"] = "success";
+            response["data"] = dataObj;
+        } else {
+            response["status"] = "error";
+            response["message"] = "No account found with this username";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "verifySecurityAnswer") {
+        QString username = data.value("username").toString().trimmed();
+        QString answer = data.value("securityAnswer").toString().trimmed();
+        QString role = data.value("role").toString().toLower();
+
+        bool valid = false;
+
+        if (role == "user") {
+            valid = userService->verifyUserSecurityAnswer(username, answer);
+        } else if (role == "publisher") {
+            valid = publisherService->verifyPublisherSecurityAnswer(username, answer);
+        } else if (role == "admin") {
+            valid = adminService->verifyAdminSecurityAnswer(username, answer);
+        }
+
+        if (valid) {
+            QJsonObject dataObj;
+            dataObj["valid"] = true;
+
+            response["status"] = "success";
+            response["data"] = dataObj;
+        } else {
+            response["status"] = "error";
+            response["message"] = "Incorrect security answer";
+        }
+        handler->sendResponse(response);
+        return;
+    }
+
+    else if (action == "resetPassword") {
+        QString username = data.value("username").toString().trimmed();
+        QString securityAnswer = data.value("securityAnswer").toString().trimmed();
+        QString newPassword = data.value("newPassword").toString();
+        QString role = data.value("role").toString().toLower();
+
+        bool success = false;
+        if (role == "publisher") {
+            success = publisherService->resetPasswordWithSecurityAnswer(username, securityAnswer, newPassword);
+        } else if (role == "admin") {
+            success = adminService->resetPasswordWithSecurityAnswer(username, securityAnswer, newPassword);
+        } else {
+            success = userService->resetPasswordWithSecurityAnswer(username, securityAnswer, newPassword);
+        }
+
+        if (success) {
+            response["status"] = "success";
+            response["message"] = "Password has been reset successfully";
+        } else {
+            response["status"] = "error";
+            response["message"] = "Security answer verification failed or account not found";
+        }
+        handler->sendResponse(response);
+        return;
+    }
 }
 
 void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, const QJsonObject& data) {
@@ -514,8 +616,24 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     if (action == "getAllBooks") {
         QList<Book> books = bookService->getAllAvailableBooks();
         qDebug() << "Server: Found" << books.size() << "books in database.";
+
+        QJsonArray arr;
+        DiscountRepository discountRepo(&DatabaseManager::instance());
+        for (const Book& b : std::as_const(books)) {
+            std::optional<Discount> disc;
+            if (b.getDiscountId() > 0) {
+                disc = discountRepo.findById(b.getDiscountId());
+            }
+            QJsonObject obj = ModelSerializer::serializeBook(b, disc);
+            auto publisherOpt = publisherService->getPublisherById(b.getPublisherId());
+            if (publisherOpt.has_value()) {
+                obj["publisherUsername"] = publisherOpt->getUsername();  // ← اضافه کن
+            }
+            arr.append(obj);
+        }
+
         response["status"] = "success";
-        response["data"] = serializeBookListWithDiscount(books);
+        response["data"] = arr;
     }
     else if (action == "addBook") {
         int pubId = data.value("publisherId").toInt();
@@ -564,10 +682,25 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     else if (action == "getPublisherBooks") {
         int pubId = data.value("publisherId").toInt();
         QList<Book> books = bookService->getBooksByPublisher(pubId);
-        response["status"] = "success";
-        response["data"] = serializeBookListWithDiscount(books);
-    }
 
+        QJsonArray arr;
+        DiscountRepository discountRepo(&DatabaseManager::instance());
+        for (const Book& b : std::as_const(books)) {
+            std::optional<Discount> disc;
+            if (b.getDiscountId() > 0) {
+                disc = discountRepo.findById(b.getDiscountId());
+            }
+            QJsonObject obj = ModelSerializer::serializeBook(b, disc);
+            auto publisherOpt = publisherService->getPublisherById(b.getPublisherId());
+            if (publisherOpt.has_value()) {
+                obj["publisherUsername"] = publisherOpt->getUsername();
+            }
+            arr.append(obj);
+        }
+
+        response["status"] = "success";
+        response["data"] = arr;
+    }
     else if (action == "updateBookPrice") {
         int pubId = data.value("publisherId").toInt();
         int bookId = data.value("bookId").toInt();
@@ -662,8 +795,19 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
     else if (action == "searchBooks") {
         QString query = data.value("query").toString().trimmed();
         QList<Book> found = bookService->search(query);
+
+        QJsonArray arr;
+        for (const Book& b : std::as_const(found)) {
+            QJsonObject obj = ModelSerializer::serializeBook(b);
+            auto publisherOpt = publisherService->getPublisherById(b.getPublisherId());
+            if (publisherOpt.has_value()) {
+                obj["publisherUsername"] = publisherOpt->getUsername();
+            }
+            arr.append(obj);
+        }
+
         response["status"] = "success";
-        response["data"] = serializeBookListWithDiscount(found);
+        response["data"] = arr;
     }
     else if (action == "applyDiscountToBook") {
         int pubId = data.value("publisherId").toInt();

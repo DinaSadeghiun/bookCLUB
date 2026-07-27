@@ -12,6 +12,7 @@
 class BookRepository;
 class DiscountRepository;
 class UserService;
+class PublisherRepository;
 
 class BookService : public QObject {
     Q_OBJECT
@@ -19,12 +20,13 @@ private:
     BookRepository* bookRepo;
     DiscountRepository* discountRepo;
     UserService* userService;
+    PublisherRepository* pubRepo;
 
     bool validateBook(const Book& book) const;
 
 public:
-    explicit BookService(BookRepository* repo, DiscountRepository* discRepo,
-                         UserService* userService, QObject* parent = nullptr);
+    explicit BookService(BookRepository* bookRepo, DiscountRepository* discRepo,
+                         UserService* userService, PublisherRepository* pubRepo, QObject* parent = nullptr);
     ~BookService() = default;
 
     bool addBook(Book& book);

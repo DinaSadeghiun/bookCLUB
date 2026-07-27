@@ -60,6 +60,17 @@ std::optional<Publisher> PublisherService::login(const QString& username, const 
     return std::nullopt;
 }
 
+bool PublisherService::verifyPublisherSecurityAnswer(const QString& username, const QString& answer) const {
+    if (!pubRepo) {
+        return false;
+    }
+    auto pubOpt = getPublisherByPublishername(username);
+    if (!pubOpt.has_value()) {
+        return false;
+    }
+    return pubOpt->verifySecurityAnswer(answer);
+}
+
 bool PublisherService::resetPasswordWithSecurityAnswer(const QString& username,
                                                        const QString& answer,
                                                        const QString& newPassword)
@@ -296,7 +307,7 @@ bool PublisherService::addRevenue(int publisherId, double amount) {
 
     pub.addRevenue(amount);
 
-    return pubRepo->save(pub);
+    return pubRepo->saveInternal(pub);
 }
 
 

@@ -106,15 +106,24 @@ QList<int> PersonalLibraryService::getFaveBooks(int userId) {
 }
 
 bool PersonalLibraryService::addToFaveBooks(int userId, int bookId) {
+    qDebug() << "=== addToFaveBooks called - userId:" << userId << "bookId:" << bookId;
     Q_ASSERT(userId > 0);
     Q_ASSERT(bookId > 0);
+
     if (userId <= 0 || bookId <= 0 || !personalLibRepo) {
+        qDebug() << "ERROR: Invalid params or null repo";
         return false;
     }
-    if (personalLibRepo->addToFaveBooks(userId, bookId)) {
+
+    bool result = personalLibRepo->addToFaveBooks(userId, bookId);
+    qDebug() << "addToFaveBooks result:" << result;
+
+    if (result) {
         emit favoritesUpdated(userId);
         return true;
     }
+
+    qDebug() << "ERROR: Failed to add book to favorites";
     return false;
 }
 

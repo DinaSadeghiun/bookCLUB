@@ -236,6 +236,8 @@ bool PersonalLibraryRepository::removeFromWishlist(int userId, int bookId) {
 }
 
 bool PersonalLibraryRepository::addToFaveBooks(int userId, int bookId) {
+    qDebug() << "=== Repository addToFaveBooks - userId:" << userId << "bookId:" << bookId;
+
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery query(db);
     query.prepare("INSERT OR IGNORE INTO Favorites (user_id, book_id, added_at) VALUES (:userId, :bookId, :addedAt)");
@@ -244,9 +246,13 @@ bool PersonalLibraryRepository::addToFaveBooks(int userId, int bookId) {
     query.bindValue(":addedAt", QDateTime::currentSecsSinceEpoch());
 
     if (!query.exec()) {
-        qWarning() << "Failed to add book to Favorites:" << query.lastError().text();
+        qDebug() << "ERROR: addToFaveBooks query failed:" << query.lastError().text();
         return false;
     }
+
+    int affected = query.numRowsAffected();
+    qDebug() << "addToFaveBooks affected rows:" << affected;
+
     return true;
 }
 

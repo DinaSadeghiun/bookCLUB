@@ -14,6 +14,7 @@ public:
     explicit ShoppingCartRepository(DatabaseManager* manager);
 
     bool save(ShoppingCart& cart);
+    bool saveInternal(ShoppingCart& cart);
     std::optional<ShoppingCart> findById(int id);
     std::optional<ShoppingCart> findByUserId(int userId);
     bool remove(int id);

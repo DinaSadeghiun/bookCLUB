@@ -46,6 +46,7 @@ private:
     void handlePersonalLibrary(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handleAdminActions(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handleNotifications(ClientHandler* handler, const QString& action, const QJsonObject& data);
+    void handleForgotPassword(ClientHandler* handler, const QString& action, const QJsonObject& data);
 
     QList<ClientHandler*> clients;
 

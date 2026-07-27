@@ -52,6 +52,17 @@ std::optional<Admin> AdminService::loginAdmin(const QString& username, const QSt
     return std::nullopt;
 }
 
+bool AdminService::verifyAdminSecurityAnswer(const QString& username, const QString& answer) const {
+    if (!adminRepo) {
+        return false;
+    }
+    auto adminOpt = getAdminByUsername(username);
+    if (!adminOpt.has_value()) {
+        return false;
+    }
+    return adminOpt->verifySecurityAnswer(answer);
+}
+
 bool AdminService::resetPasswordWithSecurityAnswer(const QString& username,
                                                    const QString& answer,
                                                    const QString& newPassword)
@@ -80,6 +91,11 @@ bool AdminService::resetPasswordWithSecurityAnswer(const QString& username,
         }
     }
     return false;
+}
+
+std::optional<Admin> AdminService::getAdminByUsername(const QString& username) const {
+    if (!adminRepo) return std::nullopt;
+    return adminRepo->findByUsername(username.trimmed());
 }
 
 // Profile

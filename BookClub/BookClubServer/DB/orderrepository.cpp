@@ -13,7 +13,7 @@ OrderRepository::OrderRepository(DatabaseManager* manager)
 
 bool OrderRepository::save(Order& order) {
     QSqlDatabase db = dbManager->getDatabase();
-    if (!db.transaction()) return false;
+
     QSqlQuery q(db);
     q.prepare(
         "INSERT INTO Orders (user_id, order_date, raw_price, discount_amount, final_price) "
@@ -27,31 +27,25 @@ bool OrderRepository::save(Order& order) {
 
     if (!q.exec()) {
         qDebug() << "OrderRepository::save insert failed:" << q.lastError().text();
-        db.rollback();
         return false;
     }
 
     int orderId = q.lastInsertId().toInt();
     order.setId(orderId);
 
-    const double perBookPrice = order.getBooksCount() > 0
-                                    ? order.getRawPrice() / order.getBooksCount()
-                                    : 0.0;
-
     for (int bookId : order.getBookIds()) {
         q.prepare("INSERT INTO OrderBooks (order_id, book_id, price) VALUES (?, ?, ?)");
         q.addBindValue(orderId);
         q.addBindValue(bookId);
-        q.addBindValue(perBookPrice);
+        q.addBindValue(0.0);
 
         if (!q.exec()) {
-            qDebug() << "OrderRepository::save OrderBooks failed:" << q.lastError().text();
-            db.rollback();
+            qDebug() << "OrderRepository::save OrderBooks failed for bookId:" << bookId << "error:" << q.lastError().text();
             return false;
         }
     }
 
-    return db.commit();
+    return true;
 }
 
 std::optional<Order> OrderRepository::findById(int id) {

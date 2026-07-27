@@ -27,6 +27,16 @@ bool PublisherRepository::save(Publisher& pub) {
     QSqlDatabase db = dbManager->getDatabase();
     if (!db.transaction()) return false;
 
+    bool ok = saveInternal(pub);
+    if (!ok) {
+        db.rollback();
+        return false;
+    }
+    return db.commit();
+}
+
+bool PublisherRepository::saveInternal(Publisher& pub) {
+    QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);
     bool isInsert = (pub.getId() == -1);
 
@@ -42,7 +52,6 @@ bool PublisherRepository::save(Publisher& pub) {
 
         if (!q.exec()) {
             qDebug() << "Publisher save (Persons) failed:" << q.lastError().text();
-            db.rollback();
             return false;
         }
         pub.setId(q.lastInsertId().toInt());
@@ -52,7 +61,6 @@ bool PublisherRepository::save(Publisher& pub) {
         q.bindValue(":rev", pub.getRevenue());
 
         if (!q.exec()) {
-            db.rollback();
             return false;
         }
     } else {
@@ -66,7 +74,6 @@ bool PublisherRepository::save(Publisher& pub) {
         q.bindValue(":role", ROLE_PUBLISHER);
 
         if (!q.exec()) {
-            db.rollback();
             return false;
         }
 
@@ -75,12 +82,11 @@ bool PublisherRepository::save(Publisher& pub) {
         q.bindValue(":pid", pub.getId());
 
         if (!q.exec()) {
-            db.rollback();
             return false;
         }
     }
 
-    return db.commit();
+    return true;
 }
 
 QList<Publisher> PublisherRepository::findAll() const {

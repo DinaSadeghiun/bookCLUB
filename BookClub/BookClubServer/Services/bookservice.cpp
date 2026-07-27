@@ -1,17 +1,23 @@
 #include "bookservice.h"
 #include "DB/bookrepository.h"
 #include "DB/discountrepository.h"
+#include "DB/publisherrepository.h"
+#include "Publisher.h"
 #include "Services/userservice.h"
 #include <QDateTime>
 #include <QDebug>
+#include <QSet>
 
 BookService::BookService(BookRepository* repo, DiscountRepository* discRepo,
-                         UserService* userSvc, QObject* parent)
-    : QObject(parent), bookRepo(repo), discountRepo(discRepo), userService(userSvc)
+                         UserService* userSvc, PublisherRepository* pRepo,
+                         QObject* parent)
+    : QObject(parent), bookRepo(repo), discountRepo(discRepo),
+    userService(userSvc), pubRepo(pRepo)
 {
     Q_ASSERT(bookRepo != nullptr);
     Q_ASSERT(discountRepo != nullptr);
     Q_ASSERT(userService != nullptr);
+    Q_ASSERT(pubRepo != nullptr);
 }
 
 bool BookService::validateBook(const Book& book) const {
@@ -120,14 +126,29 @@ QList<Book> BookService::getBooksByGenre(Genre genre) const {
 }
 
 QList<Book> BookService::search(const QString& query) const {
-    if (!bookRepo) {
-        return {};
-    }
+    if (!bookRepo) return {};
     QString trimmedQuery = query.trimmed();
-    if (trimmedQuery.isEmpty()) {
-        return {};
+    if (trimmedQuery.isEmpty()) return {};
+
+    QList<Book> results = bookRepo->searchBooks(trimmedQuery);
+
+    if (pubRepo) {
+        QSet<int> seenIds;
+        for (const Book& b : std::as_const(results)) seenIds.insert(b.getId());
+
+        QString lowerQuery = trimmedQuery.toLower();
+        for (const Publisher& pub : pubRepo->findAll()) {
+            if (pub.getUsername().toLower().contains(lowerQuery)) {
+                for (const Book& b : bookRepo->findByPublisherId(pub.getId())) {
+                    if (!seenIds.contains(b.getId())) {
+                        results.append(b);
+                        seenIds.insert(b.getId());
+                    }
+                }
+            }
+        }
     }
-    return bookRepo->searchBooks(trimmedQuery);
+    return results;
 }
 
 //Home

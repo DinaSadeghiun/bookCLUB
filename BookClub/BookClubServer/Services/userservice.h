@@ -25,6 +25,7 @@ public:
                          const QList<Genre>& favoriteGenres = {});
 
     std::optional<User> loginUser(const QString& username, const QString& password);
+    bool verifyUserSecurityAnswer(const QString& username, const QString& answer) const;
 
     bool resetPasswordWithSecurityAnswer(const QString& username,
                                          const QString& securityAnswer,

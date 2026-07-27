@@ -14,6 +14,7 @@ public:
     explicit PublisherRepository(DatabaseManager* manager);
 
     bool save(Publisher& pub);
+    bool saveInternal(Publisher& pub);
     QList<Publisher> findAll() const;
     QList<Publisher> searchPublishers(const QString& query);
     std::optional<Publisher> findById(int id) const;
@@ -24,6 +25,7 @@ public:
 private:
     DatabaseManager* dbManager;
     Publisher fromQuery(QSqlQuery& q) const;
+
 };
 
 #endif

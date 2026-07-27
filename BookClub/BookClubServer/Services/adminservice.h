@@ -39,7 +39,10 @@ public:
     //Auth
     QString registerAdmin(const QString& username, const QString& password, const QString& securityAnswer);
     std::optional<Admin> loginAdmin(const QString& username, const QString& password);
+    bool verifyAdminSecurityAnswer(const QString& username, const QString& answer) const;
     bool resetPasswordWithSecurityAnswer(const QString& username, const QString& answer, const QString& newPassword);
+    std::optional<Admin> getAdminByUsername(const QString& username) const;
+
 
     //Profile
     bool changeAdminPassword(int adminId, const QString& oldPassword, const QString& newPassword);

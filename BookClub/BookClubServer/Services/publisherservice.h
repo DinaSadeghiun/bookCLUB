@@ -36,6 +36,7 @@ public:
 
 
     std::optional<Publisher> login(const QString& username, const QString& password);
+    bool verifyPublisherSecurityAnswer(const QString& username, const QString& answer) const;
 
     bool resetPasswordWithSecurityAnswer(const QString& username,
                                          const QString& answer,
