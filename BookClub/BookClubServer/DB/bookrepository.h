@@ -20,6 +20,7 @@ public:
     explicit BookRepository(DatabaseManager* manager);
 
     bool save(Book& book);
+    bool incrementSalesCount(int bookId);
     std::optional<Book> findById(int id);
     QList<Book> findAll();
     QList<Book> findByPublisherId(int publisherId);

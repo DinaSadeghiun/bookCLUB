@@ -36,11 +36,10 @@ OrderService::OrderService(OrderRepository* oRepo,
 
 bool OrderService::checkout(int userId) {
     Q_ASSERT(userId > 0);
-    if (userId <= 0 || !orderRepo || !cartService || !userService || !personalLibRepo) {
+    if (userId <= 0 || !orderRepo || !cartService || !userService || !personalLibRepo || !bookRepo) {
         qDebug() << "Checkout Failed: Invalid user ID or uninitialized dependencies.";
         return false;
     }
-
 
     // Fetch cart details and calculate prices
     CartDetails details = cartService->getCartDetails(userId);
@@ -81,6 +80,12 @@ bool OrderService::checkout(int userId) {
         }
 
         if (!personalLibRepo->addPurchasedBook(userId, bookId)) {
+            query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
+            return false;
+        }
+
+        if (!bookRepo->incrementSalesCount(bookId)) {
+            qDebug() << "Checkout Failed: Could not increment sales_count for book:" << bookId;
             query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
             return false;
         }

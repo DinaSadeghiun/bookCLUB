@@ -293,8 +293,7 @@ bool PublisherService::updateBookDetailsByPublisher(int publisherId, const Book&
 //add revenue
 bool PublisherService::addRevenue(int publisherId, double amount) {
     Q_ASSERT(publisherId > 0);
-    Q_ASSERT(amount > 0);
-        if (publisherId <= 0 || amount <= 0 || !pubRepo) {
+        if (publisherId <= 0 || amount < 0 || !pubRepo) {
         return false;
     }
     auto optPub = pubRepo->findById(publisherId);

@@ -2,7 +2,7 @@
 
 //creat new
 Publisher::Publisher(const QString& name, const QString& password, const QString& sa)
-    : Person(name, password, sa),
+    : Person(name, password, sa)
 {}
 
 //LOAD from DB

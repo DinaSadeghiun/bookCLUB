@@ -167,7 +167,7 @@ void BookClubServer::routeRequest(ClientHandler* handler, const QJsonObject& req
              action == "updateBookPrice" ||
              action == "activateBook" || action == "deactivateBook" ||
              action == "removeBook" || action == "getPublisherBooks" ||
-             action == "getBookDetails" || action == "searchBooks" ||
+             action == "getBookDetails" || action == "getBookPdf" || action == "searchBooks" ||
              action == "applyDiscountToBook" || action == "removeDiscountFromBook" ||
              action == "updateBookDetails" || action == "getHomeData" || action == "getBooksByGenre") {
         handleBooks(handler, action, data);
@@ -791,6 +791,101 @@ void BookClubServer::handleBooks(ClientHandler* handler, const QString& action, 
             response["status"] = "error";
             response["message"] = "Book not found";
         }
+    }
+    else if (action == "getBookPdf") {
+        qDebug() << "=== getBookPdf START ===";
+
+        int userId = data.value("userId").toInt();
+        int bookId = data.value("bookId").toInt();
+        qDebug() << "userId:" << userId << "bookId:" << bookId;
+
+        if (!personalLibraryService) {
+            qDebug() << "ERROR: personalLibraryService is NULL!";
+            response["status"] = "error";
+            response["message"] = "Server error: personalLibraryService not initialized";
+            handler->sendResponse(response);
+            return;
+        }
+
+        QList<int> purchasedIds = personalLibraryService->getPurchasedBooks(userId);
+        qDebug() << "purchasedIds:" << purchasedIds;
+
+        if (!purchasedIds.contains(bookId)) {
+            qDebug() << "User has not purchased this book";
+            response["status"] = "error";
+            response["message"] = "You must purchase this book before reading it.";
+            handler->sendResponse(response);
+            return;
+        }
+
+        if (!bookService) {
+            qDebug() << "ERROR: bookService is NULL!";
+            response["status"] = "error";
+            response["message"] = "Server error: bookService not initialized";
+            handler->sendResponse(response);
+            return;
+        }
+
+        auto bookOpt = bookService->getBookById(bookId);
+        qDebug() << "bookOpt has_value:" << bookOpt.has_value();
+
+        if (!bookOpt.has_value()) {
+            qDebug() << "Book not found!";
+            response["status"] = "error";
+            response["message"] = "Book not found.";
+            handler->sendResponse(response);
+            return;
+        }
+
+        QString pdfPath = bookOpt->getPdfFilePath();
+        qDebug() << "pdfPath:" << pdfPath;
+
+        if (pdfPath.isEmpty()) {
+            qDebug() << "PDF path is empty!";
+            response["status"] = "error";
+            response["message"] = "No PDF file available for this book.";
+            handler->sendResponse(response);
+            return;
+        }
+
+        QFile pdfFile(pdfPath);
+        qDebug() << "File exists:" << pdfFile.exists();
+
+        if (!pdfFile.exists()) {
+            qDebug() << "PDF file does not exist!";
+            response["status"] = "error";
+            response["message"] = "PDF file not found on server.";
+            handler->sendResponse(response);
+            return;
+        }
+
+        if (!pdfFile.open(QIODevice::ReadOnly)) {
+            qDebug() << "Failed to open PDF file!";
+            response["status"] = "error";
+            response["message"] = "Failed to open PDF file on server.";
+            handler->sendResponse(response);
+            return;
+        }
+
+        qDebug() << "Reading PDF file...";
+        QByteArray pdfData = pdfFile.readAll();
+        qDebug() << "PDF size:" << pdfData.size() << "bytes";
+        pdfFile.close();
+
+        qDebug() << "Encoding to Base64...";
+        QString pdfBase64 = QString::fromLatin1(pdfData.toBase64());
+        qDebug() << "Base64 size:" << pdfBase64.size();
+
+        QJsonObject payload;
+        payload["pdfData"] = pdfBase64;
+        payload["title"] = bookOpt->getTitle();
+        payload["fileName"] = bookOpt->getTitle() + ".pdf";
+
+        response["status"] = "success";
+        response["data"] = payload;
+
+        qDebug() << "=== getBookPdf SUCCESS ===";
+        handler->sendResponse(response);
     }
     else if (action == "searchBooks") {
         QString query = data.value("query").toString().trimmed();

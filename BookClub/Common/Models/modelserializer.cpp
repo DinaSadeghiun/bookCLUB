@@ -262,6 +262,7 @@ QJsonObject ModelSerializer::serializeCartDetails(const CartDetails& details) {
     json["totalDiscountAmount"] = details.totalDiscountAmount;
     json["finalPriceToPay"] = details.finalPriceToPay;
     json["bookIds"] = serializeIntList(details.bookIds);
+    json["books"] = serializeBookList(details.books);
     return json;
 }
 

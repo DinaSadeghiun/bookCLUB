@@ -5,6 +5,7 @@
 #include <QDateTime>
 
 class Order;
+class Book;
 
 class ShoppingCart {
 private:
@@ -44,6 +45,7 @@ struct CartDetails {
     double rawTotalPrice = 0.0;
     double totalDiscountAmount = 0.0;
     double finalPriceToPay = 0.0;
+    QList<Book> books = {};
 };
 
 #endif

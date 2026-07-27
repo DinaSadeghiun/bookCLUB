@@ -96,6 +96,14 @@ bool BookRepository::save(Book& book) {
     }
 }
 
+bool BookRepository::incrementSalesCount(int bookId) {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+    q.prepare("UPDATE Books SET sales_count = sales_count + 1 WHERE id = :id");
+    q.bindValue(":id", bookId);
+    return q.exec() && q.numRowsAffected() > 0;
+}
+
 std::optional<Book> BookRepository::findById(int id) {
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery q(db);

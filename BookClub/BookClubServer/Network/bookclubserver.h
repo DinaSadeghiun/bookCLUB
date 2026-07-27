@@ -8,6 +8,7 @@
 #include "Notification.h"
 
 class Book;
+class BookRepository;
 class UserService;
 class BookService;
 class CommentService;
@@ -16,6 +17,7 @@ class OrderService;
 class PublisherService;
 class AdminService;
 class PersonalLibraryService;
+class PersonalLibraryRepository;
 class NotificationService;
 
 class BookClubServer : public QTcpServer {
@@ -59,6 +61,9 @@ private:
     AdminService* adminService = nullptr;
     PersonalLibraryService* personalLibraryService = nullptr;
     NotificationService* notificationService = nullptr;
+
+    BookRepository* bookRepo = nullptr;
+    PersonalLibraryRepository* personalLibRepo = nullptr;
 };
 
 #endif
