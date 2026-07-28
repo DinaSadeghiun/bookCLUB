@@ -10,38 +10,17 @@ Item {
     property int userId: 0
     property var userGenres: []
     property int cartItemCount: 0
+    property int unreadCount: 0
     property int currentTab: 0
     property string favoriteAuthor: ""
 
-    // ---------------------------------------------------------------
-    // Central book cache: id -> book object (from getAllBooks).
-    // Wishlist / Favorites / Cart / PurchasedBooks / Shelves only ever
-    // give us book IDs, never full book data, so every tab resolves
-    // titles/authors/covers through this single shared map instead of
-    // re-fetching or guessing.
-    // ---------------------------------------------------------------
     property var booksById: ({})
     property var allBooksList: []
 
-    Connections {
-        target: contentLoader.item
-        ignoreUnknownSignals: true
-        enabled: contentLoader.item !== null
-
-        function onBookSelected(bookId) {
-            var mainStack = dashboardRoot.StackView.view
-            if (mainStack) {
-                mainStack.push("BookPage.qml", {
-                    "bookId": bookId,
-                    "networkManager": networkManager,
-                    "userId": userId
-                })
-            }
-        }
-    }
     Component.onCompleted: {
         if (networkManager) {
             networkManager.getHomeData(userId)
+            networkManager.getNotifications(userId)
         }
         currentTab = 0
         loadCurrentView()
@@ -49,7 +28,6 @@ Item {
 
     onCurrentTabChanged: loadCurrentView()
 
-    // Background for the entire dashboard
     Rectangle {
         anchors.fill: parent
         color: "#1A0F1F"
@@ -73,6 +51,7 @@ Item {
         case 2: contentLoader.setSource("SearchView.qml", props); break
         case 3: contentLoader.setSource("CartView.qml", props); break
         case 4: contentLoader.setSource("SettingsView.qml", props); break
+        case 5: contentLoader.setSource("NotificationView.qml", props); break
         default: contentLoader.setSource("HomeView.qml", props); break
         }
     }
@@ -81,7 +60,6 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ---------- Sidebar ----------
         Rectangle {
             id: sidebar
             Layout.preferredWidth: 220
@@ -182,14 +160,61 @@ Item {
                     }
                 }
 
+                Button {
+                    id: notificationBtn
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+
+                    background: Rectangle {
+                        color: currentTab === 5 ? "#D4AF37" : "transparent"
+                        radius: 8
+                        border.color: currentTab === 5 ? "#D4AF37" : "transparent"
+                    }
+
+                    contentItem: Text {
+                        text: "🔔 Notifications"
+                        color: currentTab === 5 ? "#1A0F1F" : "#D4AF37"
+                        font.pixelSize: 16
+                        font.bold: currentTab === 5
+                        leftPadding: 15
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    Rectangle {
+                        visible: unreadCount > 0
+                        width: 22; height: 22; radius: 11
+                        color: "#FF5555"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: unreadCount > 9 ? "9+" : unreadCount
+                            color: "white"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                    }
+
+                    onClicked: {
+                        currentTab = 5
+                        loadCurrentView()
+                    }
+                }
+
                 Item { Layout.fillHeight: true }
 
                 Button {
                     Layout.fillWidth: true
                     text: "Logout"
                     onClicked: {
-                        if (dashboardRoot.StackView.view)
-                            dashboardRoot.StackView.view.pop()
+                        var stack = StackView.view
+                        if (stack) {
+                            stack.pop()
+                        } else {
+                            console.error("Logout: StackView not found!")
+                        }
                     }
                     background: Rectangle {
                         color: "transparent"
@@ -206,7 +231,6 @@ Item {
             }
         }
 
-        // ---------- Content area ----------
         Loader {
             id: contentLoader
             Layout.fillWidth: true
@@ -231,7 +255,6 @@ Item {
                 ignoreUnknownSignals: true
                 enabled: contentLoader.item !== null
 
-                // ناوبری هوشمند به صفحه مشخصات کتاب به محض دریافت سیگنال از لودر
                 function onBookSelected(bookId) {
                     var mainStack = dashboardRoot.StackView.view
                     if (mainStack) {
@@ -266,6 +289,44 @@ Item {
                     }
                 }
             }
+
+            Connections {
+                target: networkManager
+
+                function onResponseReceived(action, status, data) {
+                    var ok = status === "success" || status === "SUCCESS"
+
+                    if (action === "getNotifications" && ok) {
+                        var list = Array.isArray(data) ? data : []
+                        unreadCount = 0
+                        for (var i = 0; i < list.length; i++) {
+                            if (!list[i].isRead) unreadCount++
+                        }
+                    }
+                    else if (action === "markNotificationAsRead" || action === "markAllNotificationsAsRead") {
+                        if (ok) {
+                            networkManager.getNotifications(userId)
+                        }
+                    }
+                }
+
+                // ===== نوتیفیکیشن لحظه‌ای =====
+                function onNotificationReceived(notification) {
+                    unreadCount++
+                    // نمایش Toast به جای showToast از آیتم لودر
+                    notificationToast.showToast(notification.message)
+                }
+            }
+        }
+    }
+
+    // ===== کامپوننت Toast برای نمایش نوتیفیکیشن‌های لحظه‌ای =====
+    NotificationToast {
+        id: notificationToast
+        parent: dashboardRoot
+        onViewRequested: {
+            currentTab = 5
+            loadCurrentView()
         }
     }
 }

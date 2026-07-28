@@ -234,7 +234,7 @@ signal bookSelected(int bookId)
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: {
-                    parent.color = "red"
+                    parent.color = "#D4AF37"
 
                     homeRoot.openBook(model.bookId)
                 }

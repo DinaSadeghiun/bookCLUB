@@ -1,3 +1,4 @@
+
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
@@ -209,13 +210,6 @@ ScrollView {
                 detailsRoot.isFavorite = data.isFavorite !== undefined ? data.isFavorite : false
 
                 console.log("Book details data:", JSON.stringify(data))
-                console.log("Price:", detailsRoot.price)
-                console.log("Discount amount:", detailsRoot.discountAmount)
-                console.log("Discount percent:", detailsRoot.discountPercent)
-                console.log("Backend final price:", detailsRoot.backendFinalPrice)
-                console.log("Resolved final price:", detailsRoot.finalPrice())
-                console.log("Resolved cover:", detailsRoot.coverImageSource)
-                console.log("Resolved publisher:", detailsRoot.publisherUsername)
             }
             else if (action === "getComments" && ok) {
                 commentsModel.clear()
@@ -224,6 +218,7 @@ ScrollView {
                     for (var i = 0; i < data.length; i++) {
                         var c = data[i]
                         commentsModel.append({
+                            "commentId": c.commentId || c.id || 0,
                             "commentUserId": c.userId || 0,
                             "username": c.username || ("User #" + (c.userId || 0)),
                             "text": c.text || "",
@@ -242,6 +237,30 @@ ScrollView {
                     refreshAfterAction()
                 } else {
                     formStatus.text = (data && data.message ? data.message : "Failed to post comment.")
+                    formStatus.color = "#FF5555"
+                    formStatus.visible = true
+                }
+            }
+            else if (action === "editComment") {
+                if (ok) {
+                    formStatus.text = "Comment edited successfully."
+                    formStatus.color = "#4CAF50"
+                    formStatus.visible = true
+                    refreshAfterAction()
+                } else {
+                    formStatus.text = (data && data.message ? data.message : "Failed to edit comment.")
+                    formStatus.color = "#FF5555"
+                    formStatus.visible = true
+                }
+            }
+            else if (action === "removeComment" || action === "deleteComment") {
+                if (ok) {
+                    formStatus.text = "Comment removed successfully."
+                    formStatus.color = "#4CAF50"
+                    formStatus.visible = true
+                    refreshAfterAction()
+                } else {
+                    formStatus.text = (data && data.message ? data.message : "Failed to remove comment.")
                     formStatus.color = "#FF5555"
                     formStatus.visible = true
                 }
@@ -802,11 +821,12 @@ ScrollView {
                             }
 
                             if (networkManager) {
+                                // ✅ اصلاح: userId, bookId, text, rating
                                 networkManager.addComment(
-                                    userId,
-                                    bookId,
-                                    commentInput.text.trim(),
-                                    detailsRoot.selectedStars
+                                    userId,                     // userId اول
+                                    bookId,                     // bookId دوم
+                                    commentInput.text.trim(),   // text سوم
+                                    detailsRoot.selectedStars   // rating چهارم
                                 )
                             }
                         }
@@ -834,6 +854,8 @@ ScrollView {
                             border.width: 1
                             implicitHeight: commentBody.implicitHeight + 24
 
+                            property bool isOwner: model.commentUserId === detailsRoot.userId
+
                             Column {
                                 id: commentBody
                                 anchors.left: parent.left
@@ -842,27 +864,96 @@ ScrollView {
                                 anchors.margins: 12
                                 spacing: 6
 
-                                Row {
+                                RowLayout {
                                     width: parent.width
-                                    spacing: 8
 
-                                    Text {
-                                        text: model.username
-                                        color: "#D4AF37"
-                                        font.pixelSize: 13
-                                        font.bold: true
+                                    Row {
+                                        spacing: 8
+                                        Layout.alignment: Qt.AlignLeft
+
+                                        Text {
+                                            text: model.username
+                                            color: "#D4AF37"
+                                            font.pixelSize: 13
+                                            font.bold: true
+                                        }
+
+                                        Text {
+                                            text: "•"
+                                            color: "#A08EAD"
+                                            font.pixelSize: 13
+                                        }
+
+                                        Text {
+                                            text: "★".repeat(model.rating) + "☆".repeat(5 - model.rating)
+                                            color: "#D4AF37"
+                                            font.pixelSize: 13
+                                        }
                                     }
 
-                                    Text {
-                                        text: "•"
-                                        color: "#A08EAD"
-                                        font.pixelSize: 13
-                                    }
+                                    // Action buttons for comment owner
+                                    Row {
+                                        spacing: 10
+                                        Layout.alignment: Qt.AlignRight
+                                        visible: isOwner
 
-                                    Text {
-                                        text: "★".repeat(model.rating) + "☆".repeat(5 - model.rating)
-                                        color: "#D4AF37"
-                                        font.pixelSize: 13
+                                        Button {
+                                            text: "Edit"
+                                            implicitWidth: 50
+                                            implicitHeight: 24
+
+                                            contentItem: Text {
+                                                text: parent.text
+                                                color: "#D4AF37"
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+
+                                            background: Rectangle {
+                                                color: "transparent"
+                                                border.color: "#D4AF37"
+                                                border.width: 1
+                                                radius: 4
+                                            }
+
+                                            onClicked: {
+                                                editCommentDialog.targetCommentId = model.commentId
+                                                editCommentDialog.tempText = model.text
+                                                editCommentDialog.tempRating = model.rating
+                                                editCommentDialog.open()
+                                            }
+                                        }
+
+                                        Button {
+                                            text: "Delete"
+                                            implicitWidth: 60
+                                            implicitHeight: 24
+
+                                            contentItem: Text {
+                                                text: parent.text
+                                                color: "#FF5555"
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                                horizontalAlignment: Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
+                                            }
+
+                                            background: Rectangle {
+                                                color: "transparent"
+                                                border.color: "#FF5555"
+                                                border.width: 1
+                                                radius: 4
+                                            }
+
+                                            onClicked: {
+                                                if (networkManager) {
+                                                    // Standard C++ side removeComment(commentId)
+                                                    networkManager.removeComment(model.commentId)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
@@ -893,4 +984,148 @@ ScrollView {
             height: 30
         }
     }
-}
+
+    // Dialog for editing existing comment
+    Dialog {
+        id: editCommentDialog
+        title: "Edit Comment"
+        x: (detailsRoot.availableWidth - width) / 2
+        y: (parent.height - height) / 2
+        modal: true
+        parent: Overlay.overlay
+
+        property int targetCommentId: 0
+        property string tempText: ""
+        property int tempRating: 5
+
+        background: Rectangle {
+            color: "#2D1B33"
+            border.color: "#5c3d75"
+            border.width: 1
+            radius: 12
+        }
+
+        header: Label {
+            text: "Edit your comment"
+            color: "#D4AF37"
+            font.pixelSize: 16
+            font.bold: true
+            padding: 12
+            background: Rectangle {
+                color: "#1A0F1F"
+                radius: 12
+            }
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12
+            width: 320
+
+            Text {
+                text: "Your Rating:"
+                color: "#A08EAD"
+                font.pixelSize: 12
+            }
+
+            Row {
+                spacing: 4
+                Layout.alignment: Qt.AlignLeft
+
+                Repeater {
+                    model: 5
+
+                    Text {
+                        text: index < editCommentDialog.tempRating ? "★" : "☆"
+                        color: "#D4AF37"
+                        font.pixelSize: 26
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: editCommentDialog.tempRating = index + 1
+                        }
+                    }
+                }
+            }
+
+            TextArea {
+                id: editTextInput
+                Layout.fillWidth: true
+                implicitHeight: 80
+                text: editCommentDialog.tempText
+                placeholderText: "Edit your comment..."
+                placeholderTextColor: "#807090"
+                color: "white"
+                wrapMode: TextArea.Wrap
+
+                background: Rectangle {
+                    color: "#1A0F1F"
+                    border.color: "#5c3d75"
+                    border.width: 1
+                    radius: 8
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 10
+                spacing: 10
+
+                Button {
+                    text: "Save"
+                    Layout.fillWidth: true
+                    implicitHeight: 36
+
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#1A0F1F"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        color: "#D4AF37"
+                        radius: 6
+                    }
+
+                    onClicked: {
+                        if (editTextInput.text.trim() === "")
+                            return
+
+                        if (networkManager) {
+                            networkManager.editComment(
+                                editCommentDialog.targetCommentId,
+                                userId,
+                                bookId,
+                                editTextInput.text.trim(),
+                                editCommentDialog.tempRating
+                            )
+                        }
+                        editCommentDialog.close()
+                    }
+
+                Button {
+                    text: "Cancel"
+                    Layout.fillWidth: true
+                    implicitHeight: 36
+
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+
+                    background: Rectangle {
+                        color: "#5c3d75"
+                        radius: 6
+                    }
+
+                    onClicked: editCommentDialog.close()
+                }
+            }
+        }
+    }
+}}

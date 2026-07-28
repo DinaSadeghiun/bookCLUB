@@ -11,7 +11,7 @@
 class NetworkManager : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionChanged)
+    Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionChanged);
 
 public:
     explicit NetworkManager(QObject* parent = nullptr);
@@ -36,6 +36,8 @@ public:
     Q_INVOKABLE void checkUsernameExists(const QString& username);
     Q_INVOKABLE  void verifySecurityAnswer(const QString& username, const QString& role, const QString& answer);
     // Books Operations
+    Q_INVOKABLE void getReadingProgress(int userId, int bookId);
+    Q_INVOKABLE void saveReadingProgress(int userId, int bookId, int page);
     Q_INVOKABLE void getBookPdf(int userId, int bookId);
     Q_INVOKABLE QString saveBase64ToCache(const QString& base64Data, const QString& fileName);
     Q_INVOKABLE void getBooksByGenre(int genreId);
@@ -48,6 +50,7 @@ public:
                                        const QString& coverImagePath, const QString& pdfFilePath,
                                        const QString& role, int publisherId = -1);
     Q_INVOKABLE void getPublisherBooks(int publisherId);
+    Q_INVOKABLE void getSalesStats(int publisherId);
     Q_INVOKABLE void updateBookPrice(int publisherId, int bookId, double price);
     Q_INVOKABLE void removeBook(int publisherId, int bookId);
     Q_INVOKABLE void deactivateBook(int publisherId, int bookId);

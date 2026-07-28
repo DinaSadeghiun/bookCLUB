@@ -28,5 +28,7 @@
         <file>PublisherDashboard.qml</file>
         <file>BookPage.qml</file>
         <file>PdfReader.qml</file>
+        <file>NotificationView.qml</file>
+        <file>NotificationToast.qml</file>
     </qresource>
 </RCC>

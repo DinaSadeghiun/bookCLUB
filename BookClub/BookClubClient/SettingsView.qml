@@ -9,13 +9,16 @@ Item {
     required property string username
     required property string userRole
     required property var networkManager
+    required property var booksById
+
 
     property var userGenres: []
-    property var booksById: ({})
     property bool loading: false
     property string statusMessage: ""
     property color statusColor: "#D4AF37"
     property string favoriteAuthor: ""
+
+    property var _orderHistoryData: []
 
     ListModel { id: purchaseHistoryModel }
 
@@ -29,26 +32,56 @@ Item {
             return
 
         loading = true
-        networkManager.getPurchasedBooks(userId)
+
+        if (!booksById || Object.keys(booksById).length === 0) {
+            networkManager.getAllBooks()
+        }
+
+        networkManager.getOrderHistory(userId)
+    }
+
+    function resolveBookTitle(bookId) {
+        var book = booksById[bookId]
+        if (book && book.title)
+            return book.title
+        return "(book #" + bookId + ")"
     }
 
     function refreshPurchaseHistory() {
         purchaseHistoryModel.clear()
 
-        for (var i = 0; i < settingsRoot._purchasedIds.length; i++) {
-            var id = settingsRoot._purchasedIds[i]
-            var book = booksById[id]
+        if (!_orderHistoryData || _orderHistoryData.length === 0)
+            return
+
+        for (var i = 0; i < _orderHistoryData.length; i++) {
+            var order = _orderHistoryData[i]
+
+            var dateObj = new Date(order.orderDate * 1000)
+            var dateStr = dateObj.toLocaleDateString()
+
+            var entries = order.bookIds || order.books || []
+            var titles = []
+            for (var j = 0; j < entries.length; j++) {
+                var entry = entries[j]
+                var bookId = (typeof entry === "object" && entry !== null) ? entry.bookId : entry
+                titles.push(resolveBookTitle(bookId))
+            }
 
             purchaseHistoryModel.append({
-                "title": book ? book.title : ("(book #" + id + ")"),
-                "author": book ? book.author : ""
+                "orderId": order.id,
+                "date": dateStr,
+                "bookList": titles.join(", "),
+                "rawPrice": order.rawPrice || 0,
+                "discountAmount": order.discountAmount || 0,
+                "finalPrice": order.finalPrice || 0
             })
         }
     }
 
-    property var _purchasedIds: []
-
-    onBooksByIdChanged: refreshPurchaseHistory()
+    onBooksByIdChanged: {
+        if (_orderHistoryData.length > 0)
+            refreshPurchaseHistory()
+    }
 
     function openGenreSelection() {
         var targetStack = settingsRoot.StackView ? settingsRoot.StackView.view : null
@@ -123,14 +156,30 @@ Item {
                     )
                 }
             }
-            else if (action === "getPurchasedBooks") {
+            else if (action === "getOrderHistory") {
                 if (ok) {
-                    settingsRoot._purchasedIds = data || []
+                    settingsRoot._orderHistoryData = data || []
                     refreshPurchaseHistory()
                 } else {
-                    settingsRoot._purchasedIds = []
+                    settingsRoot._orderHistoryData = []
                     purchaseHistoryModel.clear()
                     showMessage(data && data.message ? data.message : "Failed to load purchase history", true)
+                }
+            }
+            else if (action === "getAllBooks" && ok) {
+                var map = {}
+                if (Array.isArray(data)) {
+                    for (var i = 0; i < data.length; i++) {
+                        var book = data[i]
+                        if (book && book.id) {
+                            map[book.id] = book
+                        }
+                    }
+                }
+                settingsRoot.booksById = map
+
+                if (settingsRoot._orderHistoryData.length > 0) {
+                    refreshPurchaseHistory()
                 }
             }
         }
@@ -660,7 +709,7 @@ Item {
                         }
 
                         Text {
-                            text: "Books purchased: " + purchaseHistoryModel.count
+                            text: "Orders: " + purchaseHistoryModel.count
                             color: "#D4AF37"
                             font.pixelSize: 13
                         }
@@ -671,31 +720,58 @@ Item {
 
                         delegate: Rectangle {
                             Layout.fillWidth: true
-                            implicitHeight: 45
+                            implicitHeight: orderCol.implicitHeight + 24
                             color: "#1A0F1F"
-                            radius: 6
+                            radius: 8
                             border.color: "#D4AF37"
                             border.width: 0.5
 
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 15
-                                anchors.rightMargin: 15
+                                anchors.margins: 12
+                                spacing: 12
 
-                                Text {
-                                    text: model.title
-                                    color: "#D4AF37"
-                                    font.pixelSize: 13
-                                    font.bold: true
-                                    elide: Text.ElideRight
+                                ColumnLayout {
+                                    id: orderCol
                                     Layout.fillWidth: true
+                                    spacing: 2
+
+                                    Text {
+                                        text: "Order #" + model.orderId + " — " + model.date
+                                        color: "#D4AF37"
+                                        font.bold: true
+                                        font.pixelSize: 13
+                                    }
+
+                                    Text {
+                                        text: model.bookList
+                                        color: "#A08EAD"
+                                        font.pixelSize: 12
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
                                 }
 
-                                Text {
-                                    text: model.author
-                                    color: "#D4AF37"
-                                    opacity: 0.6
-                                    font.pixelSize: 12
+                                ColumnLayout {
+                                    spacing: 2
+                                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+
+                                    Text {
+                                        visible: model.discountAmount > 0
+                                        text: "$" + model.rawPrice.toFixed(2)
+                                        color: "#A08EAD"
+                                        font.pixelSize: 11
+                                        font.strikeout: true
+                                        Layout.alignment: Qt.AlignRight
+                                    }
+
+                                    Text {
+                                        text: "$" + model.finalPrice.toFixed(2)
+                                        color: "#66FF99"
+                                        font.bold: true
+                                        font.pixelSize: 14
+                                        Layout.alignment: Qt.AlignRight
+                                    }
                                 }
                             }
                         }

@@ -9,12 +9,13 @@ Rectangle {
     height: parent ? parent.height : 720
     color: "#2D1B33"
 
-    // ========== PROPERTIES ==========
+    property var globalNetworkManager: networkManager
     property int userId: 0
     property string username: ""
     property string userRole: ""
     property string publisherPassword: ""
     property string favoriteAuthor: ""
+    property int unreadCount: 0
 
     property real totalRevenue: 0.0
     property int totalBooksPublished: 0
@@ -26,21 +27,23 @@ Rectangle {
     property string coverImagePath: ""
     property string pdfFilePath: ""
     property double pendingDiscount: 0.0
+    property int pendingDiscountType: 0
+    property int discountTypeSelection: 0
 
     property string successMessageText: ""
     property bool showSuccess: false
     property bool showError: false
 
-    // ===== فلگ‌های جدید برای تشخیص تغییر فایل =====
     property bool isCoverChanged: false
     property bool isPdfChanged: false
 
-    // ========== MODELS ==========
+    property var topSellersList: []
+    property var worstSellersList: []
+
     ListModel {
         id: booksModel
     }
 
-    // ========== FILE DIALOGS ==========
     FileDialog {
         id: coverFileDialog
         title: "Select Book Cover Image"
@@ -63,7 +66,6 @@ Rectangle {
         }
     }
 
-    // ========== NETWORK CONNECTIONS ==========
     Connections {
         target: networkManager
 
@@ -92,6 +94,17 @@ Rectangle {
                         var isActive = book.isAvailable !== undefined ? book.isAvailable : true
 
                         if (isActive) totalActiveBooks++
+                        var ratingValue = book.rating
+                        if (ratingValue === undefined || ratingValue === null || ratingValue === "") {
+                            ratingValue = book.averageRating
+                        }
+                        if (ratingValue === undefined || ratingValue === null || ratingValue === "") {
+                            ratingValue = book.avgRating
+                        }
+                        if (ratingValue === undefined || ratingValue === null || ratingValue === "") {
+                            ratingValue = book.average_rating
+                        }
+                        ratingValue = Number(ratingValue) || 0.0
 
                         booksModel.append({
                             bookId: book.id || book.bookId || 0,
@@ -101,12 +114,15 @@ Rectangle {
                             desc: book.description || "",
                             price: book.price || 0.0,
                             discount: book.discountValue || 0.0,
-                            rating: book.rating || 0.0,
+                            discountType: book.discountType || 0,
+
                             active: isActive,
                             sales: book.sales || book.salesCount || 0,
                             coverData: book.coverImageData || book.coverData || "",
                             coverImagePath: book.coverImagePath || book.coverPath || "",
-                            pdfFilePath: book.pdfFilePath || book.pdfPath || ""
+                            pdfFilePath: book.pdfFilePath || book.pdfPath || "",
+                                              rating: ratingValue
+
                         })
                         rev += (book.price * (book.sales || book.salesCount || 0))
                     }
@@ -125,10 +141,11 @@ Rectangle {
                     if (pendingDiscount > 0 && newBookId > 0) {
                         var now = Math.floor(Date.now() / 1000)
                         var oneYearLater = now + 365 * 24 * 60 * 60
-                        networkManager.applyDiscountToBook(userId, newBookId, pendingDiscount, 0, now, oneYearLater)
+                        networkManager.applyDiscountToBook(userId, newBookId, pendingDiscount, pendingDiscountType, now, oneYearLater)
                     }
 
                     pendingDiscount = 0
+                    pendingDiscountType = 0
                     networkManager.getPublisherBooks(userId)
                     clearForm()
                     isEditing = false
@@ -205,25 +222,53 @@ Rectangle {
                     showErrorMessage("❌ " + (data.message || (action + " failed.")))
                 }
             }
+
+            else if (action === "getSalesStats" && (statusUpper === "SUCCESS" || statusUpper === "OK")) {
+                topSellersList = data.topSellingBooks || []
+                worstSellersList = data.lowSellingBooks || []
+            }
+
+            else if (action === "getNotifications" && (statusUpper === "SUCCESS" || statusUpper === "OK")) {
+                var list = Array.isArray(data) ? data : []
+                unreadCount = 0
+                for (var i = 0; i < list.length; i++) {
+                    if (!list[i].isRead) unreadCount++
+                }
+                if (notificationView) {
+                    notificationView.loadNotifications()
+                }
+            }
+            else if (action === "markNotificationAsRead" || action === "markAllNotificationsAsRead") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    networkManager.getNotifications(userId)
+                }
+            }
+        }
+
+        function onNotificationReceived(notification) {
+            unreadCount++
+            showSuccessMessage("🔔 " + notification.message)
+            if (notificationView) {
+                notificationView.loadNotifications()
+            }
         }
     }
 
-    // ========== COMPONENT LIFECYCLE ==========
     Component.onCompleted: {
         if (typeof networkManager !== "undefined" && networkManager !== null && userId > 0) {
             networkManager.getPublisherBooks(userId)
+            networkManager.getNotifications(userId)
+            networkManager.getSalesStats(userId)
         }
         if (favoriteAuthor === "") {
             favoriteAuthor = "Not set"
         }
     }
 
-    // ========== UI ==========
     RowLayout {
         anchors.fill: parent
         spacing: 0
 
-        // ===== SIDEBAR =====
         Rectangle {
             Layout.fillHeight: true
             Layout.preferredWidth: 250
@@ -279,7 +324,40 @@ Rectangle {
                     }
                 }
 
-                Item { Layout.fillHeight: true }
+                Button {
+                    text: "🔔 Notifications"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 45
+                    flat: true
+                    contentItem: Text {
+                        text: parent.text
+                        color: mainStack.currentIndex === 4 ? "#D4AF37" : "#FFFFFF"
+                        horizontalAlignment: Text.AlignLeft
+                        font.pixelSize: 16
+                    }
+                    Rectangle {
+                        visible: unreadCount > 0
+                        width: 22; height: 22; radius: 11
+                        color: "#FF5555"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: unreadCount > 9 ? "9+" : unreadCount
+                            color: "white"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                    }
+                    onClicked: {
+                        mainStack.currentIndex = 4
+                    }
+                }
+
+                Item { Layout.fillHeight: true
+                Layout.fillWidth: true }
 
                 Button {
                     text: "Logout"
@@ -293,14 +371,12 @@ Rectangle {
             }
         }
 
-        // ===== MAIN CONTENT =====
         StackLayout {
             id: mainStack
             Layout.fillWidth: true
             Layout.fillHeight: true
             currentIndex: 0
 
-            // ===== TAB 0: STATISTICS =====
             ScrollView {
                 contentWidth: availableWidth
                 ColumnLayout {
@@ -335,47 +411,143 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Best Selling Books (Sales Count)"
+                        text: "Best Selling Books (Top 5)"
                         color: "#FFF"
                         font.pixelSize: 20
                         Layout.topMargin: 20
                     }
 
                     RowLayout {
-                        height: 200
-                        spacing: 40
+                        height: 250
+                        spacing: 30
                         Layout.leftMargin: 20
+                        Layout.rightMargin: 20
+                        Layout.fillWidth: true
+
                         Repeater {
-                            model: booksModel
-                            Rectangle {
-                                width: 50
-                                height: Math.max(20, (model.sales / 350) * 150)
-                                color: model.active ? "#D4AF37" : "#666666"
-                                Layout.alignment: Qt.AlignBottom
-                                Text {
-                                    text: model.sales + " sales"
-                                    color: "#FFF"
-                                    font.pixelSize: 11
-                                    anchors.bottom: parent.top
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                }
-                                Text {
-                                    text: model.title
-                                    color: "#FFF"
-                                    font.pixelSize: 10
-                                    anchors.top: parent.bottom
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    wrapMode: Text.Wrap
-                                    width: 80
-                                    horizontalAlignment: Text.AlignHCenter
+                            model: topSellersList
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.bottom: parent.bottom
+                                    spacing: 5
+
+                                    Text {
+                                        text: modelData.salesCount + " sales"
+                                        color: "#D4AF37"
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    Rectangle {
+                                        Layout.preferredWidth: 40
+                                        Layout.preferredHeight: Math.max(10, (modelData.salesCount / 100) * 150)
+                                        color: "#D4AF37"
+                                        radius: 4
+                                        Layout.alignment: Qt.AlignHCenter
+
+                                        Behavior on Layout.preferredHeight {
+                                            NumberAnimation { duration: 300 }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.title.length > 12 ? modelData.title.substring(0, 10) + "..." : modelData.title
+                                        color: "#FFF"
+                                        font.pixelSize: 10
+                                        Layout.alignment: Qt.AlignHCenter
+                                        horizontalAlignment: Text.AlignHCenter
+                                        wrapMode: Text.WordWrap
+                                        Layout.maximumWidth: 80
+                                    }
                                 }
                             }
+                        }
+
+                        Text {
+                            visible: topSellersList.length === 0
+                            text: "No sales yet"
+                            color: "#888"
+                            font.pixelSize: 14
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    Text {
+                        text: "Lowest Selling Books (Bottom 5)"
+                        color: "#FFF"
+                        font.pixelSize: 20
+                        Layout.topMargin: 20
+                    }
+
+                    RowLayout {
+                        height: 250
+                        spacing: 30
+                        Layout.leftMargin: 20
+                        Layout.rightMargin: 20
+                        Layout.fillWidth: true
+
+                        Repeater {
+                            model: worstSellersList
+                            Item {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+
+                                ColumnLayout {
+                                    anchors.fill: parent
+                                    anchors.bottom: parent.bottom
+                                    spacing: 5
+
+                                    Text {
+                                        text: modelData.salesCount + " sales"
+                                        color: "#FF6B35"
+                                        font.pixelSize: 11
+                                        font.bold: true
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    Rectangle {
+                                        Layout.preferredWidth: 40
+                                        Layout.preferredHeight: Math.max(10, (modelData.salesCount / 100) * 150)
+                                        color: "#FF6B35"
+                                        radius: 4
+                                        Layout.alignment: Qt.AlignHCenter
+
+                                        Behavior on Layout.preferredHeight {
+                                            NumberAnimation { duration: 300 }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: modelData.title.length > 12 ? modelData.title.substring(0, 10) + "..." : modelData.title
+                                        color: "#FFF"
+                                        font.pixelSize: 10
+                                        Layout.alignment: Qt.AlignHCenter
+                                        horizontalAlignment: Text.AlignHCenter
+                                        wrapMode: Text.WordWrap
+                                        Layout.maximumWidth: 80
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: worstSellersList.length === 0
+                            text: "No data available"
+                            color: "#888"
+                            font.pixelSize: 14
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.fillWidth: true
                         }
                     }
                 }
             }
 
-            // ===== TAB 1: MY BOOKS =====
             ListView {
                 id: booksListView
                 model: booksModel
@@ -566,6 +738,7 @@ Rectangle {
                                     descIn.text = model.desc;
                                     priceIn.text = model.price.toString();
                                     discountIn.text = model.discount.toString();
+                                    discountTypeSelection = model.discountType || 0;
 
                                     coverImagePath = model.coverImagePath || "";
                                     pdfFilePath = model.pdfFilePath || "";
@@ -609,7 +782,6 @@ Rectangle {
                 }
             }
 
-            // ===== TAB 2: ADD NEW BOOK =====
             ScrollView {
                 contentWidth: availableWidth
                 ColumnLayout {
@@ -683,9 +855,30 @@ Rectangle {
 
                         CustomTextField {
                             id: discountIn
-                            placeholder: "Discount (%)"
+                            placeholder: "Discount"
                             Layout.fillWidth: true
-                            validator: DoubleValidator { bottom: 0; top: 100; decimals: 2 }
+                            validator: DoubleValidator { bottom: 0; decimals: 2 }
+                        }
+
+                        ComboBox {
+                            id: discountTypeIn
+                            model: ["Percentage (%)", "Fixed Amount ($)"]
+                            currentIndex: discountTypeSelection
+                            Layout.preferredWidth: 160
+                            onCurrentIndexChanged: discountTypeSelection = currentIndex
+                            background: Rectangle {
+                                color: "#3D2B43"
+                                border.color: discountTypeIn.activeFocus ? "#D4AF37" : "#555"
+                                border.width: 2
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: discountTypeIn.displayText
+                                color: "white"
+                                font.pixelSize: 13
+                                leftPadding: 10
+                                verticalAlignment: Text.AlignVCenter
+                            }
                         }
                     }
 
@@ -767,6 +960,7 @@ Rectangle {
 
                             var priceVal = parseFloat(priceIn.text) || 0.0
                             var discountVal = parseFloat(discountIn.text) || 0.0
+                            var discountTypeVal = discountTypeSelection
                             var now = Math.floor(Date.now() / 1000)
                             var oneYearLater = now + 365 * 24 * 60 * 60
 
@@ -788,12 +982,13 @@ Rectangle {
                                 );
 
                                 if (discountVal > 0) {
-                                    networkManager.applyDiscountToBook(userId, editingBookId, discountVal, 0, now, oneYearLater);
+                                    networkManager.applyDiscountToBook(userId, editingBookId, discountVal, discountTypeVal, now, oneYearLater);
                                 } else {
                                     networkManager.removeDiscountFromBook(userId, editingBookId);
                                 }
                             } else {
-                                pendingDiscount = discountVal;
+                                pendingDiscount = discountVal
+                                pendingDiscountType = discountTypeVal
                                 networkManager.addBook(
                                     userId,
                                     titleIn.text,
@@ -810,7 +1005,6 @@ Rectangle {
                 }
             }
 
-            // ===== TAB 3: ACCOUNT SETTINGS =====
             ScrollView {
                 contentWidth: availableWidth
                 ColumnLayout {
@@ -963,10 +1157,24 @@ Rectangle {
                     }
                 }
             }
+
+            // ===== TAB 4: NOTIFICATIONS =====
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                NotificationView {
+                    id: notificationView
+                    anchors.fill: parent
+                    networkManager: publisherRoot.globalNetworkManager
+                    userId: userId
+                    username: username
+                    userRole: userRole
+                }
+            }
         }
     }
 
-    // ========== HELPER FUNCTIONS ==========
     function clearForm() {
         titleIn.text = ""
         authorIn.text = ""
@@ -974,6 +1182,8 @@ Rectangle {
         descIn.text = ""
         priceIn.text = ""
         discountIn.text = ""
+        discountTypeSelection = 0
+        pendingDiscountType = 0
         coverImagePath = ""
         pdfFilePath = ""
         coverLabel.text = "No cover selected"
@@ -995,7 +1205,6 @@ Rectangle {
         showSuccess = false
     }
 
-    // ========== COMPONENTS ==========
     component StatCard : Rectangle {
         property string title: ""
         property string value: ""

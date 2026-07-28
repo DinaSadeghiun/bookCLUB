@@ -1,5 +1,5 @@
 # Include necessary Qt modules (including widgets and QML/Quick)
-QT += core gui quick qml widgets network pdf pdfwidgets quickcontrols2
+QT += core gui quick qml widgets network pdf pdfwidgets quickcontrols2 quick quickcontrols2
 #QT += pdf pdfwidgets
 
 CONFIG += c++17
@@ -28,6 +28,8 @@ DISTFILES += \
     GenreSelection.qml \
     HomeView.qml \
     LibraryView.qml \
+    NotificationToast.qml \
+    NotificationView.qml \
     PdfReader.qml \
     PublisherDashboard.qml \
     SearchView.qml \

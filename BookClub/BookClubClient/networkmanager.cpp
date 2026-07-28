@@ -162,6 +162,20 @@ void NetworkManager::verifySecurityAnswer(const QString& username, const QString
     sendRequest("verifySecurityAnswer", data);
 }
 // Books Operations
+void NetworkManager::getReadingProgress(int userId, int bookId) {
+QJsonObject data;
+data["userId"] = userId;
+data["bookId"] = bookId;
+sendRequest("getReadingProgress", data);
+}
+
+void NetworkManager::saveReadingProgress(int userId, int bookId, int page) {
+    QJsonObject data;
+    data["userId"] = userId;
+    data["bookId"] = bookId;
+    data["page"] = page;
+    sendRequest("saveReadingProgress", data);
+}
 void NetworkManager::getAllBooks()
 {
     qDebug() << "Client: Attempting to send getAllBooks request...";
@@ -215,41 +229,19 @@ void NetworkManager::getBookPdf(int userId, int bookId)
 
 QString NetworkManager::saveBase64ToCache(const QString& base64Data, const QString& fileName)
 {
-    if (base64Data.isEmpty() || fileName.isEmpty()) {
-        emit errorOccurred("Base64 data or file name is empty.");
-        return QString();
-    }
-
-    QByteArray fileData = QByteArray::fromBase64(base64Data.toUtf8());
-    if (fileData.isEmpty()) {
-        emit errorOccurred("Failed to decode base64 data.");
-        return QString();
-    }
+    QByteArray bytes = QByteArray::fromBase64(base64Data.toLatin1());
+    if (bytes.isEmpty()) return "";
 
     QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-    if (cacheDir.isEmpty()) {
-        emit errorOccurred("Cache directory is not available.");
-        return QString();
-    }
-
-    QDir dir;
-    if (!dir.mkpath(cacheDir)) {
-        emit errorOccurred("Failed to create cache directory.");
-        return QString();
-    }
+    QDir().mkpath(cacheDir);
 
     QString fullPath = cacheDir + "/" + fileName;
-
     QFile file(fullPath);
-    if (!file.open(QIODevice::WriteOnly)) {
-        emit errorOccurred("Failed to save file: " + fullPath);
-        return QString();
-    }
+    if (!file.open(QIODevice::WriteOnly)) return "";
 
-    file.write(fileData);
+    file.write(bytes);
     file.close();
-
-    return fullPath;
+    return QUrl::fromLocalFile(fullPath).toString();
 }
 
 void NetworkManager::getBooksByGenre(int genreId) {
@@ -288,6 +280,12 @@ void NetworkManager::getPublisherBooks(int publisherId) {
     QJsonObject data;
     data["publisherId"] = publisherId;
     sendRequest("getPublisherBooks", data);
+}
+
+void NetworkManager::getSalesStats(int publisherId) {
+    QJsonObject data;
+    data["publisherId"] = publisherId;
+    sendRequest("getSalesStats", data);
 }
 
 void NetworkManager::updateBookPrice(int publisherId, int bookId, double price)

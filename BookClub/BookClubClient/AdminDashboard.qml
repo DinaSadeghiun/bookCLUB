@@ -2,12 +2,6 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
-// =====================================================================
-// Admin Dashboard - single-file version
-// Sidebar (Users / Books / Comments) + Loader that swaps between three
-// inline Components instead of separate .qml files.
-// =====================================================================
-
 Item {
     id: dashboardRoot
 
@@ -18,7 +12,6 @@ Item {
 
     Component.onCompleted: currentTab = 0
 
-    // Background for the entire dashboard
     Rectangle {
         anchors.fill: parent
         color: "#1A0F1F"
@@ -28,7 +21,6 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ================= Sidebar =================
         Rectangle {
             id: sidebar
             Layout.preferredWidth: 220
@@ -134,7 +126,6 @@ Item {
             }
         }
 
-        // ================= Content area =================
         Loader {
             id: contentLoader
             Layout.fillWidth: true
@@ -160,16 +151,13 @@ Item {
         }
     }
 
-    // =====================================================================
-    // Users tab
-    // =====================================================================
     Component {
         id: usersViewComponent
 
         Item {
             id: usersRoot
 
-            property string activeType: "users"   // "users" | "publishers"
+            property string activeType: "users"
             property string searchQuery: ""
 
             ListModel { id: usersModel }
@@ -213,7 +201,6 @@ Item {
                 function onResponseReceived(action, status, data) {
                     var ok = (status === "success" || status === "SUCCESS")
 
-                    // TODO: اگه اسم فیلدها با پاسخ واقعی سرور فرق داشت، با این لاگ اصلاحش کنید
                     if (action === "getAllUsers" || action === "getAllPublishers"
                             || action === "searchUsers" || action === "searchPublishers") {
                         console.log("AdminUsersView - " + action + ":", JSON.stringify(data))
@@ -460,9 +447,6 @@ Item {
         }
     }
 
-    // =====================================================================
-    // Books tab
-    // =====================================================================
     Component {
         id: booksViewComponent
 
@@ -481,6 +465,7 @@ Item {
                         "title": b.title || "Unknown",
                         "author": b.author || "Unknown",
                         "genre": b.genre || "",
+                        "description": b.description || "",
                         "price": b.price || 0,
                         "isAvailable": b.isAvailable !== undefined ? b.isAvailable : true,
                         "publisherId": b.publisherId || 0
@@ -501,6 +486,12 @@ Item {
                     if (!ok) return
                     if (action === "getAllBooks") fillModel(data)
                     else if (action === "removeBook") loadBooks()
+                    else if (action === "adminUpdateBook") {
+                        if (ok) {
+                            editBookDialog.close()
+                            loadBooks()
+                        }
+                    }
                 }
             }
 
@@ -547,7 +538,7 @@ Item {
 
                             delegate: Rectangle {
                                 width: listView.width
-                                height: 64
+                                height: 80
                                 color: "#1A0F1F"
                                 radius: 8
                                 border.color: "#3d2545"
@@ -600,6 +591,29 @@ Item {
                                     }
 
                                     Button {
+                                        text: "Edit"
+                                        Layout.preferredWidth: 70
+                                        background: Rectangle { color: "#D4AF37"; radius: 6 }
+                                        contentItem: Text {
+                                            text: parent.text
+                                            color: "#1A0F1F"
+                                            font.pixelSize: 12
+                                            horizontalAlignment: Text.AlignHCenter
+                                        }
+                                        onClicked: {
+                                            editBookDialog.targetBookId = model.bookId
+                                            editBookDialog.targetPublisherId = model.publisherId
+                                            editBookDialog.titleText = model.title
+                                            editBookDialog.authorText = model.author
+                                            editBookDialog.genreText = model.genre
+                                            editBookDialog.descText = model.description || ""
+                                            editBookDialog.priceText = model.price.toString()
+                                            editBookDialog.availableChecked = model.isAvailable
+                                            editBookDialog.open()
+                                        }
+                                    }
+
+                                    Button {
                                         text: "Remove"
                                         Layout.preferredWidth: 90
                                         background: Rectangle { color: "#8B2C2C"; radius: 6 }
@@ -645,12 +659,205 @@ Item {
                         networkManager.removeBook(removeConfirmDialog.targetPublisherId, removeConfirmDialog.targetBookId)
                 }
             }
+
+            Dialog {
+                id: editBookDialog
+                property int targetBookId: 0
+                property int targetPublisherId: 0
+                property string titleText: ""
+                property string authorText: ""
+                property string genreText: ""
+                property string descText: ""
+                property string priceText: "0"
+                property bool availableChecked: true
+
+                title: "Edit Book Details"
+                modal: true
+                anchors.centerIn: parent
+                standardButtons: Dialog.Ok | Dialog.Cancel
+                width: Math.min(parent.width * 0.9, 500)
+
+                background: Rectangle {
+                    color: "#2D1B33"
+                    border.color: "#D4AF37"
+                    border.width: 2
+                    radius: 8
+                }
+
+                header: Rectangle {
+                    color: "#1A0F1F"
+                    implicitHeight: 40
+                    radius: 8
+                    Text {
+                        text: "Edit Book Details"
+                        color: "#D4AF37"
+                        anchors.centerIn: parent
+                        font.bold: true
+                    }
+                }
+
+                contentItem: ColumnLayout {
+                    spacing: 12
+                    width: parent.width
+
+                    ColumnLayout {
+                        spacing: 4
+                        Layout.fillWidth: true
+                        Text { text: "Title:"; color: "#A08EAD"; font.pixelSize: 13 }
+                        TextField {
+                            id: editTitle
+                            text: editBookDialog.titleText
+                            Layout.fillWidth: true
+                            color: "white"
+                            background: Rectangle { color: "#1A0F1F"; border.color: "#5c3d75"; border.width: 1; radius: 5 }
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 4
+                        Layout.fillWidth: true
+                        Text { text: "Author:"; color: "#A08EAD"; font.pixelSize: 13 }
+                        TextField {
+                            id: editAuthor
+                            text: editBookDialog.authorText
+                            Layout.fillWidth: true
+                            color: "white"
+                            background: Rectangle { color: "#1A0F1F"; border.color: "#5c3d75"; border.width: 1; radius: 5 }
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 4
+                        Layout.fillWidth: true
+                        Text { text: "Genre:"; color: "#A08EAD"; font.pixelSize: 13 }
+                        ComboBox {
+                            id: editGenre
+                            model: ["Fiction", "NonFiction", "Mystery", "Romance", "SciFi", "Fantasy",
+                                    "Biography", "History", "SelfHelp", "Poetry", "Children", "Other"]
+                            Layout.fillWidth: true
+                            currentIndex: {
+                                var idx = model.indexOf(editBookDialog.genreText)
+                                return idx !== -1 ? idx : 0
+                            }
+                            background: Rectangle {
+                                color: "#1A0F1F"
+                                border.color: editGenre.activeFocus ? "#D4AF37" : "#5c3d75"
+                                border.width: 1
+                                radius: 5
+                            }
+                            contentItem: Text {
+                                text: editGenre.displayText
+                                color: "white"
+                                font.pixelSize: 13
+                                leftPadding: 10
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            indicator: Text {
+                                text: "▼"
+                                color: "#D4AF37"
+                                font.pixelSize: 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 4
+                        Layout.fillWidth: true
+                        Text { text: "Description:"; color: "#A08EAD"; font.pixelSize: 13 }
+                        TextArea {
+                            id: editDesc
+                            text: editBookDialog.descText
+                            Layout.fillWidth: true
+                            implicitHeight: 80
+                            color: "white"
+                            wrapMode: TextArea.Wrap
+                            background: Rectangle {
+                                color: "#1A0F1F"
+                                border.color: editDesc.activeFocus ? "#D4AF37" : "#5c3d75"
+                                border.width: 1
+                                radius: 5
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        spacing: 15
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            spacing: 4
+                            Layout.fillWidth: true
+                            Text { text: "Price:"; color: "#A08EAD"; font.pixelSize: 13 }
+                            TextField {
+                                id: editPrice
+                                text: editBookDialog.priceText
+                                Layout.fillWidth: true
+                                color: "white"
+                                validator: DoubleValidator { bottom: 0; decimals: 2 }
+                                background: Rectangle { color: "#1A0F1F"; border.color: "#5c3d75"; border.width: 1; radius: 5 }
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 4
+                            Layout.alignment: Qt.AlignBottom
+                            Text { text: "Available:"; color: "#A08EAD"; font.pixelSize: 13 }
+                            CheckBox {
+                                id: editAvailable
+                                checked: editBookDialog.availableChecked
+                                indicator: Rectangle {
+                                    width: 24; height: 24; radius: 4
+                                    color: editAvailable.checked ? "#D4AF37" : "#2D1B33"
+                                    border.color: "#D4AF37"; border.width: 2
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: editAvailable.checked ? "✓" : ""
+                                        color: "#1A0F1F"
+                                        font.bold: true
+                                    }
+                                }
+                                contentItem: Text {
+                                    text: ""
+                                }
+                            }
+                        }
+                    }
+                }
+
+                onAccepted: {
+                    if (!networkManager) return
+                    var title = editTitle.text.trim()
+                    var author = editAuthor.text.trim()
+                    var genre = editGenre.currentText
+                    var desc = editDesc.text.trim()
+                    var price = parseFloat(editPrice.text)
+                    if (isNaN(price) || price < 0) price = 0
+                    var available = editAvailable.checked
+
+                    if (title === "" || author === "") {
+                        editBookDialog.close()
+                        return
+                    }
+
+                    networkManager.updateBookDetails(
+                        editBookDialog.targetBookId,
+                        title,
+                        author,
+                        price,
+                        genre,
+                        desc,
+                        "",  // coverPath
+                        "",  // pdfPath
+                        "admin",
+                        editBookDialog.targetPublisherId
+                    )
+                }
+            }
         }
     }
 
-    // =====================================================================
-    // Comments tab
-    // =====================================================================
     Component {
         id: commentsViewComponent
 
@@ -678,7 +885,6 @@ Item {
                 for (var i = 0; i < list.length; i++) {
                     var c = list[i]
                     commentsModel.append({
-                        // TODO: اگه آیدی کامنت با اسم دیگه‌ای میاد، با کمک لاگ زیر اصلاحش کنید
                         "commentId": c.id || c.commentId || 0,
                         "username": c.username || ("User #" + (c.userId || 0)),
                         "text": c.text || "",

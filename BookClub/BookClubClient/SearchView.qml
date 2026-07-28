@@ -8,6 +8,7 @@ Rectangle {
     color: "#1A0F1F"
 
     required property var networkManager
+    signal bookSelected(int bookId)
     property int userId: 0
     property var booksById: ({})
     property var allBooksList: []
@@ -203,6 +204,12 @@ Rectangle {
             delegate: Item {
                 width: 140
                 height: 250
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: searchRoot.bookSelected(model.bookId)
+                }
 
                 ColumnLayout {
                     anchors.fill: parent
