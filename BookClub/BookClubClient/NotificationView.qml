@@ -38,13 +38,17 @@ Item {
         }
     }
 
-    Component.onCompleted: loadNotifications()
+    Component.onCompleted: {
+        console.log("NotificationView: initialized")
+        loadNotifications()
+    }
 
     Connections {
         target: networkManager
 
         function onResponseReceived(action, status, data) {
-            var ok = status === "success" || status === "SUCCESS" || status === "ok" || status === "OK"
+            var ok = status === "success" || status === "SUCCESS" ||
+                     status === "ok" || status === "OK"
 
             if (action === "getNotifications" && ok) {
                 notificationList = Array.isArray(data) ? data : []
@@ -54,7 +58,8 @@ Item {
                 for (var i = 0; i < notificationList.length; i++) {
                     var item = notificationList[i] || {}
 
-                    item.notificationId = item.notificationId !== undefined ? item.notificationId : item.id
+                    item.notificationId = item.notificationId !== undefined
+                            ? item.notificationId : item.id
                     item.isRead = normalizeIsRead(item.isRead)
 
                     if (!item.isRead) {
@@ -66,22 +71,22 @@ Item {
 
                 console.log("NotificationView: loaded", notificationList.length, "notifications")
                 console.log("NotificationView: unreadCount =", unreadCount)
-            }
-            else if (action === "markNotificationAsRead" && ok) {
-                console.log("NotificationView: markNotificationAsRead success -> reloading notifications")
+            } else if (action === "markNotificationAsRead" && ok) {
+                console.log("NotificationView: markNotificationAsRead success")
                 loadNotifications()
-            }
-            else if (action === "markAllNotificationsAsRead" && ok) {
-                console.log("NotificationView: markAllNotificationsAsRead success -> reloading notifications")
+            } else if (action === "markAllNotificationsAsRead" && ok) {
+                console.log("NotificationView: markAllNotificationsAsRead success")
                 loadNotifications()
             }
         }
 
         function onNotificationReceived(notification) {
-            console.log("NotificationView: new notification received:", notification.message)
+            console.log("NotificationView: new notification received:",
+                        notification ? notification.message : "")
 
             var item = notification || {}
-            item.notificationId = item.notificationId !== undefined ? item.notificationId : item.id
+            item.notificationId = item.notificationId !== undefined
+                    ? item.notificationId : item.id
             item.isRead = normalizeIsRead(item.isRead)
 
             notificationModel.insert(0, item)
@@ -107,7 +112,7 @@ Item {
             Layout.fillWidth: true
 
             Text {
-                text: "🔔 Notifications"
+                text: "Notifications"
                 font.pixelSize: 28
                 font.bold: true
                 color: "#D4AF37"
@@ -132,7 +137,7 @@ Item {
                 }
 
                 onClicked: {
-                    console.log("Mark all clicked. userId =", userId)
+                    console.log("NotificationView: Mark all clicked. userId =", userId)
                     if (networkManager) {
                         networkManager.markAllNotificationsAsRead(userId)
                     }
@@ -141,7 +146,9 @@ Item {
         }
 
         Text {
-            text: unreadCount > 0 ? "🔴 " + unreadCount + " unread" : "✅ All read"
+            text: unreadCount > 0
+                  ? unreadCount + " unread"
+                  : "All read"
             color: unreadCount > 0 ? "#FF5555" : "#4CAF50"
             font.pixelSize: 14
         }
@@ -222,7 +229,6 @@ Item {
                     Button {
                         visible: !isRead
                         text: "✓"
-                        font.pixelSize: 14
 
                         contentItem: Text {
                             text: parent.text
@@ -240,7 +246,8 @@ Item {
                         }
 
                         onClicked: {
-                            console.log("Single notification button clicked. notificationId =", notificationId, "userId =", userId)
+                            console.log("NotificationView: single mark clicked. notificationId =",
+                                        notificationId, "userId =", userId)
                             if (networkManager && notificationId > 0) {
                                 networkManager.markNotificationAsRead(notificationId, userId)
                             }
@@ -252,7 +259,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: notificationModel.count === 0
-                text: "📭 No notifications yet"
+                text: "No notifications yet"
                 color: "#A08EAD"
                 font.pixelSize: 16
             }

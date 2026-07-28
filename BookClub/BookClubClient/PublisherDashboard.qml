@@ -228,21 +228,25 @@ Rectangle {
                 worstSellersList = data.lowSellingBooks || []
             }
 
-            else if (action === "getNotifications" && (statusUpper === "SUCCESS" || statusUpper === "OK")) {
+            else if (action === "getNotifications" &&
+                     (statusUpper === "SUCCESS" || statusUpper === "OK")) {
                 var list = Array.isArray(data) ? data : []
                 unreadCount = 0
                 for (var i = 0; i < list.length; i++) {
                     if (!list[i].isRead) unreadCount++
                 }
-                if (notificationView) {
-                    notificationView.loadNotifications()
-                }
             }
-            else if (action === "markNotificationAsRead" || action === "markAllNotificationsAsRead") {
+            else if (action === "markNotificationAsRead") {
                 if (statusUpper === "SUCCESS" || statusUpper === "OK") {
-                    networkManager.getNotifications(userId)
+                    unreadCount = Math.max(0, unreadCount - 1)
                 }
             }
+            else if (action === "markAllNotificationsAsRead") {
+                if (statusUpper === "SUCCESS" || statusUpper === "OK") {
+                    unreadCount = 0
+                }
+            }
+
         }
 
         function onNotificationReceived(notification) {
