@@ -22,6 +22,7 @@ public:
     std::optional<Comment> findById(int id) const;
     QList<Comment> findByBookId(int bookId) const;
     QList<Comment> findAll() const;
+    double getAverageRatingForBook(int bookId) const;
 };
 
 #endif

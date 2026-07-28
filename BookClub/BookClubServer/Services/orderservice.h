@@ -12,6 +12,7 @@ class UserService;
 class PersonalLibraryRepository;
 class BookRepository;
 class PublisherService;
+class NotificationService;
 
 class OrderService : public QObject {
     Q_OBJECT
@@ -22,6 +23,7 @@ private:
     PersonalLibraryRepository* personalLibRepo;
     BookRepository* bookRepo;
     PublisherService* publisherSvc;
+    NotificationService* notificationSvc;
 
 public:
     explicit OrderService(OrderRepository* oRepo,
@@ -30,6 +32,7 @@ public:
                           PersonalLibraryRepository* libRepo,
                           BookRepository* bRepo,
                           PublisherService* pubSvc,
+                          NotificationService* notifSvc,
                           QObject* parent = nullptr);
     ~OrderService() = default;
 

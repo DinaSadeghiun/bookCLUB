@@ -5,6 +5,7 @@
 #include "Services/userservice.h"
 #include "DB/bookrepository.h"
 #include "Services/publisherservice.h"
+#include "Services/notificationservice.h"
 #include <QDebug>
 #include <QSqlDatabase>
 #include <QSqlQuery>
@@ -17,6 +18,7 @@ OrderService::OrderService(OrderRepository* oRepo,
                            PersonalLibraryRepository* libRepo,
                            BookRepository* bRepo,
                            PublisherService* pubSvc,
+                           NotificationService* notifSvc,
                            QObject* parent)
     : QObject(parent),
     orderRepo(oRepo),
@@ -24,7 +26,8 @@ OrderService::OrderService(OrderRepository* oRepo,
     userService(userSvc),
     personalLibRepo(libRepo),
     bookRepo(bRepo),
-    publisherSvc(pubSvc)
+    publisherSvc(pubSvc),
+    notificationSvc(notifSvc)
 {
     Q_ASSERT(orderRepo != nullptr);
     Q_ASSERT(cartService != nullptr);
@@ -32,6 +35,7 @@ OrderService::OrderService(OrderRepository* oRepo,
     Q_ASSERT(personalLibRepo != nullptr);
     Q_ASSERT(bookRepo != nullptr);
     Q_ASSERT(publisherSvc != nullptr);
+    Q_ASSERT(notificationSvc != nullptr);
 }
 
 bool OrderService::checkout(int userId) {
@@ -89,6 +93,14 @@ bool OrderService::checkout(int userId) {
             query.exec("ROLLBACK TO SAVEPOINT checkout_sp");
             return false;
         }
+
+        notificationSvc->sendNotification(
+            NotificationType::NewSaleForBook,
+            bookOpt->getPublisherId(),
+            bookId,
+            "💰 New sale for '" + bookOpt->getTitle() + "'!"
+            );
+
     }
 
     // Release (Commit) the savepoint to persist all changes

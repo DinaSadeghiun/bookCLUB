@@ -1,6 +1,4 @@
 #include "modelserializer.h"
-#include "DB/databasemanager.h"
-#include "DB/discountrepository.h"
 #include <QFile>
 
 
@@ -22,6 +20,12 @@ QJsonObject ModelSerializer::serializeBook(const Book& b) {
     o["salesCount"] = b.getSalesCount();
     o["isAvailable"] = b.getIsAvailable();
     o["discount"] = b.getDiscountAmount();
+    double avg = 0.0;
+    if (b.getRatingCount() > 0) {
+        avg = b.getTotalRating() / b.getRatingCount();
+    }
+    o["averageRating"] = avg;
+    o["rating"] = avg;
 
     QString coverData = "";
     if (!b.getCoverImagePath().isEmpty()) {
@@ -268,17 +272,25 @@ QJsonObject ModelSerializer::serializeCartDetails(const CartDetails& details) {
 
 // Order
 QJsonObject ModelSerializer::serializeOrder(const Order& order) {
-    QJsonObject json;
-    json["orderId"] = order.getId();
-    json["userId"] = order.getUserId();
-    json["rawTotalPrice"] = order.getRawPrice();
-    json["totalDiscountAmount"] = order.getDiscountAmount();
-    json["finalPriceToPay"] = order.getFinalPrice();
-    json["orderDate"] = order.getOrderDate().toString(Qt::ISODate);
-    json["bookIds"] = serializeIntList(order.getBookIds());
-    return json;
-}
+    QJsonObject o;
+    o["id"] = order.getId();
+    o["userId"] = order.getUserId();
+    o["orderDate"] = order.getOrderDate().toSecsSinceEpoch();
+    o["rawPrice"] = order.getRawPrice();
+    o["discountAmount"] = order.getDiscountAmount();
+    o["finalPrice"] = order.getFinalPrice();
 
+    QJsonArray booksArray;
+    for (int bookId : order.getBookIds()) {
+        QJsonObject bookObj;
+        bookObj["bookId"] = bookId;
+        booksArray.append(bookObj);
+    }
+    o["bookIds"] = booksArray;
+    o["books"] = booksArray;
+
+    return o;
+}
 
 QJsonArray ModelSerializer::serializeOrderList(const QList<Order>& orders) {
     QJsonArray arr;

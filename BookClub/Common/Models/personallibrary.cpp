@@ -169,6 +169,7 @@ PersonalLibrary& PersonalLibrary::operator=(const PersonalLibrary &other) {
         userId = other.userId;
         purchasedBooks = other.purchasedBooks;
         wishlist = other.wishlist;
+        faveBooks = other.faveBooks;
 
         for (const Shelf* shelf : other.customShelves) {
             if (shelf) {
@@ -188,7 +189,9 @@ PersonalLibrary::PersonalLibrary(PersonalLibrary &&other) noexcept
     : userId(other.userId),
     purchasedBooks(std::move(other.purchasedBooks)),
     wishlist(std::move(other.wishlist)),
-    customShelves(std::move(other.customShelves)) {
+    faveBooks(std::move(other.faveBooks)),
+    customShelves(std::move(other.customShelves))
+{
     other.userId = 0;
     other.customShelves.clear();
 }

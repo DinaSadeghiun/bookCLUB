@@ -303,6 +303,22 @@ bool DatabaseManager::createTables() {
     }
 
 
+    if (!q.exec(R"(
+    CREATE TABLE IF NOT EXISTS ReadingProgress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        book_id INTEGER NOT NULL,
+        last_page INTEGER DEFAULT 0,
+        updated_at INTEGER NOT NULL,
+        UNIQUE(user_id, book_id),
+        FOREIGN KEY(user_id) REFERENCES Users(person_id) ON DELETE CASCADE,
+        FOREIGN KEY(book_id) REFERENCES Books(id) ON DELETE CASCADE
+    )
+    )")) {
+        qCritical() << "ReadingProgress:" << q.lastError().text(); return false;
+    }
+
+
     qDebug() << "All tables created successfully.";
     return true;
 }

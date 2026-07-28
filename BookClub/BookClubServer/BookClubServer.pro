@@ -26,6 +26,7 @@ SOURCES += \
     DB/orderrepository.cpp \
     DB/personallibraryrepository.cpp \
     DB/publisherrepository.cpp \
+    DB/readingprogressrepository.cpp \
     DB/shoppingcartrepository.cpp \
     DB/userrepository.cpp \
     Network/bookclubserver.cpp \
@@ -51,6 +52,7 @@ HEADERS += \
     DB/orderrepository.h \
     DB/personallibraryrepository.h \
     DB/publisherrepository.h \
+    DB/readingprogressrepository.h \
     DB/shoppingcartrepository.h \
     DB/userrepository.h \
     Network/bookclubserver.h \

@@ -33,6 +33,11 @@ QList<int> PersonalLibraryRepository::loadWishlist(int userId) const {
 }
 
 QList<int> PersonalLibraryRepository::loadFaveBooks(int userId) const {
+    // ===== LOG =====
+    qDebug() << "=== loadFaveBooks START ===";
+    qDebug() << "userId:" << userId;
+    // ===============
+
     QList<int> faveList;
     QSqlDatabase db = dbManager->getDatabase();
     QSqlQuery query(db);
@@ -43,11 +48,21 @@ QList<int> PersonalLibraryRepository::loadFaveBooks(int userId) const {
         while (query.next()) {
             faveList.append(query.value(0).toInt());
         }
+        // ===== LOG =====
+        qDebug() << "faveList IDs:" << faveList;
+        qDebug() << "faveList count:" << faveList.size();
+        // ===============
     } else {
         qWarning() << "Failed to load favorites for user" << userId << ":" << query.lastError().text();
     }
+
+    // ===== LOG =====
+    qDebug() << "=== loadFaveBooks END ===";
+    // ===============
+
     return faveList;
 }
+
 
 
 QList<QPair<QString, QList<int>>> PersonalLibraryRepository::loadShelves(int userId) const {
@@ -81,17 +96,25 @@ std::optional<PersonalLibrary> PersonalLibraryRepository::findByUserId(int userI
     QSqlQuery q(db);
     q.prepare("SELECT person_id FROM Users WHERE person_id = :id");
     q.bindValue(":id", userId);
-    if (!q.exec() || !q.next()) return std::nullopt;
+    if (!q.exec() || !q.next()) {
+        return std::nullopt;
+    }
 
     PersonalLibrary lib(userId);
+
     for (int id : loadPurchasedBooks(userId)) lib.addPurchasedBook(id);
-    for (int id : loadWishlist(userId))       lib.addToWishlist(id);
-    for (int id : loadFaveBooks(userId))      lib.addToFaveBooks(id);
+
+    for (int id : loadWishlist(userId)) lib.addToWishlist(id);
+
+    QList<int> favorites = loadFaveBooks(userId);
+    qDebug() << "favorites loaded:" << favorites.size() << "books";
+    for (int id : std::as_const(favorites)) lib.addToFaveBooks(id);
 
     for (const auto& [name, bookIds] : loadShelves(userId)) {
         auto* shelf = lib.createShelf(name);
         if (shelf) for (int bid : bookIds) shelf->addBook(bid);
     }
+
     return lib;
 }
 

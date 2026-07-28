@@ -95,14 +95,22 @@ bool PersonalLibraryService::isInWishlist(int userId, int bookId) {
 // favorite books
 QList<int> PersonalLibraryService::getFaveBooks(int userId) {
     Q_ASSERT(userId > 0);
+
     if (userId <= 0 || !personalLibRepo) {
+        qDebug() << "ERROR: Invalid userId or personalLibRepo is null";
         return QList<int>();
     }
     auto libOpt = personalLibRepo->findByUserId(userId);
     if (!libOpt.has_value()) {
+        qDebug() << "No PersonalLibrary found for userId:" << userId;
         return QList<int>();
     }
-    return libOpt->getFaveBooks();
+
+    QList<int> faves = libOpt->getFaveBooks();
+    qDebug() << "Favorites count:" << faves.size();
+    qDebug() << "Favorites IDs:" << faves;
+
+    return faves;
 }
 
 bool PersonalLibraryService::addToFaveBooks(int userId, int bookId) {

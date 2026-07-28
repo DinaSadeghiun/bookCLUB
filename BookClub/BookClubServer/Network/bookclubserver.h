@@ -4,6 +4,7 @@
 #include <QTcpServer>
 #include <QList>
 #include <QJsonObject>
+#include "DB/readingprogressrepository.h"
 #include "clienthandler.h"
 #include "Notification.h"
 
@@ -47,7 +48,9 @@ private:
     void handleCartAndOrder(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handlePersonalLibrary(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handleAdminActions(ClientHandler* handler, const QString& action, const QJsonObject& data);
+    void handlePublisherActions(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handleNotifications(ClientHandler* handler, const QString& action, const QJsonObject& data);
+    void handleReadingProgress(ClientHandler* handler, const QString& action, const QJsonObject& data);
     void handleForgotPassword(ClientHandler* handler, const QString& action, const QJsonObject& data);
 
     QList<ClientHandler*> clients;
@@ -61,6 +64,7 @@ private:
     AdminService* adminService = nullptr;
     PersonalLibraryService* personalLibraryService = nullptr;
     NotificationService* notificationService = nullptr;
+    ReadingProgressRepository* readingProgressRepo = nullptr;
 
     BookRepository* bookRepo = nullptr;
     PersonalLibraryRepository* personalLibRepo = nullptr;

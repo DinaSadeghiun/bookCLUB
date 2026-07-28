@@ -24,6 +24,8 @@ public:
                             QObject* parent = nullptr);
     ~CommentService() = default;
 
+    double getAverageRatingForBook(int bookId) const;
+
     bool addComment(Comment& comment);
     bool removeComment(int commentId);
     bool editComment(int commentId, const QString& newText, int newRating);

@@ -116,3 +116,15 @@ QList<Comment> CommentRepository::findAll() const {
     }
     return list;
 }
+
+double CommentRepository::getAverageRatingForBook(int bookId) const {
+    QSqlDatabase db = dbManager->getDatabase();
+    QSqlQuery q(db);
+    q.prepare("SELECT AVG(rating) FROM Comments WHERE book_id = ?");
+    q.addBindValue(bookId);
+
+    if (q.exec() && q.next()) {
+        return q.value(0).toDouble();
+    }
+    return 0.0;
+}

@@ -4,6 +4,7 @@
 #include "person.h"
 #include <QString>
 #include <QList>
+#include "Book.h"
 
 // Sales statistics container
 struct SalesStats {
@@ -11,6 +12,8 @@ struct SalesStats {
     double averageRating = 0.0;
     QList<int> topSellingBookIds;
     QList<int> lowSellingBookIds;
+    QList<Book> topSellingBooks;
+    QList<Book> lowSellingBooks;
 };
 
 

@@ -13,6 +13,11 @@ CommentService::CommentService(CommentRepository* cRepo,
     Q_ASSERT(bRepo != nullptr);
 }
 
+double CommentService::getAverageRatingForBook(int bookId) const {
+    if (!commentRepo) return 0.0;
+    return commentRepo->getAverageRatingForBook(bookId);
+}
+
 bool CommentService::addComment(Comment& comment) {
     if (!commentRepo) {
         return false;

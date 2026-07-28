@@ -417,17 +417,19 @@ std::optional<SalesStats> PublisherService::calculateSalesStats(int publisherId)
         return a.getSalesCount() > b.getSalesCount();
     });
 
-    int limit = std::min(3, static_cast<int>(sortedBooks.size()));
+    int limit = std::min(5, static_cast<int>(sortedBooks.size()));
 
     for (int i = 0; i < limit; ++i) {
         if (sortedBooks[i].getSalesCount() > 0) {
             stats.topSellingBookIds.append(sortedBooks[i].getId());
+            stats.topSellingBooks.append(sortedBooks[i]);
         }
     }
 
     int startIdx = std::max(0, static_cast<int>(sortedBooks.size()) - limit);
     for (int i = static_cast<int>(sortedBooks.size()) - 1; i >= startIdx; --i) {
         stats.lowSellingBookIds.append(sortedBooks[i].getId());
+        stats.lowSellingBooks.append(sortedBooks[i]);
     }
 
     return stats;
