@@ -8,13 +8,8 @@ CONFIG -= app_bundle
 win64-msvc* {
     QMAKE_CXXFLAGS -= -permissive-
     QMAKE_CXXFLAGS -= /permissive-
-
     QMAKE_CXXFLAGS += /permissive
 }
-
-
-
-
 
 SOURCES += \
     DB/adminrepository.cpp \
@@ -66,6 +61,11 @@ HEADERS += \
     Services/publisherservice.h \
     Services/shoppingcartservice.h \
     Services/userservice.h
+
+INCLUDEPATH += $$PWD \
+               $$PWD/DB \
+               $$PWD/Network \
+               $$PWD/Services
 
 include(../Common/Common.pri)
 

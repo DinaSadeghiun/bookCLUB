@@ -21,7 +21,7 @@ Rectangle {
     property real maxZoom: 3.0
     property real zoomStep: 0.15
     property bool isFullyLoaded: false
-    property int savedPage: 0          // Temporarily holds the page retrieved from the server
+    property int savedPage: 0
 
     // --- Document ---
     PdfDocument {
@@ -188,7 +188,7 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        // -------------------- Header --------------------
+        //  Header
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 60
@@ -237,7 +237,7 @@ Rectangle {
             }
         }
 
-        // -------------------- Reader View Area --------------------
+        //  Reader View Area
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true; color: "#0F090F"
 
@@ -286,7 +286,7 @@ Rectangle {
             }
         }
 
-        // -------------------- Footer Controls --------------------
+        //  Footer Controls
         Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 76; color: "#241530"
             visible: pdfDoc.status === PdfDocument.Ready && !readerRoot.loading && readerRoot.errorMessage === ""

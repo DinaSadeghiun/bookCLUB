@@ -1,5 +1,5 @@
 #include "AdminRepository.h"
-#include "databasemanager.h"
+#include "DB/databasemanager.h"
 #include "person.h"
 #include "Admin.h"
 #include <QSqlError>

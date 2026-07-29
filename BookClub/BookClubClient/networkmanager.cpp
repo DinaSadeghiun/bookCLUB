@@ -266,7 +266,7 @@ void NetworkManager::updateBookDetails(int bookId, const QString& title, const Q
         data["publisherId"] = publisherId;
     }
 
-    // ===== تبدیل فایل‌ها به Base64 (مثل addBook) =====
+    //  تبدیل فایل‌ها به Base64
     QString coverBase64 = QString::fromUtf8(readFileAsBase64(coverPath));
     QString pdfBase64 = QString::fromUtf8(readFileAsBase64(pdfPath));
 
@@ -667,9 +667,8 @@ void NetworkManager::onReadyRead()
 
         if (line.isEmpty()) continue;
 
-        // --- این خط را برای دیباگ اضافه کنید ---
-        qDebug() << "RAW SERVER RESPONSE LINE:" << line;
-        // ------------------------------------
+
+
 
         QJsonParseError parseError;
         QJsonDocument doc = QJsonDocument::fromJson(line, &parseError);
@@ -683,12 +682,12 @@ void NetworkManager::onReadyRead()
 
             QString action = response.value("action").toString();
             QString status = response.value("status").toString();
-            QVariant data = response.value("data").toVariant();   // <-- به‌جای .toObject()
+            QVariant data = response.value("data").toVariant();
 
             qDebug() << "Parsed Response -> Action:" << action << "Status:" << status;
 
             if (action == "newNotification") {
-                emit notificationReceived(data.toJsonObject());   // این یکی مطمئنیم همیشه object هست
+                emit notificationReceived(data.toJsonObject());
             } else {
                 emit responseReceived(action, status, data);
             }

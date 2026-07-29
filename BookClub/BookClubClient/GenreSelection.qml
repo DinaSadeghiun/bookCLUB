@@ -8,7 +8,7 @@ Rectangle {
     color: "#1A0F1F"
     required property string username
     required property string userRole
-    property int userId: 0 // اضافه شده برای ارسال شناسه کاربر به سرور در صورت نیاز
+    property int userId: 0
     property var selectedGenres: []
     property bool isEditMode: false
     property var initialGenres: []

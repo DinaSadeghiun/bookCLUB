@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     engine.load(url);
 
     // 5. Connect to server AFTER QML is loaded
-    netManager->connectToServer("192.168.1.8", 8080); //
+    netManager->connectToServer("192.168.240.69", 8080); //
 
 
     return app.exec();

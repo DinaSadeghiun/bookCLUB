@@ -197,7 +197,7 @@ Rectangle {
                     networkManager.registerPublisher(
                         usernameField.text,
                         passwordField.text,
-                        secAnswer   // ← فقط securityAnswer
+                        secAnswer
                     )
 
 
