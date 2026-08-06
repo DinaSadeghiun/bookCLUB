@@ -62,7 +62,7 @@ BookClubServer::~BookClubServer() {
 
 void BookClubServer::initializeServices() {
     DatabaseManager* db = &DatabaseManager::instance();
-    db->initDatabase("bookclub.db");
+    db->initDatabase("bookclubFinal.db");
 
     auto* userRepo              = new UserRepository(db);
     auto* bookRepo              = new BookRepository(db);

@@ -17,10 +17,10 @@ QSqlDatabase& DatabaseManager::getDatabase() {
 
 
 bool DatabaseManager::initDatabase(const QString& dbName) {
-    if (QSqlDatabase::contains("bookclub.db")) {
-        db = QSqlDatabase::database("bookclub.db");
+    if (QSqlDatabase::contains("bookclubFinal.db")) {
+        db = QSqlDatabase::database("bookclubFinal.db");
     } else {
-        db = QSqlDatabase::addDatabase("QSQLITE", "bookclub.db");
+        db = QSqlDatabase::addDatabase("QSQLITE", "bookclubFinal.db");
     }
 
     QString path = QCoreApplication::applicationDirPath() + "/" + dbName;

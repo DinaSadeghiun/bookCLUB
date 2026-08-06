@@ -42,6 +42,7 @@ HEADERS += \
     DB/bookrepository.h \
     DB/commentrepository.h \
     DB/databasemanager.h \
+    DB/databasemanager.h \
     DB/discountrepository.h \
     DB/notificationrepository.h \
     DB/orderrepository.h \
